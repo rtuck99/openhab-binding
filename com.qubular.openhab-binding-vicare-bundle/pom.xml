@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <parent>
+    <artifactId>com.qubular.openhab-binding-vicare</artifactId>
+    <groupId>com.qubular</groupId>
+    <version>3.2.0-SNAPSHOT</version>
+  </parent>
+  <modelVersion>4.0.0</modelVersion>
+
+  <artifactId>com.qubular.openhab-binding-vicare-bundle</artifactId>
+  <dependencies>
+    <!-- Openhab dependencies -->
+    <dependency>
+      <groupId>org.openhab.core.bom</groupId>
+      <artifactId>org.openhab.core.bom.compile</artifactId>
+      <version>${openhab.version}</version>
+      <scope>provided</scope>
+      <type>pom</type>
+    </dependency>
+
+    <dependency>
+      <groupId>org.openhab.core.bundles</groupId>
+      <artifactId>org.openhab.core.thing</artifactId>
+      <version>${openhab.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Test dependencies -->
+
+    <dependency>
+      <groupId>org.ops4j.pax.logging</groupId>
+      <artifactId>pax-logging-log4j2</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.openhab.core.bundles</groupId>
+      <artifactId>org.openhab.core.test</artifactId>
+      <version>${openhab.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+  </dependencies>
+
+  <properties>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>biz.aQute.bnd</groupId>
+        <artifactId>bnd-maven-plugin</artifactId>
+          <configuration>
+            <bnd><![CDATA[Bundle-SymbolicName: ${project.artifactId}
+Automatic-Module-Name: ${def;bsn}
+Import-Package: \\
+  io.swagger.v3.oas.annotations.*;resolution:=optional,\\
+  javax.annotation.security.*;resolution:=optional,\\
+  org.eclipse.jdt.annotation.*;resolution:=optional,\\
+  org.openhab.core.automation.annotation.*;resolution:=optional;version=!,\\
+  org.openhab.*;version=!,\\
+  com.google.common.*;version="14.0",\\
+  ${bnd.importpackage},\\
+  *
+-exportcontents: \\
+  !*.internal.*,\\
+  !*.impl.*, \\
+  org.openhab.*, \\
+  ${bnd.exportpackage}
+-noimportjava: true
+-sources: false
+-contract: *
+-includeresource: ${bnd.includeresource}
+-fixupmessages: \\
+  'Unused Import-Package instructions';is:=ignore,\\
+  'Unused Export-Package instructions';is:=ignore,\\
+  ${bnd.fixupmessages}]]></bnd>
+            <!-- -dsannotations-options: norequirements -->
+            <skipIfEmpty>true</skipIfEmpty>
+          </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>bnd-process</goal>
+              </goals>
+            </execution>
+          </executions>
+      </plugin>
+
+    </plugins>
+  </build>
+
+</project>

@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.qubular</groupId>
+  <artifactId>com.qubular.openhab-binding-vicare</artifactId>
+  <version>3.2.0-SNAPSHOT</version>
+  <licenses>
+    <license>
+      <name>Eclipse Public License 2.0</name>
+      <url>https://www.eclipse.org/legal/epl-2.0/</url>
+    </license>
+  </licenses>
+  <packaging>pom</packaging>
+  <properties>
+    <openhab.version>3.2.0</openhab.version>
+    <oh.java.version>11</oh.java.version>
+    <maven.compiler.source>${oh.java.version}</maven.compiler.source>
+    <maven.compiler.target>${oh.java.version}</maven.compiler.target>
+    <maven.compiler.compilerVersion>${oh.java.version}</maven.compiler.compilerVersion>
+    <bnd.version>6.3.1</bnd.version>
+    <bnd.exportpackage/>
+    <bnd.fixupmessages>"Classes found in the wrong directory"; is:=warning</bnd.fixupmessages>
+    <bnd.includeresource>-${.}/NOTICE, -${.}/*.xsd</bnd.includeresource>
+    <!-- Exclude all the kitchen-sink optional shit in gRPC / netty -->
+    <bnd.importpackage>!sun.*,!javax.annotation.*,!lzma.sdk.*,!net.jpountz.*,!com.sun.*,!io.grpc.census.*,com.aayushatharva.brotli4j.*;resolution:=optional,com.github.luben.*;resolution:=optional,com.google.protobuf.nano.*;resolution:=optional,com.jcraft.jzlib.*;resolution:=optional,com.ning.compress.*;resolution:=optional,com.oracle.*;resolution:=optional,io.grpc.*;resolution:=optional,io.perfmark.*;resolution:=optional;org.bouncycastle.*;resolution:=optional,org.conscrypt.*;resolution:=optional,org.eclipse.jetty.*;resolution:=optional,org.jboss.*;resolution:=optional,reactor.blockhound.*;resolution:=optional,com.google.api.client.*;resolution:=optional,!io.opencensus.*,org.apache.http.*;resolution:=optional</bnd.importpackage>
+    <eea.version>2.2.1</eea.version>
+    <feature.directory>src/main/feature/feature.xml</feature.directory>
+    <karaf.version>4.3.4</karaf.version>
+    <junit.version>5.8.1</junit.version>
+    <osgi.version>7.0.0</osgi.version>
+    <felix.framework.version>7.0.0</felix.framework.version>
+  </properties>
+  <repositories>
+    <repository>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <id>openhab-release</id>
+      <name>openHAB Release Repository</name>
+      <url>https://openhab.jfrog.io/openhab/libs-release</url>
+    </repository>
+  </repositories>
+  <pluginRepositories>
+    <pluginRepository>
+      <id>openhab-release</id>
+      <name>openHAB Release Repository</name>
+      <url>https://openhab.jfrog.io/openhab/libs-release</url>
+    </pluginRepository>
+  </pluginRepositories>
+  <dependencyManagement>
+    <dependencies>
+
+      <!-- Junit -->
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-api</artifactId>
+        <version>${junit.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-engine</artifactId>
+        <version>${junit.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.junit.platform</groupId>
+        <artifactId>junit-platform-launcher</artifactId>
+        <version>1.8.1</version>
+      </dependency>
+
+      <!-- pax logging -->
+      <dependency>
+        <groupId>org.ops4j.pax.logging</groupId>
+        <artifactId>pax-logging-log4j2</artifactId>
+        <version>2.0.12</version>
+      </dependency>
+
+      <!-- OSGi dependencies (provided) -->
+      <dependency>
+        <groupId>org.osgi</groupId>
+        <artifactId>osgi.core</artifactId>
+        <version>${osgi.version}</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.osgi</groupId>
+        <artifactId>osgi.cmpn</artifactId>
+        <version>${osgi.version}</version>
+        <scope>provided</scope>
+      </dependency>
+
+      <!-- OSGi dependencies (runtime) -->
+      <dependency>
+        <groupId>org.osgi</groupId>
+        <artifactId>org.osgi.util.promise</artifactId>
+        <version>1.2.0</version>
+      </dependency>
+
+      <!-- Felix OSGi container bundles -->
+      <dependency>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>org.apache.felix.framework</artifactId>
+        <version>${felix.framework.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>org.apache.felix.log</artifactId>
+        <version>1.2.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>org.apache.felix.scr</artifactId>
+        <version>2.1.18</version>
+      </dependency>
+
+    <!-- bnd testing runtime dependency -->
+      <dependency>
+        <groupId>biz.aQute.bnd</groupId>
+        <artifactId>biz.aQute.tester.junit-platform</artifactId>
+        <version>${bnd.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <configuration>
+            <archive>
+              <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+            </archive>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.0.0-M7</version>
+          <configuration>
+            <systemPropertyVariables>
+              <junit.jupiter.execution.timeout.default>15 m</junit.jupiter.execution.timeout.default>
+            </systemPropertyVariables>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>3.1.2</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>build-helper-maven-plugin</artifactId>
+          <version>3.0.0</version>
+        </plugin>
+        <plugin>
+          <groupId>biz.aQute.bnd</groupId>
+          <artifactId>bnd-maven-plugin</artifactId>
+          <version>${bnd.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>biz.aQute.bnd</groupId>
+          <artifactId>bnd-indexer-maven-plugin</artifactId>
+          <version>${bnd.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>biz.aQute.bnd</groupId>
+          <artifactId>bnd-resolver-maven-plugin</artifactId>
+          <version>${bnd.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>biz.aQute.bnd</groupId>
+          <artifactId>bnd-testing-maven-plugin</artifactId>
+          <version>${bnd.version}</version>
+        </plugin>
+
+        <!-- Define the version of the export plugin we use -->
+        <plugin>
+          <groupId>biz.aQute.bnd</groupId>
+          <artifactId>bnd-export-maven-plugin</artifactId>
+          <version>${bnd.version}</version>
+          <configuration>
+            <resolve>true</resolve>
+            <failOnChanges>true</failOnChanges>
+          </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>export</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+
+      </plugins>
+    </pluginManagement>
+  </build>
+  <modules>
+    <module>com.qubular.openhab-binding-vicare-bundle</module>
+    <module>com.qubular.vicare-osgi</module>
+    <module>com.qubular.vicare.tester</module>
+  </modules>
+
+</project>

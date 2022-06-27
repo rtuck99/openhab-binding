@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <parent>
+    <artifactId>com.qubular.openhab-binding-vicare</artifactId>
+    <groupId>com.qubular</groupId>
+    <version>3.2.0-SNAPSHOT</version>
+  </parent>
+  <description>Test container that executes integration tests</description>
+  <modelVersion>4.0.0</modelVersion>
+
+  <artifactId>com.qubular.vicare.tester</artifactId>
+
+<dependencies>
+  <dependency>
+    <groupId>com.qubular</groupId>
+    <artifactId>com.qubular.vicare-osgi</artifactId>
+    <version>${project.version}</version>
+  </dependency>
+  <dependency>
+    <groupId>com.qubular</groupId>
+    <artifactId>com.qubular.vicare-osgi</artifactId>
+    <version>${project.version}</version>
+    <type>test-jar</type>
+  </dependency>
+
+  <!-- OSGi container bundles -->
+  <dependency>
+    <groupId>org.osgi</groupId>
+    <artifactId>org.osgi.util.promise</artifactId>
+  </dependency>
+  <dependency>
+    <groupId>org.apache.felix</groupId>
+    <artifactId>org.apache.felix.framework</artifactId>
+  </dependency>
+  <dependency>
+    <groupId>org.apache.felix</groupId>
+    <artifactId>org.apache.felix.log</artifactId>
+  </dependency>
+  <dependency>
+    <groupId>org.apache.felix</groupId>
+    <artifactId>org.apache.felix.scr</artifactId>
+  </dependency>
+
+  <!-- JUnit runtimes -->
+  <dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter-engine</artifactId>
+  </dependency>
+  <!-- JUnit launcher -->
+  <dependency>
+    <groupId>org.junit.platform</groupId>
+    <artifactId>junit-platform-launcher</artifactId>
+  </dependency>
+  <!-- Pax logging -->
+  <dependency>
+    <groupId>org.ops4j.pax.logging</groupId>
+    <artifactId>pax-logging-log4j2</artifactId>
+  </dependency>
+  <!-- bnd testing runtime dependency -->
+  <dependency>
+    <groupId>biz.aQute.bnd</groupId>
+    <artifactId>biz.aQute.tester.junit-platform</artifactId>
+  </dependency>
+</dependencies>
+<build>
+  <plugins>
+    <plugin>
+      <groupId>biz.aQute.bnd</groupId>
+      <artifactId>bnd-maven-plugin</artifactId>
+      <extensions>true</extensions>
+      <executions>
+        <execution>
+          <goals>
+            <goal>bnd-process</goal>
+          </goals>
+        </execution>
+      </executions>
+    </plugin>
+    <plugin>
+      <groupId>biz.aQute.bnd</groupId>
+      <artifactId>bnd-indexer-maven-plugin</artifactId>
+      <configuration>
+        <localURLs>REQUIRED</localURLs>
+        <attach>false</attach>
+        <scopes>
+          <scope>compile</scope>
+          <scope>runtime</scope>
+          <scope>test</scope>
+        </scopes>
+      </configuration>
+      <executions>
+        <execution>
+          <goals>
+            <goal>index</goal>
+          </goals>
+        </execution>
+      </executions>
+    </plugin>
+    <plugin>
+      <groupId>biz.aQute.bnd</groupId>
+      <artifactId>bnd-resolver-maven-plugin</artifactId>
+      <configuration>
+        <failOnChanges>false</failOnChanges>
+        <bndruns>
+          <bndrun>app.bndrun</bndrun>
+        </bndruns>
+        <scopes>
+          <scope>compile</scope>
+          <scope>runtime</scope>
+          <scope>test</scope>
+        </scopes>
+      </configuration>
+      <executions>
+        <execution>
+          <phase>package</phase>
+          <goals>
+            <goal>resolve</goal>
+          </goals>
+        </execution>
+      </executions>
+    </plugin>
+    <plugin>
+      <groupId>biz.aQute.bnd</groupId>
+      <artifactId>bnd-testing-maven-plugin</artifactId>
+      <configuration>
+        <bndruns>
+          <bndrun>app.bndrun</bndrun>
+        </bndruns>
+      </configuration>
+      <executions>
+        <execution>
+          <goals>
+            <goal>testing</goal>
+          </goals>
+          <phase>integration-test</phase>
+        </execution>
+      </executions>
+    </plugin>
+  </plugins>
+</build>
+</project>

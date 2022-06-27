@@ -1,0 +1,101 @@
+# -standalone: \
+#	../../bom/runtime-index/target/index.xml;name="org.openhab.core.bom.runtime-index",\
+#	../../bom/test-index/target/index.xml;name="org.openhab.core.bom.test-index",\
+#	../../bom/openhab-core-index/target/index.xml;name="org.openhab.core.bom.openhab-core-index",\
+#	 target/index.xml;name="self"
+#-standalone: \
+#    ../openhab-binding-googleassistant-bundle/target/index.xml;name="com.qubular.openhab-binding-googleassistant-bundle",\
+#	 target/index.xml;name="openhab-binding-googleassistant-it"
+
+-resolve.effective: active
+
+-tester: biz.aQute.tester.junit-platform
+
+# Run all integration tests which are named xyzTest
+Test-Cases: ${classes;CONCRETE;PUBLIC;NAMED;*Test}
+
+# A temporary inclusion until an R7 framework is available
+Import-Package: org.osgi.framework.*;version="[1.8,2)",\
+    !*.internal.\
+    *
+
+# We would like to use the slf4j-api and implementation provided by pax-logging
+-runblacklist.itest-common: \
+	bnd.identity;id='slf4j.api'
+
+# Used by Objenesis/Mockito and not actually optional
+-runsystempackages: sun.reflect
+
+-runfw: org.eclipse.osgi
+-runee: JavaSE-11
+
+# An unused random HTTP port is used during tests to prevent resource conflicts
+# This property is set by the build-helper-maven-plugin in the itests pom.xml
+-runvm: -Dorg.osgi.service.http.port=${org.osgi.service.http.port},'-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000'
+
+# The integration test itself does not export anything.
+Export-Package:
+-exportcontents:
+
+#-runrequires.ee: \
+#	bnd.identity;id='org.apache.servicemix.specs.activation-api-1.2.1',\
+#	bnd.identity;id='org.glassfish.hk2.osgi-resource-locator',\
+#	bnd.identity;id='com.sun.xml.bind.jaxb-osgi'
+
+#-runrequires.junit: \
+#	bnd.identity;id='biz.aQute.tester.junit-platform',\
+#	bnd.identity;id='junit-jupiter-engine'
+
+-runproperties: \
+	nashorn.args=--no-deprecation-warning,\
+	org.ops4j.pax.logging.DefaultServiceLog.level=INFO,\
+	org.ops4j.pax.logging.property.file=${project.basedir}/log4j2.xml
+
+-runvm.java9plus: \
+	--add-opens=java.base/java.io=ALL-UNNAMED,\
+	--add-opens=java.base/java.lang=ALL-UNNAMED,\
+	--add-opens=java.base/java.lang.reflect=ALL-UNNAMED,\
+	--add-opens=java.base/java.net=ALL-UNNAMED,\
+	--add-opens=java.base/java.security=ALL-UNNAMED,\
+	--add-opens=java.base/java.text=ALL-UNNAMED,\
+	--add-opens=java.base/java.time=ALL-UNNAMED,\
+	--add-opens=java.base/java.util=ALL-UNNAMED,\
+	--add-opens=java.desktop/java.awt.font=ALL-UNNAMED,\
+	--add-opens=java.naming/javax.naming.spi=ALL-UNNAMED,\
+	--add-opens=java.rmi/sun.rmi.transport.tcp=ALL-UNNAMED
+
+Bundle-SymbolicName: ${project.artifactId}
+Fragment-Host: com.qubular.openhab-binding-googleassistant-bundle
+
+-runrequires: \
+    bnd.identity;id='com.qubular.openhab-binding-googleassistant-it',\
+	bnd.identity;id='org.ops4j.pax.logging.pax-logging-log4j2',\
+	ds.log.extension=true,\
+	felix.log.level=0,\
+	felix.resolver.log.level=0
+
+#	bnd.identity;id='org.osgi.service.cm',\
+#	bnd.identity;id='org.openhab.core.binding.xml',\
+#	bnd.identity;id='org.openhab.core.thing.xml',\
+#-runrequires: \
+#	bnd.identity;id='openhab-binding-googleassistant-it',\
+#	bnd.identity;id='org.openhab.core.binding.xml',\
+#	bnd.identity;id='org.openhab.core.thing.xml',\
+#	bnd.identity;id='org.osgi.service.cm',\
+#	bnd.identity;id='org.ops4j.pax.logging.pax-logging-log4j2',\
+#	ds.log.extension=true,\
+#	felix.log.level=0,\
+#	felix.resolver.log.level=0
+
+# We would like to use the "volatile" storage only
+-runblacklist: \
+	bnd.identity;id='org.openhab.core.storage.json'
+
+-contract: \
+	JavaServlet;from='org.apache.felix.http.servlet-api-1.1.2'
+
+# DO NOT EDIT BELOW, AUTOGENERATE USING mvn bnd-resolver:resolve
+#
+# done
+#
+-runbundles: org.osgi.service.cm;version='[1.6.0,1.6.1)'

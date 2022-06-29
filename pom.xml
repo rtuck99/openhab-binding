@@ -15,6 +15,7 @@
   </licenses>
   <packaging>pom</packaging>
   <properties>
+    <org.osgi.service.http.port>9000</org.osgi.service.http.port>
     <openhab.version>3.2.0</openhab.version>
     <oh.java.version>11</oh.java.version>
     <maven.compiler.source>${oh.java.version}</maven.compiler.source>
@@ -32,6 +33,9 @@
     <junit.version>5.8.1</junit.version>
     <osgi.version>7.0.0</osgi.version>
     <felix.framework.version>7.0.0</felix.framework.version>
+    <slf4j.version>1.7.32</slf4j.version>
+    <pax.web.version>7.3.23</pax.web.version>
+    <jetty.version>9.4.43.v20210629</jetty.version>
   </properties>
   <repositories>
     <repository>
@@ -74,6 +78,13 @@
         <version>1.8.1</version>
       </dependency>
 
+      <!-- SLF4J -->
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+
       <!-- pax logging -->
       <dependency>
         <groupId>org.ops4j.pax.logging</groupId>
@@ -101,6 +112,17 @@
         <artifactId>org.osgi.util.promise</artifactId>
         <version>1.2.0</version>
       </dependency>
+      <dependency>
+        <!-- needed for pax web -->
+        <groupId>org.osgi</groupId>
+        <artifactId>org.osgi.service.http.whiteboard</artifactId>
+        <version>1.1.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.osgi</groupId>
+        <artifactId>org.osgi.service.http</artifactId>
+        <version>1.2.2</version>
+      </dependency>
 
       <!-- Felix OSGi container bundles -->
       <dependency>
@@ -118,12 +140,59 @@
         <artifactId>org.apache.felix.scr</artifactId>
         <version>2.1.18</version>
       </dependency>
+      <dependency>
+        <!-- contains the JavaServlet OSGi capability  -->
+        <groupId>org.apache.felix</groupId>
+        <artifactId>org.apache.felix.http.servlet-api</artifactId>
+        <version>1.1.2</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>org.apache.felix.http.jetty</artifactId>
+        <version>4.0.14</version>
+      </dependency>
 
     <!-- bnd testing runtime dependency -->
       <dependency>
         <groupId>biz.aQute.bnd</groupId>
         <artifactId>biz.aQute.tester.junit-platform</artifactId>
         <version>${bnd.version}</version>
+      </dependency>
+
+      <!-- servlet api -->
+      <dependency>
+        <groupId>javax.servlet</groupId>
+        <artifactId>javax.servlet-api</artifactId>
+        <version>3.1.0</version>
+        <scope>provided</scope>
+      </dependency>
+
+      <!-- Jetty pax web and all its dependencies -->
+      <dependency>
+        <groupId>org.ops4j.pax.web</groupId>
+        <artifactId>pax-web-jetty-bundle</artifactId>
+        <version>${pax.web.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.ops4j.pax.web</groupId>
+        <artifactId>pax-web-api</artifactId>
+        <version>${pax.web.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.ops4j.pax.web</groupId>
+        <artifactId>pax-web-spi</artifactId>
+        <version>${pax.web.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.xbean</groupId>
+        <artifactId>xbean-finder</artifactId>
+        <version>4.19</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty.aggregate</groupId>
+        <artifactId>jetty-all</artifactId>
+        <version>${jetty.version}</version>
+        <type>pom</type>
       </dependency>
     </dependencies>
   </dependencyManagement>

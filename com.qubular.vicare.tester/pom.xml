@@ -42,7 +42,45 @@
     <groupId>org.apache.felix</groupId>
     <artifactId>org.apache.felix.scr</artifactId>
   </dependency>
-
+  <dependency>
+    <groupId>org.apache.felix</groupId>
+    <artifactId>org.apache.felix.http.servlet-api</artifactId>
+  </dependency>
+  <dependency>
+    <groupId>org.apache.felix</groupId>
+    <artifactId>org.apache.felix.http.jetty</artifactId>
+  </dependency>
+  <!-- OSGi jetty servlet Pax Web runtimes -->
+  <dependency>
+    <groupId>org.ops4j.pax.web</groupId>
+    <artifactId>pax-web-jetty-bundle</artifactId>
+  </dependency>
+  <dependency>
+    <groupId>org.ops4j.pax.web</groupId>
+    <artifactId>pax-web-api</artifactId>
+  </dependency>
+  <dependency>
+    <groupId>org.ops4j.pax.web</groupId>
+    <artifactId>pax-web-spi</artifactId>
+  </dependency>
+  <dependency>
+    <groupId>org.apache.xbean</groupId>
+    <artifactId>xbean-finder</artifactId>
+  </dependency>
+<!--  <dependency>-->
+<!--    <groupId>org.eclipse.jetty.aggregate</groupId>-->
+<!--    <artifactId>jetty-all</artifactId>-->
+<!--    <type>pom</type>-->
+<!--  </dependency>-->
+  <dependency>
+    <!-- needed for pax web -->
+    <groupId>org.osgi</groupId>
+    <artifactId>org.osgi.service.http.whiteboard</artifactId>
+  </dependency>
+  <dependency>
+    <groupId>org.osgi</groupId>
+    <artifactId>org.osgi.service.http</artifactId>
+  </dependency>
   <!-- JUnit runtimes -->
   <dependency>
     <groupId>org.junit.jupiter</groupId>

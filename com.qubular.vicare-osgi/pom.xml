@@ -26,6 +26,14 @@
       <groupId>org.osgi</groupId>
       <artifactId>osgi.cmpn</artifactId>
     </dependency>
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
   </dependencies>
 
   <properties>
@@ -43,6 +51,17 @@
             <id>bundle-jar</id>
             <goals>
               <goal>bnd-process</goal>
+            </goals>
+            <configuration>
+              <bnd>
+                -exportcontents: \\
+                com.qubular.vicare
+              </bnd>
+            </configuration>
+          </execution>
+          <execution>
+            <id>test-jar</id>
+            <goals>
               <goal>test-jar</goal>
             </goals>
           </execution>

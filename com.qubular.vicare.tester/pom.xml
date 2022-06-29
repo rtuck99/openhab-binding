@@ -51,18 +51,18 @@
     <artifactId>org.apache.felix.http.jetty</artifactId>
   </dependency>
   <!-- OSGi jetty servlet Pax Web runtimes -->
-  <dependency>
-    <groupId>org.ops4j.pax.web</groupId>
-    <artifactId>pax-web-jetty-bundle</artifactId>
-  </dependency>
-  <dependency>
-    <groupId>org.ops4j.pax.web</groupId>
-    <artifactId>pax-web-api</artifactId>
-  </dependency>
-  <dependency>
-    <groupId>org.ops4j.pax.web</groupId>
-    <artifactId>pax-web-spi</artifactId>
-  </dependency>
+<!--  <dependency>-->
+<!--    <groupId>org.ops4j.pax.web</groupId>-->
+<!--    <artifactId>pax-web-jetty-bundle</artifactId>-->
+<!--  </dependency>-->
+<!--  <dependency>-->
+<!--    <groupId>org.ops4j.pax.web</groupId>-->
+<!--    <artifactId>pax-web-api</artifactId>-->
+<!--  </dependency>-->
+<!--  <dependency>-->
+<!--    <groupId>org.ops4j.pax.web</groupId>-->
+<!--    <artifactId>pax-web-spi</artifactId>-->
+<!--  </dependency>-->
   <dependency>
     <groupId>org.apache.xbean</groupId>
     <artifactId>xbean-finder</artifactId>
@@ -95,6 +95,14 @@
   <dependency>
     <groupId>org.ops4j.pax.logging</groupId>
     <artifactId>pax-logging-log4j2</artifactId>
+  </dependency>
+  <dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-api</artifactId>
+  </dependency>
+  <dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-core</artifactId>
   </dependency>
   <!-- bnd testing runtime dependency -->
   <dependency>

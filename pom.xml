@@ -36,6 +36,7 @@
     <slf4j.version>1.7.32</slf4j.version>
     <pax.web.version>7.3.23</pax.web.version>
     <jetty.version>9.4.43.v20210629</jetty.version>
+    <log4j2.version>2.17.2</log4j2.version>
   </properties>
   <repositories>
     <repository>
@@ -83,6 +84,7 @@
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
         <version>${slf4j.version}</version>
+        <scope>provided</scope>
       </dependency>
 
       <!-- pax logging -->
@@ -168,31 +170,46 @@
       </dependency>
 
       <!-- Jetty pax web and all its dependencies -->
-      <dependency>
-        <groupId>org.ops4j.pax.web</groupId>
-        <artifactId>pax-web-jetty-bundle</artifactId>
-        <version>${pax.web.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.ops4j.pax.web</groupId>
-        <artifactId>pax-web-api</artifactId>
-        <version>${pax.web.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.ops4j.pax.web</groupId>
-        <artifactId>pax-web-spi</artifactId>
-        <version>${pax.web.version}</version>
-      </dependency>
+<!--      <dependency>-->
+<!--        <groupId>org.ops4j.pax.web</groupId>-->
+<!--        <artifactId>pax-web-jetty-bundle</artifactId>-->
+<!--        <version>${pax.web.version}</version>-->
+<!--      </dependency>-->
+<!--      <dependency>-->
+<!--        <groupId>org.ops4j.pax.web</groupId>-->
+<!--        <artifactId>pax-web-api</artifactId>-->
+<!--        <version>${pax.web.version}</version>-->
+<!--      </dependency>-->
+<!--      <dependency>-->
+<!--        <groupId>org.ops4j.pax.web</groupId>-->
+<!--        <artifactId>pax-web-spi</artifactId>-->
+<!--        <version>${pax.web.version}</version>-->
+<!--      </dependency>-->
       <dependency>
         <groupId>org.apache.xbean</groupId>
         <artifactId>xbean-finder</artifactId>
         <version>4.19</version>
       </dependency>
+<!--      <dependency>-->
+<!--        <groupId>org.eclipse.jetty.aggregate</groupId>-->
+<!--        <artifactId>jetty-all</artifactId>-->
+<!--        <version>${jetty.version}</version>-->
+<!--        <type>pom</type>-->
+<!--      </dependency>-->
       <dependency>
-        <groupId>org.eclipse.jetty.aggregate</groupId>
-        <artifactId>jetty-all</artifactId>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-client</artifactId>
         <version>${jetty.version}</version>
-        <type>pom</type>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-api</artifactId>
+        <version>${log4j2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-core</artifactId>
+        <version>${log4j2.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

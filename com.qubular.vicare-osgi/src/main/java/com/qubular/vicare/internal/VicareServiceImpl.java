@@ -2,6 +2,7 @@ package com.qubular.vicare.internal;
 
 import com.qubular.vicare.ChallengeStore;
 import com.qubular.vicare.HttpClientProvider;
+import com.qubular.vicare.TokenStore;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.internal.servlet.VicareServlet;
 import org.osgi.service.cm.Configuration;
@@ -26,12 +27,13 @@ public class VicareServiceImpl implements VicareService {
     public VicareServiceImpl(@Reference HttpService httpService,
                              @Reference ChallengeStore<?> challengeStore,
                              @Reference ConfigurationAdmin configurationAdmin,
-                             @Reference HttpClientProvider httpClientProvider) {
+                             @Reference HttpClientProvider httpClientProvider,
+                             @Reference TokenStore tokenStore) {
         logger.info("Activating ViCare Service");
         try {
             Configuration configuration = configurationAdmin.getConfiguration(CONFIG_PID, CONFIG_ACCESS_SERVER_URI);
             VicareServiceConfiguration config = new VicareServiceConfiguration(configuration);
-            VicareServlet servlet = new VicareServlet(challengeStore, config.getAccessServerURI(), httpClientProvider, config.getClientId());
+            VicareServlet servlet = new VicareServlet(challengeStore, tokenStore, config.getAccessServerURI(), httpClientProvider, config.getClientId());
             httpService.registerServlet(VicareServlet.CONTEXT_PATH, servlet, new Hashtable<>(), httpService.createDefaultHttpContext());
         } catch (ServletException | NamespaceException e) {
             logger.error("Unable to register ViCare servlet", e);

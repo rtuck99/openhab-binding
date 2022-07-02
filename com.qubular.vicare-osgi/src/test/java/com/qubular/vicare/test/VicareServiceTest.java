@@ -1,6 +1,7 @@
 package com.qubular.vicare.test;
 
 import com.qubular.vicare.ChallengeStore;
+import com.qubular.vicare.TokenStore;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.URIHelper;
 import org.eclipse.jetty.client.HttpClient;
@@ -102,6 +103,19 @@ public class VicareServiceTest {
                 (req, resp) -> {
                     parameterMap.set(req.getParameterMap());
                     requested.set(true);
+                    resp.setStatus(200);
+                    resp.setContentType("application/json");
+                    try (var os = resp.getOutputStream()) {
+                        os.print("{\n" +
+                                "    \"access_token\": \"eyJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAtMjU...\",\n" +
+                                "    \"refresh_token\": \"083ed7fe41a619242df5978190fd11b5\",\n" +
+                                "    \"token_type\": \"Bearer\",\n" +
+                                "    \"expires_in\": 3600\n" +
+                                "}");
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+
                 }
         ), new Hashtable<>(), httpService.createDefaultHttpContext());
 
@@ -120,5 +134,9 @@ public class VicareServiceTest {
         assertArrayEquals(new String[]{"authorization_code"}, parameterMap.get().get("grant_type"));
         assertArrayEquals(new String[]{challengeStore.currentChallenge.getChallengeCode()}, parameterMap.get().get("code_verifier"));
         assertArrayEquals(new String[]{"abcd1234"}, parameterMap.get().get("code"));
+
+        TokenStore tokenStore = getService(TokenStore.class);
+        assertEquals("eyJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAtMjU...", tokenStore.getAccessToken().get().token);
+        assertEquals("083ed7fe41a619242df5978190fd11b5", tokenStore.getRefreshToken().get());
     }
 }

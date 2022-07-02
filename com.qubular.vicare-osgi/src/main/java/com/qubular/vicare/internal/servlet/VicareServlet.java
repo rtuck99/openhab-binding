@@ -1,7 +1,11 @@
 package com.qubular.vicare.internal.servlet;
 
+import com.google.gson.FieldNamingPolicy;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.qubular.vicare.ChallengeStore;
 import com.qubular.vicare.HttpClientProvider;
+import com.qubular.vicare.TokenStore;
 import com.qubular.vicare.URIHelper;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.util.StringContentProvider;
@@ -15,10 +19,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -31,6 +37,7 @@ import static javax.servlet.http.HttpServletResponse.SC_OK;
 public class VicareServlet extends HttpServlet {
     private static final Pattern AUTH_CODE_PATTERN = Pattern.compile("/authCode/(.*)");
     private ChallengeStore<?> challengeStore;
+    private final TokenStore tokenStore;
     private final URI accessServerUri;
     private final HttpClientProvider httpClientProvider;
     private final String clientId;
@@ -39,11 +46,20 @@ public class VicareServlet extends HttpServlet {
     public static final URI AUTHORISE_ENDPOINT = URI.create("https://iam.viessmann.com/idp/v2/authorize");
     private static final Logger logger = LoggerFactory.getLogger(VicareServlet.class);
 
+    private static class AccessGrantResponse {
+        String accessToken;
+        String refreshToken;
+        String tokenType;
+        int expiresIn;
+    }
+
     public VicareServlet(ChallengeStore<?> challengeStore,
+                         TokenStore tokenStore,
                          URI accessServerUri,
                          HttpClientProvider httpClientProvider,
                          String clientId) {
         this.challengeStore = challengeStore;
+        this.tokenStore = tokenStore;
         this.accessServerUri = accessServerUri;
         this.httpClientProvider = httpClientProvider;
         this.clientId = clientId;
@@ -101,7 +117,16 @@ public class VicareServlet extends HttpServlet {
                                     logger.warn("Access server returned status {}", accessTokenResponse.getStatus());
                                     resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                                 } else {
-                                    // TODO
+                                    Gson gson = new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+                                            .create();
+                                    AccessGrantResponse accessGrantResponse = gson.fromJson(accessTokenResponse.getContentAsString(),
+                                            AccessGrantResponse.class);
+                                    logger.debug("Got access token, expiry in {}", accessGrantResponse.expiresIn);
+                                    tokenStore.storeAccessToken(accessGrantResponse.accessToken, Instant.now().plusSeconds(accessGrantResponse.expiresIn));
+                                    if (accessGrantResponse.refreshToken != null) {
+                                        logger.debug("Got refresh token");
+                                        tokenStore.storeRefreshToken(accessGrantResponse.refreshToken);
+                                    }
                                 }
                             } catch (InterruptedException | ExecutionException | TimeoutException | URISyntaxException e) {
                                 logger.warn("Unable to fetch access token", e);

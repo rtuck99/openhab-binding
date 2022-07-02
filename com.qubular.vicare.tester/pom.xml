@@ -50,6 +50,10 @@
     <groupId>org.apache.felix</groupId>
     <artifactId>org.apache.felix.http.jetty</artifactId>
   </dependency>
+  <dependency>
+    <groupId>org.apache.felix</groupId>
+    <artifactId>org.apache.felix.configadmin</artifactId>
+  </dependency>
   <!-- OSGi jetty servlet Pax Web runtimes -->
 <!--  <dependency>-->
 <!--    <groupId>org.ops4j.pax.web</groupId>-->

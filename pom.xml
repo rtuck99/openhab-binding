@@ -153,6 +153,12 @@
         <artifactId>org.apache.felix.http.jetty</artifactId>
         <version>4.0.14</version>
       </dependency>
+      <dependency>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>org.apache.felix.configadmin</artifactId>
+        <version>1.9.22</version>
+      </dependency>
+
 
     <!-- bnd testing runtime dependency -->
       <dependency>

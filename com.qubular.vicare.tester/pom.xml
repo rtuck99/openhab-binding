@@ -12,6 +12,33 @@
 
   <artifactId>com.qubular.vicare.tester</artifactId>
 
+  <profiles>
+    <profile>
+      <id>realConnection</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>biz.aQute.bnd</groupId>
+            <artifactId>bnd-testing-maven-plugin</artifactId>
+            <configuration>
+              <bndruns>
+                <bndrun>realConnection.bndrun</bndrun>
+              </bndruns>
+            </configuration>
+            <executions>
+              <execution>
+                <id>default</id>
+                <goals>
+                  <goal>testing</goal>
+                </goals>
+                <phase>integration-test</phase>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 <dependencies>
   <dependency>
     <groupId>com.qubular</groupId>

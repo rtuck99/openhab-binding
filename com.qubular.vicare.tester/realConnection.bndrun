@@ -1,0 +1,6 @@
+-include app.bndrun
+
+-runproperties.realConnection: \
+    com.qubular.vicare.tester.clientId=${com.qubular.vicare.tester.clientId},\
+    com.qubular.vicare.tester.accessServerUri=${com.qubular.vicare.tester.accessServerUri},\
+    com.qubular.vicare.tester.realConnection=true

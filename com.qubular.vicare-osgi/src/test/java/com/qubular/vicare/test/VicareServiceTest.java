@@ -5,9 +5,12 @@ import com.qubular.vicare.TokenStore;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.URIHelper;
 import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.api.ContentResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.service.cm.ConfigurationAdmin;
@@ -16,6 +19,7 @@ import org.osgi.service.http.NamespaceException;
 
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Hashtable;
@@ -27,6 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static java.util.Optional.ofNullable;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class VicareServiceTest {
@@ -51,13 +56,19 @@ public class VicareServiceTest {
         httpService = getService(HttpService.class);
 
         Hashtable<String, Object> newConfig = new Hashtable<>();
-        newConfig.put(VicareService.CONFIG_ACCESS_SERVER_URI, "http://localhost:9000/grantAccess");
-        newConfig.put(VicareService.CONFIG_CLIENT_ID, "myClientId");
+        String clientId = ofNullable(System.getProperty("com.qubular.vicare.tester.clientId")).orElse("myClientId");
+        String accessServerUri = ofNullable(System.getProperty("com.qubular.vicare.tester.accessServerUri")).orElse("http://localhost:9000/grantAccess");
+        newConfig.put(VicareService.CONFIG_CLIENT_ID, clientId);
+        newConfig.put(VicareService.CONFIG_ACCESS_SERVER_URI, accessServerUri);
         getService(ConfigurationAdmin.class)
                 .getConfiguration(VicareService.CONFIG_PID)
                 .update(newConfig);
 
         vicareService = getService(VicareService.class);
+    }
+
+    boolean realConnection() {
+        return Boolean.getBoolean("com.qubular.vicare.tester.realConnection");
     }
 
     @AfterEach
@@ -70,6 +81,7 @@ public class VicareServiceTest {
     }
 
     @Test
+    @DisabledIf("realConnection")
     public void setupPageRendersAndIncludesRedirectURI() throws Exception {
         String contentAsString = httpClient.GET("http://localhost:9000/vicare/setup")
                 .getContentAsString();
@@ -79,21 +91,26 @@ public class VicareServiceTest {
                 .matcher(contentAsString);
         assertTrue(matcher.find(), contentAsString);
         URI uri = URI.create(matcher.group(1));
-        assertEquals("https", uri.getScheme());
-        assertEquals("iam.viessmann.com", uri.getAuthority());
-        assertEquals("/idp/v2/authorize", uri.getPath());
-        Map<String, String> queryParams = URIHelper.getQueryParams(uri);
+        assertEquals("http", uri.getScheme());
+        assertEquals("localhost:9000", uri.getAuthority());
+        assertEquals("/vicare/redirect", uri.getPath());
+
+        httpClient.setFollowRedirects(false);
+        ContentResponse reflectorResponse = httpClient.GET(uri);
+        assertEquals(HttpServletResponse.SC_FOUND, reflectorResponse.getStatus());
+        URI redirectUri = URI.create(reflectorResponse.getHeaders().get("Location"));
+        Map<String, String> queryParams = URIHelper.getQueryParams(redirectUri);
         SimpleChallengeStore challengeStore = (SimpleChallengeStore) getService(ChallengeStore.class);
-        assertEquals("http://localhost:9000/vicare/authCode/" + challengeStore.currentChallenge.getKey(), queryParams.get("redirect_uri"));
+        assertEquals("http://localhost:9000/vicare/authCode", queryParams.get("redirect_uri"));
         assertEquals("code", queryParams.get("response_type"));
         assertEquals("IoT User offline_access", queryParams.get("scope"));
-        assertEquals("plain", queryParams.get("code_challenge_method"));
         assertNotNull(queryParams.get("code_challenge"));
         assertEquals(challengeStore.currentChallenge.getChallengeCode(), queryParams.get("code_challenge"));
 
     }
 
     @Test
+    @DisabledIf("realConnection")
     public void extractAuthoriseCodeObtainsAnAccessToken() throws ExecutionException, InterruptedException, TimeoutException, ServletException, NamespaceException, IOException {
         String contentAsString = httpClient.GET("http://localhost:9000/vicare/setup")
                 .getContentAsString();
@@ -121,12 +138,22 @@ public class VicareServiceTest {
 
         SimpleChallengeStore challengeStore = (SimpleChallengeStore) getService(ChallengeStore.class);
 
+        System.out.print(contentAsString);
         Matcher matcher = Pattern.compile("<form action=\"(.*?)\"", Pattern.MULTILINE)
                 .matcher(contentAsString);
         assertTrue(matcher.find(), contentAsString);
-        Map<String, String> queryParams = URIHelper.getQueryParams(URI.create(matcher.group(1)));
+
+        String reflectorUri = matcher.group(1);
+        // This should follow the redirect
+        httpClient.setFollowRedirects(false);
+        ContentResponse reflectorResponse = httpClient.GET(reflectorUri);
+        assertEquals(HttpServletResponse.SC_FOUND, reflectorResponse.getStatus());
+        String redirectUri = reflectorResponse.getHeaders().get("Location");
+
+        Map<String, String> queryParams = URIHelper.getQueryParams(URI.create(redirectUri));
+        String stateKey = queryParams.get("state");
         // pretend we authorised and call the redirect, this should call our bogus access server
-        int status = httpClient.GET(queryParams.get("redirect_uri") + "?code=abcd1234").getStatus();
+        int status = httpClient.GET(queryParams.get("redirect_uri") + "?code=abcd1234&state=" + stateKey).getStatus();
         assertEquals(200, status);
         assertTrue(requested.get());
         assertArrayEquals(new String[]{"myClientId"}, parameterMap.get().get("client_id"));
@@ -138,5 +165,11 @@ public class VicareServiceTest {
         TokenStore tokenStore = getService(TokenStore.class);
         assertEquals("eyJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAtMjU...", tokenStore.getAccessToken().get().token);
         assertEquals("083ed7fe41a619242df5978190fd11b5", tokenStore.getRefreshToken().get());
+    }
+
+    @Test
+    @EnabledIf("realConnection")
+    public void demoAuthentication() throws InterruptedException {
+        Thread.sleep(180000);
     }
 }

@@ -2,6 +2,7 @@ package com.qubular.vicare.test;
 
 import com.qubular.vicare.HttpClientProvider;
 import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 
@@ -11,7 +12,7 @@ public class SimpleHttpClientProvider implements HttpClientProvider {
 
     @Activate
     public SimpleHttpClientProvider() {
-        this.httpClient = new HttpClient();
+        this.httpClient = new HttpClient(new SslContextFactory.Client());
         try {
             this.httpClient.start();
         } catch (Exception e) {

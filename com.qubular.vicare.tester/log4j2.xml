@@ -10,5 +10,6 @@
       <AppenderRef ref="Console"/>
     </Root>
     <Logger name="com.qubular.vicare" level="debug"/>
+<!--    <Logger name="org.eclipse.jetty" level="debug"/>-->
   </Loggers>
 </Configuration>

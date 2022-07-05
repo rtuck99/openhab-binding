@@ -3,12 +3,15 @@ package com.qubular.vicare.internal.servlet;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.qubular.vicare.ChallengeStore;
 import com.qubular.vicare.HttpClientProvider;
 import com.qubular.vicare.TokenStore;
 import com.qubular.vicare.URIHelper;
 import org.eclipse.jetty.client.api.ContentResponse;
+import org.eclipse.jetty.client.util.FormContentProvider;
 import org.eclipse.jetty.client.util.StringContentProvider;
+import org.eclipse.jetty.util.Fields;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,11 +23,13 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -32,6 +37,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 
 public class VicareServlet extends HttpServlet {
@@ -53,11 +59,16 @@ public class VicareServlet extends HttpServlet {
         int expiresIn;
     }
 
+    private static class ErrorResponse {
+        String error;
+    }
+
     public VicareServlet(ChallengeStore<?> challengeStore,
                          TokenStore tokenStore,
                          URI accessServerUri,
                          HttpClientProvider httpClientProvider,
                          String clientId) {
+        logger.info("Configuring servlet with accessServerUri {}", accessServerUri);
         this.challengeStore = challengeStore;
         this.tokenStore = tokenStore;
         this.accessServerUri = accessServerUri;
@@ -72,23 +83,36 @@ public class VicareServlet extends HttpServlet {
         URI uri = URI.create(req.getRequestURI());
         String relPath = uri.getPath().replaceFirst(CONTEXT_PATH, "");
 
-        Matcher matcher = AUTH_CODE_PATTERN.matcher(relPath);
-        if (matcher.matches()) {
-            extractAuthCodeAndFetchAccessToken(req, resp, matcher.group(1));
-        } else {
-            switch (relPath) {
-                case "/setup":
-                    renderSetupPage(req, resp);
-                    break;
-                default:
-                    resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            }
+        switch (relPath) {
+            case "/authCode":
+                extractAuthCodeAndFetchAccessToken(req, resp, req.getParameter("state"));
+                break;
+            case "/setup":
+                renderSetupPage(req, resp);
+                break;
+            case "/redirect":
+                redirectToAuthServer(req, resp);
+                break;
+            default:
+                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
         }
     }
 
-    private URI getRedirectURI(HttpServletRequest req, String challengeKey) {
+    private void redirectToAuthServer(HttpServletRequest req, HttpServletResponse resp) {
+        ChallengeStore.Challenge challenge = challengeStore.createChallenge();
+        try {
+            String redirectUri = authoriseEndpointUri(req, challenge);
+            logger.debug("Redirecting browser to {}", redirectUri);
+            resp.sendRedirect(redirectUri);
+        } catch (IOException e) {
+            logger.warn("Unable to generate redirect uri", e);
+            resp.setStatus(SC_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private URI getRedirectURI(HttpServletRequest req) {
         URI redirectUriRoot = RedirectURLHelper.getRedirectUri(req);
-        return redirectUriRoot.resolve(redirectUriRoot.getPath() + "/" + challengeKey);
+        return redirectUriRoot;
     }
 
     private void extractAuthCodeAndFetchAccessToken(HttpServletRequest req, HttpServletResponse resp, String challengeKey) {
@@ -101,20 +125,25 @@ public class VicareServlet extends HttpServlet {
         challengeStore.getChallenge(challengeKey)
                 .ifPresentOrElse(challenge -> {
                             try {
-                                Map<String, String> tokenRequestQueryParams = Map.of("client_id", clientId,
-                                        "redirect_uri", RedirectURLHelper.getNavigatedURL(req).toString(),
-                                        "grant_type", "authorization_code",
-                                        "code_verifier", challenge.getChallengeCode(),
-                                        "code", code);
-                                String content = URIHelper.generateQueryParams(tokenRequestQueryParams);
+                                Fields fields = new Fields();
+                                fields.put("grant_type", "authorization_code");
+                                fields.put("code_verifier", challenge.getChallengeCode());
+                                fields.put("client_id", clientId);
+                                fields.put("redirect_uri", RedirectURLHelper.getNavigatedURL(req).toString());
+                                fields.put("code", code);
+                                if (logger.isDebugEnabled()) {
+                                    logger.debug("sending to access server {}:", accessServerUri);
+                                    fields.forEach(f -> logger.debug("{}={}", f.getName(), f.getValue()));
+                                }
                                 ContentResponse accessTokenResponse = httpClientProvider.getHttpClient()
                                         .POST(accessServerUri)
-                                        .header("Content-Type", "application/x-www-form-urlencoded")
-                                        .content(new StringContentProvider(content, StandardCharsets.UTF_8))
+                                        .content(new FormContentProvider(fields, StandardCharsets.UTF_8))
+                                        .accept("application/json")
                                         .send();
 
                                 if (accessTokenResponse.getStatus() != SC_OK) {
                                     logger.warn("Access server returned status {}", accessTokenResponse.getStatus());
+                                    handleError(resp, accessTokenResponse);
                                     resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                                 } else {
                                     Gson gson = new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
@@ -128,7 +157,7 @@ public class VicareServlet extends HttpServlet {
                                         tokenStore.storeRefreshToken(accessGrantResponse.refreshToken);
                                     }
                                 }
-                            } catch (InterruptedException | ExecutionException | TimeoutException | URISyntaxException e) {
+                            } catch (InterruptedException | ExecutionException | TimeoutException e) {
                                 logger.warn("Unable to fetch access token", e);
                                 resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                             }
@@ -137,13 +166,24 @@ public class VicareServlet extends HttpServlet {
                 );
     }
 
+    private void handleError(HttpServletResponse response, ContentResponse accessTokenResponse) {
+        if (accessTokenResponse.getMediaType().equals("application/json")) {
+            Gson gson = new GsonBuilder().create();
+            ErrorResponse errorResponse = gson.fromJson(accessTokenResponse.getContentAsString(), ErrorResponse.class);
+            try (PrintWriter writer = response.getWriter()) {
+                writer.format("Received error from server: %s", errorResponse.error);
+            } catch (IOException e) {
+                logger.warn("Unable to handle error", e);
+            }
+        }
+    }
+
     private void renderSetupPage(HttpServletRequest req, HttpServletResponse resp) {
         try (InputStream is = getClass().getResourceAsStream("setup.html")) {
             String html = new String(is.readAllBytes(), StandardCharsets.UTF_8);
 
-            ChallengeStore.Challenge challenge = challengeStore.createChallenge();
-            html = html.replaceAll("\\$\\{redirectUri\\}", getRedirectURI(req, challenge.getKey()).toString());
-            html = html.replaceAll("\\$\\{authServerUri\\}", authoriseEndpointUri(req, challenge));
+            html = html.replaceAll("\\$\\{redirectUri\\}", getRedirectURI(req).toString());
+            html = html.replaceAll("\\$\\{authServerUri\\}", RedirectURLHelper.getNavigatedURL(req).toURI().resolve("redirect").toString());
 
             // TODO substitute authorised status
 
@@ -154,18 +194,22 @@ public class VicareServlet extends HttpServlet {
         } catch (IOException e) {
             logger.warn("Unable to render setup page", e);
             resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        } catch (URISyntaxException e) {
+            logger.warn("Unable to generate redirect.", e);
+            resp.setStatus(SC_INTERNAL_SERVER_ERROR);
         }
     }
 
     private String authoriseEndpointUri(HttpServletRequest req, ChallengeStore.Challenge challenge) {
-        Map<String, String> queryParams = Map.of("redirect_uri", getRedirectURI(req, challenge.getKey()).toString(),
+        Map<String, String> queryParams = Map.of("redirect_uri", getRedirectURI(req).toString(),
                 "response_type", "code",
                 "scope", "IoT User offline_access",
-                "code_challenge_method", "plain",
-                "code_challenge", challenge.getChallengeCode());
+                "code_challenge", challenge.getChallengeCode(),
+                "state", challenge.getKey(),
+                "client_id", clientId);
+
+
         return AUTHORISE_ENDPOINT.toString() + "?" +
-                queryParams.entrySet().stream()
-                        .map(e -> URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8) + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
-                        .collect(Collectors.joining("&"));
+                URIHelper.generateQueryParamsForURI(queryParams);
     }
 }

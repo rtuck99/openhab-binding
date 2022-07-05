@@ -23,9 +23,11 @@ public class URIHelper {
         return queryParams;
     }
 
-    public static String generateQueryParams(Map<String, String> queryParams) throws URISyntaxException {
+    public static String generateQueryParamsForURI(Map<String, String> queryParams) {
         return queryParams.entrySet().stream()
-                .map(e -> URLEncoder.encode(e.getKey(), UTF_8) + "=" + URLEncoder.encode(e.getValue(), UTF_8))
+                .map(e -> URLEncoder.encode(e.getKey(), UTF_8).replaceAll("\\+","%20") +
+                        "=" +
+                        URLEncoder.encode(e.getValue(), UTF_8).replaceAll("\\+", "%20"))
                 .collect(Collectors.joining("&"));
     }
 }

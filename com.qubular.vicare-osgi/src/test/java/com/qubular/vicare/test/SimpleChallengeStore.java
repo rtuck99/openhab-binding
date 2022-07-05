@@ -18,17 +18,17 @@ public class SimpleChallengeStore implements ChallengeStore<SimpleChallengeStore
     private final Map<String, SimpleChallenge> challenges = new HashMap<>();
 
     public static class SimpleChallenge implements Challenge {
-        private final UUID challengeCode;
+        private final String challengeCode;
         private final String key;
 
         public SimpleChallenge() {
-            this.challengeCode = UUID.randomUUID();
+            this.challengeCode = UUID.randomUUID() + "-" + UUID.randomUUID();
             this.key = UUID.randomUUID().toString();
         }
 
         @Override
         public String getChallengeCode() {
-            return challengeCode.toString();
+            return challengeCode;
         }
 
         @Override

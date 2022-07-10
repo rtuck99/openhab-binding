@@ -1,0 +1,73 @@
+{
+  "data": [
+    {
+      "id": 2012616,
+      "description": "Test Installation",
+      "address": {
+        "street": "My Street",
+        "houseNumber": "1234",
+        "zip": "AA1 1AA",
+        "city": "City",
+        "region": null,
+        "country": "GB",
+        "phoneNumber": null,
+        "faxNumber": null,
+        "geolocation": {
+          "latitude": 51.0,
+          "longitude": -1.0,
+          "timeZone": "Europe/London"
+        }
+      },
+      "gateways": [
+        {
+          "serial": "7633107093013212",
+          "version": "502.2144.33.0",
+          "firmwareUpdateFailureCounter": 0,
+          "autoUpdate": false,
+          "createdAt": "2021-06-01T11:41:58.338Z",
+          "producedAt": "2021-06-01T11:41:58.335Z",
+          "lastStatusChangedAt": "2022-07-07T18:54:03.084Z",
+          "aggregatedStatus": "WorksProperly",
+          "targetRealm": "DC",
+          "devices": [
+            {
+              "gatewaySerial": "7633107093013212",
+              "id": "0",
+              "boilerSerial": "7723181102527121",
+              "boilerSerialEditor": "DeviceCommunication",
+              "bmuSerial": null,
+              "bmuSerialEditor": null,
+              "createdAt": "2022-06-16T14:33:35.127Z",
+              "editedAt": "2022-06-16T14:33:35.208Z",
+              "modelId": "E3_Vitodens_100_0421",
+              "status": "Online",
+              "deviceType": "heating",
+              "roles": [
+                "capability:backup;0037_HBMU_VD",
+                "type:E3",
+                "type:boiler"
+              ]
+            }
+          ],
+          "gatewayType": "WiFi_SA0041",
+          "installationId": 2012616,
+          "registeredAt": "2022-06-16T14:36:05.927Z",
+          "description": null,
+          "otaOngoing": false
+        }
+      ],
+      "registeredAt": "2022-06-16T14:36:05.923Z",
+      "updatedAt": "2022-06-16T14:45:39.363Z",
+      "aggregatedStatus": "WorksProperly",
+      "servicedBy": null,
+      "heatingType": null,
+      "ownedByMaintainer": false,
+      "endUserWlanCommissioned": false,
+      "withoutViCareUser": false,
+      "installationType": "Residential"
+    }
+  ],
+  "cursor": {
+    "next": ""
+  }
+}

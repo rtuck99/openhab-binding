@@ -14,7 +14,7 @@ public interface TokenStore {
         }
     }
 
-    void storeAccessToken(String accessToken, Instant expiry);
+    AccessToken storeAccessToken(String accessToken, Instant expiry);
     void storeRefreshToken(String refreshToken);
     Optional<AccessToken> getAccessToken();
     Optional<String> getRefreshToken();

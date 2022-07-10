@@ -1,9 +1,7 @@
 package com.qubular.vicare.test;
 
-import com.qubular.vicare.ChallengeStore;
-import com.qubular.vicare.TokenStore;
-import com.qubular.vicare.VicareService;
-import com.qubular.vicare.URIHelper;
+import com.qubular.vicare.*;
+import com.qubular.vicare.model.Installation;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.junit.jupiter.api.AfterEach;
@@ -11,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.opentest4j.AssertionFailedError;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.service.cm.ConfigurationAdmin;
@@ -19,13 +18,20 @@ import org.osgi.service.http.NamespaceException;
 
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
@@ -42,7 +48,10 @@ public class VicareServiceTest {
 
     private HttpService httpService;
 
-    private Servlet servlet;
+    private Servlet accessServlet;
+
+    private Servlet iotServlet;
+    private SimpleTokenStore tokenStore;
 
     private <T> T getService(Class<T> clazz) {
         return bundleContext.getService(bundleContext.getServiceReference(clazz));
@@ -60,11 +69,13 @@ public class VicareServiceTest {
         String accessServerUri = ofNullable(System.getProperty("com.qubular.vicare.tester.accessServerUri")).orElse("http://localhost:9000/grantAccess");
         newConfig.put(VicareService.CONFIG_CLIENT_ID, clientId);
         newConfig.put(VicareService.CONFIG_ACCESS_SERVER_URI, accessServerUri);
+        newConfig.put(VicareService.CONFIG_IOT_SERVER_URI, "http://localhost:9000/iot/");
         getService(ConfigurationAdmin.class)
                 .getConfiguration(VicareService.CONFIG_PID)
                 .update(newConfig);
 
         vicareService = getService(VicareService.class);
+        tokenStore = (SimpleTokenStore) getService(TokenStore.class);
     }
 
     boolean realConnection() {
@@ -74,10 +85,15 @@ public class VicareServiceTest {
     @AfterEach
     public void tearDown() throws Exception {
         httpClient.stop();
-        if (servlet != null) {
+        if (accessServlet != null) {
             httpService.unregister("/grantAccess");
-            servlet = null;
+            accessServlet = null;
         }
+        if (iotServlet != null) {
+            httpService.unregister("/iot");
+            iotServlet = null;
+        }
+        tokenStore.reset();
     }
 
     @Test
@@ -116,7 +132,7 @@ public class VicareServiceTest {
                 .getContentAsString();
         AtomicBoolean requested = new AtomicBoolean();
         AtomicReference<Map<String,String[]>> parameterMap = new AtomicReference<>();
-        httpService.registerServlet("/grantAccess", new SimpleAccessServer(
+        accessServlet = new SimpleAccessServer(
                 (req, resp) -> {
                     parameterMap.set(req.getParameterMap());
                     requested.set(true);
@@ -134,7 +150,8 @@ public class VicareServiceTest {
                     }
 
                 }
-        ), new Hashtable<>(), httpService.createDefaultHttpContext());
+        );
+        httpService.registerServlet("/grantAccess", accessServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
 
         SimpleChallengeStore challengeStore = (SimpleChallengeStore) getService(ChallengeStore.class);
 
@@ -171,5 +188,84 @@ public class VicareServiceTest {
     @EnabledIf("realConnection")
     public void demoAuthentication() throws InterruptedException {
         Thread.sleep(180000);
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void getInstallationsThrowsIfNoAccessToken() {
+        assertThrows(AuthenticationException.class, () -> {
+            List<Installation> installations = vicareService.getInstallations();
+        });
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void getInstallationsRefreshesAccessToken() throws AuthenticationException, ServletException, NamespaceException {
+        tokenStore.storeAccessToken("mytoken", Instant.now().minus(1, ChronoUnit.SECONDS));
+        tokenStore.storeRefreshToken("myrefresh");
+        Map<String, String> parameters = new HashMap<>();
+        accessServlet = new SimpleAccessServer(
+                (req, resp) -> {
+                    parameters.put("grant_type", req.getParameter("grant_type"));
+                    parameters.put("client_id", req.getParameter("client_id"));
+                    parameters.put("refresh_token", req.getParameter("refresh_token"));
+                    resp.setStatus(200);
+                    resp.setContentType("application/json");
+                    try (var os = resp.getOutputStream()) {
+                        os.print("{\n" +
+                                "    \"access_token\": \"eyJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAtMjU...\",\n" +
+                                "    \"token_type\": \"Bearer\",\n" +
+                                "    \"expires_in\": 3600\n" +
+                                "}");
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+        );
+        httpService.registerServlet("/grantAccess", accessServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+
+        vicareService.getInstallations();
+
+        assertEquals("refresh_token", parameters.get("grant_type"));
+        assertEquals("myClientId", parameters.get("client_id"));
+        assertEquals("myrefresh", parameters.get("refresh_token"));
+        assertEquals("eyJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAtMjU...", tokenStore.getAccessToken().get().token);
+    }
+
+
+    @Test
+    @DisabledIf("realConnection")
+    public void getInstallations() throws ServletException, NamespaceException {
+        tokenStore.storeAccessToken("mytoken", Instant.now().plus(1, ChronoUnit.DAYS));
+        CompletableFuture<Void> servletTestResult = new CompletableFuture<>();
+        iotServlet = new HttpServlet() {
+            @Override
+            protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+                try {
+                    assertEquals("/iot/equipment/installations", URI.create(req.getRequestURI()).getPath());
+                    assertEquals("true", req.getParameter("includeGateways"));
+                    String jsonResponse = new String(getClass().getResourceAsStream("installationsResponse.json").readAllBytes(), StandardCharsets.UTF_8);
+
+                    resp.setContentType("application/json");
+                    resp.setStatus(200);
+                    try (ServletOutputStream outputStream = resp.getOutputStream()) {
+                        outputStream.print(jsonResponse);
+                    }
+                    servletTestResult.complete(null);
+                } catch (AssertionFailedError e) {
+                    servletTestResult.completeExceptionally(e);
+                }
+            }
+        };
+        httpService.registerServlet("/iot", iotServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+
+        List<Installation> installations = assertDoesNotThrow(() -> vicareService.getInstallations());
+
+        servletTestResult.orTimeout(10, TimeUnit.SECONDS).join();
+
+        assertNotNull(installations);
+        assertEquals(1, installations.size());
+        assertEquals(2012616, installations.get(0).getId());
     }
 }

@@ -27,4 +27,11 @@ class VicareServiceConfiguration {
                 .map(d -> (String) d.get(VicareService.CONFIG_CLIENT_ID))
                 .orElseThrow(() -> new IllegalStateException("Client ID is not configured"));
     }
+
+    public URI getIOTServerURI() {
+        return ofNullable(configuration.getProperties()).map(d -> d.get(VicareService.CONFIG_IOT_SERVER_URI))
+                .map(String::valueOf)
+                .map(URI::create)
+                .orElse(URI.create("https://api.viessmann.com/iot/v1/"));
+    }
 }

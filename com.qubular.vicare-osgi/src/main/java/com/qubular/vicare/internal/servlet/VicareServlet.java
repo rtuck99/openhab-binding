@@ -3,14 +3,14 @@ package com.qubular.vicare.internal.servlet;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
 import com.qubular.vicare.ChallengeStore;
 import com.qubular.vicare.HttpClientProvider;
 import com.qubular.vicare.TokenStore;
 import com.qubular.vicare.URIHelper;
+import com.qubular.vicare.internal.oauth.AccessGrantResponse;
+import com.qubular.vicare.internal.oauth.ErrorResponse;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.util.FormContentProvider;
-import org.eclipse.jetty.client.util.StringContentProvider;
 import org.eclipse.jetty.util.Fields;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,26 +22,20 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 
 public class VicareServlet extends HttpServlet {
-    private static final Pattern AUTH_CODE_PATTERN = Pattern.compile("/authCode/(.*)");
+    private static final String SESSION_ATTR_ACCESS_TOKEN = "accessToken";
     private ChallengeStore<?> challengeStore;
     private final TokenStore tokenStore;
     private final URI accessServerUri;
@@ -51,17 +45,6 @@ public class VicareServlet extends HttpServlet {
 
     public static final URI AUTHORISE_ENDPOINT = URI.create("https://iam.viessmann.com/idp/v2/authorize");
     private static final Logger logger = LoggerFactory.getLogger(VicareServlet.class);
-
-    private static class AccessGrantResponse {
-        String accessToken;
-        String refreshToken;
-        String tokenType;
-        int expiresIn;
-    }
-
-    private static class ErrorResponse {
-        String error;
-    }
 
     public VicareServlet(ChallengeStore<?> challengeStore,
                          TokenStore tokenStore,
@@ -152,6 +135,7 @@ public class VicareServlet extends HttpServlet {
                                             AccessGrantResponse.class);
                                     logger.debug("Got access token, expiry in {}", accessGrantResponse.expiresIn);
                                     tokenStore.storeAccessToken(accessGrantResponse.accessToken, Instant.now().plusSeconds(accessGrantResponse.expiresIn));
+                                    req.getSession().setAttribute(SESSION_ATTR_ACCESS_TOKEN, accessGrantResponse.accessToken);
                                     if (accessGrantResponse.refreshToken != null) {
                                         logger.debug("Got refresh token");
                                         tokenStore.storeRefreshToken(accessGrantResponse.refreshToken);
@@ -182,10 +166,13 @@ public class VicareServlet extends HttpServlet {
         try (InputStream is = getClass().getResourceAsStream("setup.html")) {
             String html = new String(is.readAllBytes(), StandardCharsets.UTF_8);
 
+            boolean authorised = tokenStore.getAccessToken()
+                    .map(t -> t.expiry)
+                    .map(t -> t.isAfter(Instant.now()))
+                    .orElse(false);
             html = html.replaceAll("\\$\\{redirectUri\\}", getRedirectURI(req).toString());
             html = html.replaceAll("\\$\\{authServerUri\\}", RedirectURLHelper.getNavigatedURL(req).toURI().resolve("redirect").toString());
-
-            // TODO substitute authorised status
+            html = html.replaceAll("\\$\\{authorisationStatus\\}", authorised ? "AUTHORISED" : "NOT AUTHORISED");
 
             resp.setContentType("text/html");
             try (ServletOutputStream os = resp.getOutputStream()) {

@@ -63,7 +63,9 @@
             <configuration>
               <bnd>
                 -exportcontents: \\
-                com.qubular.vicare
+                com.qubular.vicare, \\
+                com.qubular.vicare.model, \\
+                com.qubular.vicare.model.features
               </bnd>
             </configuration>
           </execution>

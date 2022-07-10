@@ -14,8 +14,9 @@ public class SimpleTokenStore implements TokenStore {
     String refreshToken;
 
     @Override
-    public void storeAccessToken(String accessToken, Instant expiry) {
+    public AccessToken storeAccessToken(String accessToken, Instant expiry) {
         this.accessToken = new AccessToken(accessToken, expiry);
+        return this.accessToken;
     }
 
     @Override
@@ -31,5 +32,10 @@ public class SimpleTokenStore implements TokenStore {
     @Override
     public Optional<String> getRefreshToken() {
         return ofNullable(refreshToken);
+    }
+
+    void reset() {
+        accessToken = null;
+        refreshToken = null;
     }
 }

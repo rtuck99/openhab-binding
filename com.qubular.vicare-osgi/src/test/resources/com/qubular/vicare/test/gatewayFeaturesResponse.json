@@ -1,0 +1,35 @@
+{
+  "data": [
+    {
+      "properties": {
+        "devices": {
+          "type": "DeviceList",
+          "value": [
+            {
+              "id": "0",
+              "fingerprint": "0041_tcu;7723181102527121;0037.0500.2111.0079;0037.0602.0602.0003",
+              "modelVersion": "266328e30cbad3bd36cfc16b2e57e18bc13ff490",
+              "name": "Vitodens One Hundred E3, Release 0620",
+              "type": "heating",
+              "roles": [
+                "capability:backup;0037_HBMU_VD",
+                "type:E3",
+                "type:boiler"
+              ],
+              "modelId": "E3_Vitodens_100_0421",
+              "status": "online"
+            }
+          ]
+        }
+      },
+      "commands": {},
+      "apiVersion": 1,
+      "uri": "https://api.viessmann.com/iot/v1/equipment/installations/2012616/gateways/7633107093013212/features/gateway.devices",
+      "gatewayId": "7633107093013212",
+      "feature": "gateway.devices",
+      "timestamp": "2022-07-06T07:58:01.240Z",
+      "isEnabled": true,
+      "isReady": true
+    }
+  ]
+}

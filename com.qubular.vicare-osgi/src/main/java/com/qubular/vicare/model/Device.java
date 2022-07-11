@@ -1,12 +1,16 @@
 package com.qubular.vicare.model;
 
 public class Device {
-    private final String gatewaySerial;
-    private final String id;
-    private final String boilerSerial;
-    private final String modelId;
-    private final String status;
-    private final String deviceType;
+    private String gatewaySerial;
+    private String id;
+    private String boilerSerial;
+    private String modelId;
+    private String status;
+    private String deviceType;
+
+    /** For Gson */
+    Device() {
+    }
 
     public Device(String gatewaySerial, String id, String boilerSerial, String modelId, String status, String deviceType) {
         this.gatewaySerial = gatewaySerial;

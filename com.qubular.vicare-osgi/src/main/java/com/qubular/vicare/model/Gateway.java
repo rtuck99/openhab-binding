@@ -4,14 +4,18 @@ import java.time.Instant;
 import java.util.List;
 
 public class Gateway {
-    private final String serial;
-    private final String version;
-    private final int firmwareUpdateFailureCounter;
-    private final Instant lastStatusChangedAt;
-    private final String aggregatedStatus;
-    private final String gatewayType;
-    private final long installationId;
-    private final List<Device> devices;
+    private String serial;
+    private String version;
+    private int firmwareUpdateFailureCounter;
+    private Instant lastStatusChangedAt;
+    private String aggregatedStatus;
+    private String gatewayType;
+    private long installationId;
+    private List<Device> devices;
+
+    /** For Gson */
+    Gateway() {
+    }
 
     public Gateway(String serial, String version, int firmwareUpdateFailureCounter, Instant lastStatusChangedAt, String aggregatedStatus, String gatewayType, long installationId, List<Device> devices) {
         this.serial = serial;

@@ -3,10 +3,14 @@ package com.qubular.vicare.model;
 import java.util.List;
 
 public class Installation {
-    private final long id;
-    private final String description;
-    private final List<Gateway> gateways;
-    private final String aggregatedStatus;
+    private long id;
+    private String description;
+    private List<Gateway> gateways;
+    private String aggregatedStatus;
+
+    /** For Gson */
+    Installation() {
+    }
 
     public Installation(long id, String description, List<Gateway> gateways, String aggregatedStatus) {
         this.id = id;

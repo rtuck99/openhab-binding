@@ -11,7 +11,7 @@ public abstract class Feature {
         void visit(TextFeature f);
     }
 
-    private final String name;
+    private String name;
 
     public Feature(String name) {
         this.name = name;

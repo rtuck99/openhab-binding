@@ -1,6 +1,9 @@
 package com.qubular.vicare.test;
 
 import com.qubular.vicare.*;
+import com.qubular.vicare.model.Device;
+import com.qubular.vicare.model.Feature;
+import com.qubular.vicare.model.Gateway;
 import com.qubular.vicare.model.Installation;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
@@ -200,7 +203,7 @@ public class VicareServiceTest {
 
     @Test
     @DisabledIf("realConnection")
-    public void getInstallationsRefreshesAccessToken() throws AuthenticationException, ServletException, NamespaceException {
+    public void getInstallationsRefreshesAccessToken() throws AuthenticationException, ServletException, NamespaceException, IOException {
         tokenStore.storeAccessToken("mytoken", Instant.now().minus(1, ChronoUnit.SECONDS));
         tokenStore.storeRefreshToken("myrefresh");
         Map<String, String> parameters = new HashMap<>();
@@ -232,7 +235,6 @@ public class VicareServiceTest {
         assertEquals("eyJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAtMjU...", tokenStore.getAccessToken().get().token);
     }
 
-
     @Test
     @DisabledIf("realConnection")
     public void getInstallations() throws ServletException, NamespaceException {
@@ -245,6 +247,7 @@ public class VicareServiceTest {
                 try {
                     assertEquals("/iot/equipment/installations", URI.create(req.getRequestURI()).getPath());
                     assertEquals("true", req.getParameter("includeGateways"));
+                    assertEquals("Bearer mytoken", req.getHeader("Authorization"));
                     String jsonResponse = new String(getClass().getResourceAsStream("installationsResponse.json").readAllBytes(), StandardCharsets.UTF_8);
 
                     resp.setContentType("application/json");
@@ -255,6 +258,7 @@ public class VicareServiceTest {
                     servletTestResult.complete(null);
                 } catch (AssertionFailedError e) {
                     servletTestResult.completeExceptionally(e);
+                    resp.setStatus(400);
                 }
             }
         };
@@ -266,6 +270,61 @@ public class VicareServiceTest {
 
         assertNotNull(installations);
         assertEquals(1, installations.size());
-        assertEquals(2012616, installations.get(0).getId());
+        Installation installation = installations.get(0);
+        assertEquals(2012616, installation.getId());
+        assertEquals("Test Installation", installation.getDescription());
+        assertEquals("WorksProperly", installation.getAggregatedStatus());
+        assertEquals(1, installation.getGateways().size());
+        Gateway gateway = installation.getGateways().get(0);
+        assertEquals("7633107093013212", gateway.getSerial());
+        assertEquals("502.2144.33.0", gateway.getVersion());
+        assertEquals(0, gateway.getFirmwareUpdateFailureCounter());
+        assertEquals(Instant.parse("2022-07-07T18:54:03.084Z"), gateway.getLastStatusChangedAt());
+        assertEquals("WorksProperly", gateway.getAggregatedStatus());
+        assertEquals("WiFi_SA0041", gateway.getGatewayType());
+        assertEquals(2012616, gateway.getInstallationId());
+        assertEquals(1, gateway.getDevices().size());
+        Device device = gateway.getDevices().get(0);
+        assertEquals("7633107093013212", device.getGatewaySerial());
+        assertEquals("0", device.getId());
+        assertEquals("7723181102527121", device.getBoilerSerial());
+        assertEquals("E3_Vitodens_100_0421", device.getModelId());
+        assertEquals("Online", device.getStatus());
+        assertEquals("heating", device.getDeviceType());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void getDeviceFeatures() throws ServletException, NamespaceException, AuthenticationException, IOException {
+
+        CompletableFuture<Void> servletTestResult = new CompletableFuture<>();
+        tokenStore.storeAccessToken("mytoken", Instant.now().plus(1, ChronoUnit.DAYS));
+        iotServlet = new HttpServlet() {
+            @Override
+            protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+                try {
+                    assertEquals("/iot/equipment/installations/2012616/gateways/7633107093013212/devices/0/features", URI.create(req.getRequestURI()).getPath());
+                    assertEquals("Bearer mytoken", req.getHeader("Authorization"));
+                    String jsonResponse = new String(getClass().getResourceAsStream("deviceFeaturesResponse.json").readAllBytes(), StandardCharsets.UTF_8);
+
+                    resp.setContentType("application/json");
+                    resp.setStatus(200);
+                    try (ServletOutputStream outputStream = resp.getOutputStream()) {
+                        outputStream.print(jsonResponse);
+                    }
+                    servletTestResult.complete(null);
+                } catch (AssertionFailedError e) {
+                    servletTestResult.completeExceptionally(e);
+                    resp.setStatus(400);
+                }
+            }
+        };
+        httpService.registerServlet("/iot", iotServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+        List<Feature> features = vicareService.getFeatures(2012616, "7633107093013212", "0");
+
+        servletTestResult.orTimeout(10, TimeUnit.SECONDS).join();
+
+        assertTrue(features.size() > 0);
     }
 }

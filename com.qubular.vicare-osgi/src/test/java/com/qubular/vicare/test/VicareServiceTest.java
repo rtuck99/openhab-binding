@@ -1,10 +1,8 @@
 package com.qubular.vicare.test;
 
 import com.qubular.vicare.*;
-import com.qubular.vicare.model.Device;
-import com.qubular.vicare.model.Feature;
-import com.qubular.vicare.model.Gateway;
-import com.qubular.vicare.model.Installation;
+import com.qubular.vicare.model.*;
+import com.qubular.vicare.model.features.*;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.junit.jupiter.api.AfterEach;
@@ -30,10 +28,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -226,6 +221,19 @@ public class VicareServiceTest {
                 }
         );
         httpService.registerServlet("/grantAccess", accessServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+        iotServlet = new HttpServlet() {
+            @Override
+            protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+                String jsonResponse = new String(getClass().getResourceAsStream("installationsResponse.json").readAllBytes(), StandardCharsets.UTF_8);
+
+                resp.setContentType("application/json");
+                resp.setStatus(200);
+                try (ServletOutputStream outputStream = resp.getOutputStream()) {
+                    outputStream.print(jsonResponse);
+                }
+            }
+        };
+        httpService.registerServlet("/iot", iotServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
 
         vicareService.getInstallations();
 
@@ -326,5 +334,52 @@ public class VicareServiceTest {
         servletTestResult.orTimeout(10, TimeUnit.SECONDS).join();
 
         assertTrue(features.size() > 0);
+
+        Optional<Feature> boilerSerial = features.stream()
+                .filter(f -> f.getName().equals("heating.boiler.serial"))
+                .findFirst();
+        assertTrue(boilerSerial.isPresent());
+        assertEquals("7723181102527121", ((TextFeature)boilerSerial.get()).getValue());
+
+        Optional<NumericSensorFeature> commonSupplyTemperature = features.stream()
+                .filter(f -> f.getName().equals("heating.boiler.sensors.temperature.commonSupply"))
+                .map(NumericSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(commonSupplyTemperature.isPresent());
+        assertEquals(34.4, commonSupplyTemperature.get().getValue().getValue(), 0.001);
+        assertEquals("celsius", commonSupplyTemperature.get().getValue().getUnit().getName());
+        assertEquals("connected", commonSupplyTemperature.get().getStatus().getName());
+
+        Optional<StatusSensorFeature> pumpStatus = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.0.circulation.pump"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(pumpStatus.isPresent());
+        assertEquals("off", pumpStatus.get().getStatus().getName());
+
+        Optional<StatisticsFeature> burnerStats = features.stream()
+                .filter(f -> f.getName().equals("heating.burners.0.statistics"))
+                .map(StatisticsFeature.class::cast)
+                .findFirst();
+        assertTrue(burnerStats.isPresent());
+        assertEquals("hour", burnerStats.get().getStatistics().get("hours").getUnit().getName());
+        assertEquals(5, burnerStats.get().getStatistics().get("hours").getValue());
+        assertEquals("", burnerStats.get().getStatistics().get("starts").getUnit().getName());
+        assertEquals(312, burnerStats.get().getStatistics().get("starts").getValue());
+
+        Optional<ConsumptionFeature> dhwConsumption = features.stream()
+                .filter(f -> f.getName().equals("heating.power.consumption.summary.dhw"))
+                .map(ConsumptionFeature.class::cast)
+                .findFirst();
+        assertTrue(dhwConsumption.isPresent());
+        assertEquals("kilowattHour", dhwConsumption.get().getToday().getUnit().getName());
+        assertEquals(0, dhwConsumption.get().getToday().getValue());
+        assertEquals("kilowattHour", dhwConsumption.get().getSevenDays().getUnit().getName());
+        assertEquals(0.2, dhwConsumption.get().getSevenDays().getValue(), 0.001);
+        assertEquals("kilowattHour", dhwConsumption.get().getMonth().getUnit().getName());
+        assertEquals(0.2, dhwConsumption.get().getMonth().getValue(), 0.001);
+        assertEquals("kilowattHour", dhwConsumption.get().getYear().getUnit().getName());
+        assertEquals(0.9, dhwConsumption.get().getYear().getValue(), 0.001);
+
     }
 }

@@ -4,16 +4,17 @@ import com.qubular.vicare.model.DimensionalValue;
 import com.qubular.vicare.model.Feature;
 
 import java.util.List;
+import java.util.Map;
 
 public class StatisticsFeature extends Feature {
-    private final List<DimensionalValue> statistics;
+    private final Map<String, DimensionalValue> statistics;
 
-    public StatisticsFeature(String name, List<DimensionalValue> statistics) {
+    public StatisticsFeature(String name, Map<String, DimensionalValue> statistics) {
         super(name);
-        this.statistics = List.copyOf(statistics);
+        this.statistics = Map.copyOf(statistics);
     }
 
-    public List<DimensionalValue> getStatistics() {
+    public Map<String, DimensionalValue> getStatistics() {
         return statistics;
     }
 

@@ -4,8 +4,8 @@ import com.google.gson.*;
 import com.qubular.vicare.*;
 import com.qubular.vicare.internal.oauth.AccessGrantResponse;
 import com.qubular.vicare.internal.servlet.VicareServlet;
-import com.qubular.vicare.model.Feature;
-import com.qubular.vicare.model.Installation;
+import com.qubular.vicare.model.*;
+import com.qubular.vicare.model.features.*;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.util.FormContentProvider;
@@ -28,11 +28,10 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.time.Instant;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 import static java.util.Optional.of;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
@@ -104,6 +103,7 @@ public class VicareServiceImpl implements VicareService {
         return new GsonBuilder()
                 .setFieldNamingPolicy(FieldNamingPolicy.IDENTITY)
                 .registerTypeAdapter(Instant.class, new InstantDeserializer())
+                .registerTypeAdapter(Feature.class, new FeatureDeserializer())
                 .create();
     }
 
@@ -157,7 +157,10 @@ public class VicareServiceImpl implements VicareService {
                     .send();
 
             if (contentResponse.getStatus() == SC_OK) {
-                return apiGson().fromJson(contentResponse.getContentAsString(), FeatureResponse.class).data;
+                List<Feature> data = apiGson().fromJson(contentResponse.getContentAsString(), FeatureResponse.class).data;
+                return data.stream()
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
             } else {
                 throw new IOException("Unable to request features from IoT API, server returned " + contentResponse.getStatus());
             }
@@ -171,6 +174,73 @@ public class VicareServiceImpl implements VicareService {
         @Override
         public Instant deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
             return Instant.parse(jsonElement.getAsString());
+        }
+    }
+
+    private static class FeatureDeserializer implements JsonDeserializer<Feature> {
+
+        @Override
+        public Feature deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+            JsonObject jsonObject = jsonElement.getAsJsonObject();
+            if (!jsonObject.get("isEnabled").getAsBoolean()) {
+                return null;
+            }
+
+            String featureName = jsonObject.get("feature").getAsString();
+            JsonObject properties = jsonObject.getAsJsonObject("properties");
+            if (properties != null) {
+                JsonObject value = properties.getAsJsonObject("value");
+                JsonObject statusObject = properties.getAsJsonObject("status");
+                if (value != null) {
+                    String valueType = value.get("type").getAsString();
+                    if ("string".equals(valueType)) {
+                        String textValue = value.get("value").getAsString();
+                        return new TextFeature(featureName, textValue);
+                    } else if ("number".equals(valueType)) {
+                        double numberValue = value.get("value").getAsDouble();
+                        String unit = value.get("unit").getAsString();
+                        if (statusObject != null) {
+                            String status = statusObject.get("value").getAsString();
+                            return new NumericSensorFeature(featureName,
+                                    new DimensionalValue(new Unit(unit), numberValue),
+                                    new Status(status));
+                        }
+                    }
+                } else if (featureName.endsWith(".statistics")) {
+                    Map<String, DimensionalValue> stats = properties.entrySet().stream()
+                            .filter(e -> e.getValue().isJsonObject())
+                            .filter(e -> "number".equals(e.getValue().getAsJsonObject().get("type").getAsString()))
+                            .collect(Collectors.toMap(Map.Entry::getKey,
+                                    e -> {
+                                        JsonObject prop = e.getValue().getAsJsonObject();
+                                        String unit = prop.get("unit").getAsString();
+                                        double numberValue = prop.get("value").getAsDouble();
+                                        return new DimensionalValue(new Unit(unit), numberValue);
+                                    }));
+                    return new StatisticsFeature(featureName, stats);
+                } else if (featureName.contains(".consumption.summary")) {
+                    Map<String, DimensionalValue> stats = properties.entrySet().stream()
+                            .filter(e -> e.getValue().isJsonObject())
+                            .filter(e -> "number".equals(e.getValue().getAsJsonObject().get("type").getAsString()))
+                            .collect(Collectors.toMap(Map.Entry::getKey,
+                                    e -> {
+                                        JsonObject prop = e.getValue().getAsJsonObject();
+                                        String unit = prop.get("unit").getAsString();
+                                        double numberValue = prop.get("value").getAsDouble();
+                                        return new DimensionalValue(new Unit(unit), numberValue);
+                                    }));
+                    return new ConsumptionFeature(featureName,
+                            stats.get("currentDay"),
+                            stats.get("lastSevenDays"),
+                            stats.get("currentMonth"),
+                            stats.get("currentYear"));
+                } else if (statusObject != null) {
+                    String status = statusObject.get("value").getAsString();
+                    return new StatusSensorFeature(featureName, new Status(status));
+                }
+
+            }
+            return null;
         }
     }
 }

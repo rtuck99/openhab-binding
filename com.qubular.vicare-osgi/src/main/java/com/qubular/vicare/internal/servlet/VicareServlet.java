@@ -3,12 +3,13 @@ package com.qubular.vicare.internal.servlet;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.qubular.vicare.ChallengeStore;
-import com.qubular.vicare.HttpClientProvider;
-import com.qubular.vicare.TokenStore;
-import com.qubular.vicare.URIHelper;
+import com.qubular.vicare.*;
 import com.qubular.vicare.internal.oauth.AccessGrantResponse;
 import com.qubular.vicare.internal.oauth.ErrorResponse;
+import com.qubular.vicare.model.Device;
+import com.qubular.vicare.model.Gateway;
+import com.qubular.vicare.model.Installation;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.util.FormContentProvider;
 import org.eclipse.jetty.util.Fields;
@@ -27,12 +28,14 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
+import static org.apache.commons.lang3.StringEscapeUtils.escapeHtml4;
 
 public class VicareServlet extends HttpServlet {
     private static final String SESSION_ATTR_ACCESS_TOKEN = "accessToken";
@@ -41,17 +44,21 @@ public class VicareServlet extends HttpServlet {
     private final URI accessServerUri;
     private final HttpClientProvider httpClientProvider;
     private final String clientId;
+    private final VicareService vicareService;
     public static final String CONTEXT_PATH = "/vicare";
 
     public static final URI AUTHORISE_ENDPOINT = URI.create("https://iam.viessmann.com/idp/v2/authorize");
     private static final Logger logger = LoggerFactory.getLogger(VicareServlet.class);
 
-    public VicareServlet(ChallengeStore<?> challengeStore,
+
+    public VicareServlet(VicareService vicareService,
+                         ChallengeStore<?> challengeStore,
                          TokenStore tokenStore,
                          URI accessServerUri,
                          HttpClientProvider httpClientProvider,
                          String clientId) {
         logger.info("Configuring servlet with accessServerUri {}", accessServerUri);
+        this.vicareService = vicareService;
         this.challengeStore = challengeStore;
         this.tokenStore = tokenStore;
         this.accessServerUri = accessServerUri;
@@ -173,7 +180,7 @@ public class VicareServlet extends HttpServlet {
             html = html.replaceAll("\\$\\{redirectUri\\}", getRedirectURI(req).toString());
             html = html.replaceAll("\\$\\{authServerUri\\}", RedirectURLHelper.getNavigatedURL(req).toURI().resolve("redirect").toString());
             html = html.replaceAll("\\$\\{authorisationStatus\\}", authorised ? "AUTHORISED" : "NOT AUTHORISED");
-
+            html = html.replaceAll("\\$\\{deviceMappings\\}", renderDeviceMappings());
             resp.setContentType("text/html");
             try (ServletOutputStream os = resp.getOutputStream()) {
                 os.print(html);
@@ -184,6 +191,27 @@ public class VicareServlet extends HttpServlet {
         } catch (URISyntaxException e) {
             logger.warn("Unable to generate redirect.", e);
             resp.setStatus(SC_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private String renderDeviceMappings() {
+        StringBuilder builder = new StringBuilder();
+        try {
+            List<Installation> installations = vicareService.getInstallations();
+            for (Installation installation : installations) {
+                for (Gateway gateway : installation.getGateways()) {
+                    for (Device device : gateway.getDevices()) {
+                        builder.append(String.format("<tr><td>%d: %s</td>", installation.getId(), installation.getDescription()));
+                        builder.append(String.format("<td>%s: %s</td>", escapeHtml4(gateway.getSerial()), escapeHtml4(gateway.getGatewayType())));
+                        builder.append(String.format("<td>%s: %s</td></tr>", escapeHtml4(device.getId()), escapeHtml4(device.getModelId())));
+                    }
+                }
+            }
+            return builder.toString();
+        } catch (AuthenticationException e) {
+            return "<tr><td>OpenHAB is not authorised</td></tr>";
+        } catch (IOException e) {
+            return "<tr><td>Unable to fetch data: " + escapeHtml4(e.getMessage()) + "</td></tr>";
         }
     }
 

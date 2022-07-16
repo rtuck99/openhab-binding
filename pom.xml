@@ -37,6 +37,7 @@
     <pax.web.version>7.3.23</pax.web.version>
     <jetty.version>9.4.43.v20210629</jetty.version>
     <log4j2.version>2.17.2</log4j2.version>
+    <commons.lang.version>3.12.0</commons.lang.version>
   </properties>
   <repositories>
     <repository>
@@ -220,6 +221,13 @@
         <groupId>com.google.code.gson</groupId>
         <artifactId>gson</artifactId>
         <version>2.8.6</version>
+      </dependency>
+
+      <!-- Apache commons-lang needed for StringEscapeUtils -->
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>${commons.lang.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

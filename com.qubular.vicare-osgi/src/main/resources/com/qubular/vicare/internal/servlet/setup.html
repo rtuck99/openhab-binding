@@ -6,11 +6,17 @@
 <body>
 <h1>Viessmann API Binding Setup</h1>
 <h2>Authorisation</h2>
-The binding is ${authorisationStatus}
+<p>The binding is ${authorisationStatus}.</p>
 
-In order to authorise the binding, go to the <a href="https://developer.viessmann.com">Viessmann Developer Portal</a>
-and register for a developer account then add a client with the following redirect URI: ${redirectUri}
+<p>In order to authorise the binding, go to the <a href="https://developer.viessmann.com">Viessmann Developer Portal</a>
+and register for a developer account then add a client with the following redirect URI: ${redirectUri}</
 
-Once this is done, then click here <form action="${authServerUri}" method="get"><button type="submit">Authorise ViCare Binding</button></form>
+<p>Once this is done, then click here <form action="${authServerUri}" method="get"><button type="submit">Authorise ViCare Binding</button></form></p>
+
+<h2>Devices</h2>
+<table>
+    <tr><th>Installation</th><th>Gateway</th><th>Device</th></tr>
+    ${deviceMappings}
+</table>
 </body>
 </html>

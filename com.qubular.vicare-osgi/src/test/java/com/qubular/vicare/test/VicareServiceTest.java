@@ -97,6 +97,20 @@ public class VicareServiceTest {
     @Test
     @DisabledIf("realConnection")
     public void setupPageRendersAndIncludesRedirectURI() throws Exception {
+        tokenStore.storeAccessToken("mytoken", Instant.now().plus(1, ChronoUnit.DAYS));
+        iotServlet = new HttpServlet() {
+            @Override
+            protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+                String jsonResponse = new String(getClass().getResourceAsStream("installationsResponse.json").readAllBytes(), StandardCharsets.UTF_8);
+                resp.setContentType("application/json");
+                resp.setStatus(200);
+                try (ServletOutputStream outputStream = resp.getOutputStream()) {
+                    outputStream.print(jsonResponse);
+                }
+            }
+        };
+        httpService.registerServlet("/iot", iotServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+
         String contentAsString = httpClient.GET("http://localhost:9000/vicare/setup")
                 .getContentAsString();
         assertTrue(contentAsString.contains("<title>Viessmann API Binding Setup</title>"), contentAsString);
@@ -108,6 +122,8 @@ public class VicareServiceTest {
         assertEquals("http", uri.getScheme());
         assertEquals("localhost:9000", uri.getAuthority());
         assertEquals("/vicare/redirect", uri.getPath());
+        assertTrue(contentAsString.contains("AUTHORISED"));
+        assertTrue(contentAsString.contains("<tr><td>2012616: Test Installation</td><td>7633107093013212: WiFi_SA0041</td><td>0: E3_Vitodens_100_0421</td></tr>"));
 
         httpClient.setFollowRedirects(false);
         ContentResponse reflectorResponse = httpClient.GET(uri);

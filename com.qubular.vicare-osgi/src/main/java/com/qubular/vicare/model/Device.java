@@ -1,6 +1,7 @@
 package com.qubular.vicare.model;
 
 public class Device {
+    public static final String DEVICE_TYPE_HEATING = "heating";
     private String gatewaySerial;
     private String id;
     private String boilerSerial;

@@ -16,6 +16,7 @@ import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.NamespaceException;
@@ -38,6 +39,7 @@ import static javax.servlet.http.HttpServletResponse.SC_OK;
 @Component
 public class VicareServiceImpl implements VicareService {
     private static final Logger logger = LoggerFactory.getLogger(VicareServiceImpl.class);
+    private final HttpService httpService;
     private final HttpClientProvider httpClientProvider;
     private final TokenStore tokenStore;
     private final VicareServiceConfiguration config;
@@ -48,16 +50,17 @@ public class VicareServiceImpl implements VicareService {
                              @Reference ConfigurationAdmin configurationAdmin,
                              @Reference HttpClientProvider httpClientProvider,
                              @Reference TokenStore tokenStore) {
+        this.httpService = httpService;
         this.httpClientProvider = httpClientProvider;
         this.tokenStore = tokenStore;
-        logger.info("Activating ViCare Service");
+        logger.info("Activating Viessmann API Service");
         try {
             Configuration configuration = configurationAdmin.getConfiguration(CONFIG_PID);
             config = new VicareServiceConfiguration(configuration);
             VicareServlet servlet = new VicareServlet(this, challengeStore, tokenStore, config.getAccessServerURI(), httpClientProvider, config.getClientId());
             httpService.registerServlet(VicareServlet.CONTEXT_PATH, servlet, new Hashtable<>(), httpService.createDefaultHttpContext());
         } catch (ServletException | NamespaceException e) {
-            logger.error("Unable to register ViCare servlet", e);
+            logger.error("Unable to register Viessmann API servlet", e);
             throw new RuntimeException(e);
         } catch (IOException e) {
             logger.error("Unable to read configuration");
@@ -65,6 +68,13 @@ public class VicareServiceImpl implements VicareService {
         }
     }
 
+    @Deactivate
+    public void deactivate() {
+        logger.info("Deactivating Viessmann API Service");
+        httpService.unregister(VicareServlet.CONTEXT_PATH);
+    }
+    
+    
     private static class InstallationsResponse {
         public List<Installation> data;
     }

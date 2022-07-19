@@ -11,6 +11,11 @@
 
   <artifactId>com.qubular.openhab-binding-vicare-bundle</artifactId>
   <dependencies>
+    <dependency>
+      <groupId>com.qubular</groupId>
+      <artifactId>com.qubular.vicare-osgi</artifactId>
+    </dependency>
+
     <!-- Openhab dependencies -->
     <dependency>
       <groupId>org.openhab.core.bom</groupId>
@@ -26,6 +31,12 @@
       <version>${openhab.version}</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.openhab.core.bundles</groupId>
+      <artifactId>org.openhab.core.config.discovery</artifactId>
+      <version>${openhab.version}</version>
+      <scope>provided</scope>
+    </dependency>
 
     <!-- Test dependencies -->
 
@@ -38,6 +49,16 @@
       <groupId>org.openhab.core.bundles</groupId>
       <artifactId>org.openhab.core.test</artifactId>
       <version>${openhab.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
 

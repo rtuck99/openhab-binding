@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="vicare"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:thing="https://openhab.org/schemas/thing-description/v1.0.0"
+  xsi:schemaLocation="https://openhab.org/schemas/thing-description/v1.0.0 https://openhab.org/schemas/thing-description-1.0.0.xsd">
+
+  <!-- Thing Type -->
+  <thing-type id="heating">
+    <supported-bridge-type-refs>
+      <bridge-type-ref id="bridge"/>
+    </supported-bridge-type-refs>
+
+    <label>Heating Device</label>
+    <description>Heating device such as a boiler</description>
+    <!-- A property composed from the installation id, gateway serial and device id -->
+    <representation-property>devicePath</representation-property>
+  </thing-type>
+
+  <thing-type id="circuit">
+    <supported-bridge-type-refs>
+      <bridge-type-ref id="bridge"/>
+    </supported-bridge-type-refs>
+
+    <label>Heating Circuit</label>
+    <description>A heating circuit</description>
+    <representation-property>circuitNumber</representation-property>
+  </thing-type>
+
+  <!-- The following channel types are defined in the Data Point definitions as per Viessmann API documentation -->
+  <channel-type id="heating_boiler_sensor_temperature_commonSupply">
+    <label>Common Supply Temperature</label>
+    <description>Shows the status and the value of the temperature sensor located on the exit of the boiler</description>
+    <category>Temperature</category>
+    <state pattern="%.1f °C" readOnly="true"/>
+  </channel-type>
+
+<!--  <channel-type id="heating_boiler_serial">-->
+<!--    <label>Boiler Serial Number</label>-->
+<!--    <description>=Shows the serial number of the boiler</description>-->
+<!--    <category>Text</category>-->
+<!--    <state readOnly="true"/>-->
+<!--  </channel-type>-->
+  <channel-type id="heating_boiler_temperature">
+    <label>Boiler Target Temperature</label>
+    <description>Shows the set target temperature value of the boiler</description>
+    <category>Heating</category>
+    <state pattern="%.1f °C"/>
+  </channel-type>
+  <channel-type id="heating_burners_modulation">
+    <label>Burner Modulation</label>
+    <description>Shows the current burner modulation in percent</description>
+    <state pattern="%.0f %" readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_burners_statistics_hours">
+    <label>Burner Hours</label>
+    <description>Shows statistics of burner: hours and times started</description>
+    <state pattern="%d" readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_burners_statistics_starts">
+    <label>Burner Starts</label>
+    <description>Shows statistics of burner: hours and times started</description>
+    <state pattern="%d" readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_circulation_pump">
+    <label>Heating Circuit Circulation Pump</label>
+    <description>Shows the state of the circulation pump (on, off) for heating circuit N</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_frostprotection">
+    <label>Heating Circuit Frost Protection</label>
+    <description>Shows whether frost protection of the installation is turned on for the device</description>
+    <state readOnly="true"/>
+  </channel-type>
+<!--  <channel-type id="heating_circuits_name">-->
+<!--    <label>Heating Circuit Name</label>-->
+<!--    <description>Shows the name given for the heating circuit N</description>-->
+<!--    <category>Text</category>-->
+<!--    <state readOnly="true"/>-->
+<!--  </channel-type>-->
+  <channel-type id="heating_circuits_sensors_temperature_supply">
+    <label>Heating Circuit Supply Temperature</label>
+    <description>Shows the status and the value of the supply temperature sensor for circuit N</description>
+    <category>Temperature</category>
+    <state readOnly="true" pattern="%.1f °C"/>
+  </channel-type>
+  <channel-type id="heating_dhw_sensors_temperature_outlet">
+    <label>DHW Outlet Temperature</label>
+    <description>Shows the status and the value of the temperature sensor located in the hot water storage at the outlet</description>
+    <category>Temperature</category>
+    <state readOnly="true" pattern="%.1f °C"/>
+  </channel-type>
+  <channel-type id="heating_dhw_sensors_temperature_hotWaterStorage">
+    <label>DHW Storage Temperature</label>
+    <description>Shows the status and the value of the temperature sensor located in the hot water storage</description>
+    <category>Temperature</category>
+    <state readOnly="true" pattern="%.1f °C"/>
+  </channel-type>
+  <channel-type id="heating_dhw_temperature_main">
+    <label>DHW Target Temperature</label>
+    <description>Shows the target temperature value of the domestic hot water (DHW). </description>
+    <category>Heating</category>
+    <state pattern="%.1f °C"/>
+  </channel-type>
+  <channel-type id="heating_sensors_temperature_outside">
+    <label>Outside Temperature</label>
+    <description>Shows the temperature value of the outside temperature sensor</description>
+    <category>Temperature</category>
+    <state readOnly="true" pattern="%.1f °C"/>
+  </channel-type>
+  <!-- Below are currently unsupported -->
+  <channel-type id="heating_circuits_heating_curve_slope">
+    <label>Heating Circuit Heating Curve Slope</label>
+    <description>Shows the values for slope and shift of the heating curve</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_heating_curve_shift">
+    <label>Heating Circuit Heating Curve Shift</label>
+    <description>Shows the values for slope and shift of the heating curve</description>
+    <state readOnly="true"/>
+  </channel-type>
+</thing:thing-descriptions>

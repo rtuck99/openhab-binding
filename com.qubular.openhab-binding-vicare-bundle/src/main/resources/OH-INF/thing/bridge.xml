@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="vicare"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:thing="https://openhab.org/schemas/thing-description/v1.0.0"
+  xsi:schemaLocation="https://openhab.org/schemas/thing-description/v1.0.0 https://openhab.org/schemas/thing-description-1.0.0.xsd">
+
+  <bridge-type id="bridge">
+    <label>Viessmann API Bridge</label>
+    <description>This bridge provides access to devices exposed by the Viessmann API</description>
+
+    <config-description>
+      <parameter name="clientId" type="text" required="true">
+        <label>Client ID</label>
+        <description>The client ID. You must obtain this from the Viessmann Developer Portal when you register the client.</description>
+      </parameter>
+      <parameter name="accessServerUri" type="text">
+        <label>Access Server URI</label>
+        <description>URI for the OAuth access server endpoint. You should not need to change this.</description>
+        <default>https://iam.viessmann.com/idp/v2/token</default>
+      </parameter>
+      <parameter name="iotServerUri" type="text">
+        <label>IoT Service Endpoint</label>
+        <description>URI for the Viessmann IoT service endpoint. You should not need to change this.</description>
+        <default>https://api.viessmann.com/iot/v1/</default>
+      </parameter>    </config-description>
+  </bridge-type>
+</thing:thing-descriptions>

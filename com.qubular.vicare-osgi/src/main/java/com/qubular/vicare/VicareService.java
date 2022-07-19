@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.util.List;
 
 public interface VicareService {
-    String CONFIG_PID = "com.qubular.vicare.VicareService";
+    String CONFIG_PID = "vicare.bridge";
 
     String CONFIG_ACCESS_SERVER_URI = "accessServerUri";
 

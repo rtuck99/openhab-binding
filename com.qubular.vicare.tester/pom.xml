@@ -52,6 +52,18 @@
     <type>test-jar</type>
   </dependency>
 
+  <!-- provided in openhab environment -->
+  <dependency>
+    <groupId>com.google.code.gson</groupId>
+    <artifactId>gson</artifactId>
+    <scope>compile</scope>
+  </dependency>
+  <dependency>
+    <groupId>org.apache.commons</groupId>
+    <artifactId>commons-lang3</artifactId>
+    <scope>compile</scope>
+  </dependency>
+
   <!-- OSGi container bundles -->
   <dependency>
     <groupId>org.osgi</groupId>

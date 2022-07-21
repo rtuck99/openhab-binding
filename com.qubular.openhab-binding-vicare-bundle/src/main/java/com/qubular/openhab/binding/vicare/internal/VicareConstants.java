@@ -7,4 +7,6 @@ public class VicareConstants {
     public static final ThingTypeUID THING_TYPE_HEATING = new ThingTypeUID(BINDING_ID, "heating");
     public static final ThingTypeUID THING_TYPE_BRIDGE = new ThingTypeUID(BINDING_ID, "bridge");
     public static final String PROPERTY_DEVICE_UNIQUE_ID = "deviceUniqueId";
+
+    public static final String PROPERTY_FEATURE_NAME = "featureName";
 }

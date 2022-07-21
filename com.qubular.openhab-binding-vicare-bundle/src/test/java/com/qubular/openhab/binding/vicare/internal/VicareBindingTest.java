@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -15,10 +16,13 @@ import org.mockito.quality.Strictness;
 import org.openhab.core.config.discovery.DiscoveryListener;
 import org.openhab.core.config.discovery.DiscoveryResult;
 import org.openhab.core.config.discovery.DiscoveryService;
+import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseThingHandlerFactory;
 import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerCallback;
+import org.openhab.core.types.RefreshType;
+import org.openhab.core.types.State;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
 
@@ -131,29 +135,49 @@ public class VicareBindingTest {
     @Test
     public void initializeDeviceHandlerCreatesTemperatureSensor() throws AuthenticationException, IOException {
         simpleHeatingInstallation();
-        vicareBridge();
+        Bridge bridge = vicareBridge();
+        VicareBridgeHandler bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge);
+        bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
+        when(bridge.getHandler()).thenReturn(bridgeHandler);
         VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(thingRegistry, vicareService);
         Thing deviceThing = heatingDeviceThing();
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = mock(ThingHandlerCallback.class);
+        when(callback.getBridge(THING_UID_BRIDGE)).thenReturn(bridge);
         handler.setCallback(callback);
 
-        handler.initialize();
 
+        doAnswer(invocation -> {
+            Thing thing = invocation.getArgument(0);
+            doReturn(thing).when(thingRegistry).get(thing.getUID());
+            return null;
+        }).when(callback).thingUpdated(any(Thing.class));
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000)).thingUpdated(thingCaptor.capture());
         Channel channel = thingCaptor.getValue().getChannel(new ChannelUID(deviceThing.getUID(), "heating_dhw_sensors_temperature_outlet"));
         assertNotNull(channel);
         assertEquals("heating_dhw_sensors_temperature_outlet", channel.getChannelTypeUID().getId());
+        assertEquals("heating.dhw.sensors.temperature.outlet", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(27.3, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
     }
 
     private Thing heatingDeviceThing() {
         Thing deviceThing = mock(Thing.class);
         doReturn(THING_UID_BRIDGE).when(deviceThing).getBridgeUID();
         doReturn(THING_TYPE_HEATING).when(deviceThing).getThingTypeUID();
-        doReturn(new ThingUID(THING_TYPE_HEATING, THING_UID_BRIDGE, encodeThingId(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID))).when(deviceThing).getUID();
+        ThingUID deviceThingId = new ThingUID(THING_TYPE_HEATING, THING_UID_BRIDGE, encodeThingId(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID));
+        doReturn(deviceThingId).when(deviceThing).getUID();
         doReturn(Map.of(PROPERTY_DEVICE_UNIQUE_ID, encodeThingUniqueId(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID))).when(deviceThing).getProperties();
-
+        doReturn(THING_UID_BRIDGE).when(deviceThing).getBridgeUID();
+        doReturn(deviceThing).when(thingRegistry).get(deviceThingId);
         return deviceThing;
     }
 

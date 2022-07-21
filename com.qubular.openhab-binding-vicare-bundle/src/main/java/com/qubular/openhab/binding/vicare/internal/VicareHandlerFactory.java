@@ -42,7 +42,7 @@ public class VicareHandlerFactory extends BaseThingHandlerFactory {
     @Override
     protected @org.eclipse.jdt.annotation.Nullable ThingHandler createHandler(Thing thing) {
         if (VicareConstants.THING_TYPE_BRIDGE.equals(thing.getThingTypeUID())) {
-            return new VicareBridgeHandler((Bridge) thing);
+            return new VicareBridgeHandler(vicareService, thingRegistry, (Bridge) thing);
         } else if (VicareConstants.THING_TYPE_HEATING.equals(thing.getThingTypeUID())) {
             return new VicareDeviceThingHandler(thing, vicareService);
         }

@@ -4,6 +4,7 @@ import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.Feature;
 import com.qubular.vicare.model.features.*;
+import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseThingHandler;
 import org.openhab.core.thing.binding.builder.ChannelBuilder;
@@ -15,13 +16,12 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
-import static com.qubular.openhab.binding.vicare.internal.VicareConstants.BINDING_ID;
-import static com.qubular.openhab.binding.vicare.internal.VicareConstants.PROPERTY_DEVICE_UNIQUE_ID;
-import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeIGD;
+import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
+import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThingUniqueId;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.escapeUIDSegment;
 
 public class VicareDeviceThingHandler extends BaseThingHandler {
@@ -35,12 +35,11 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
     /**
      * Create the channels
-     * Initialize state from the service
      */
     @Override
     public void initialize() {
         String deviceUniqueId = thing.getProperties().get(PROPERTY_DEVICE_UNIQUE_ID);
-        VicareUtil.IGD igd = decodeIGD(deviceUniqueId);
+        VicareUtil.IGD igd = decodeThingUniqueId(deviceUniqueId);
         CompletableFuture.runAsync(() -> {
             try {
                 List<Feature> features = vicareService.getFeatures(igd.installationId, igd.gatewaySerial, igd.deviceId);
@@ -57,6 +56,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                             String id = escapeUIDSegment(feature.getName());
                             channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), id))
                                     .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id)))
+                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName()))
                                     .build());
                         }
 
@@ -100,6 +100,44 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
+        try {
+            Optional<Feature> feature = ((VicareBridgeHandler) getBridge().getHandler()).handleBridgedDeviceCommand(channelUID, command);
+            feature.ifPresent(f -> {
+                f.accept(new Feature.Visitor() {
+                    @Override
+                    public void visit(ConsumptionFeature f) {
 
+                    }
+
+                    @Override
+                    public void visit(NumericSensorFeature f) {
+                        double value = f.getValue().getValue();
+                        updateState(channelUID, new DecimalType(value));
+                    }
+
+                    @Override
+                    public void visit(StatisticsFeature f) {
+
+                    }
+
+                    @Override
+                    public void visit(StatusSensorFeature f) {
+
+                    }
+
+                    @Override
+                    public void visit(TextFeature f) {
+
+                    }
+                });
+            });
+            if (thing.getStatus() != ThingStatus.ONLINE) {
+                updateStatus(ThingStatus.ONLINE);
+            }
+        } catch (AuthenticationException e) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Unable to authenticate with Viessmann API: " + e.getMessage());
+        } catch (IOException e) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Unable to communicate with Viessmann API: " + e.getMessage());
+        }
     }
 }

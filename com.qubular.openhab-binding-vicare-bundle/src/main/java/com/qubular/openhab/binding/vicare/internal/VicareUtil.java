@@ -20,9 +20,9 @@ public class VicareUtil {
         return String.format("%s/%s/%s", installationId, gatewaySerial, deviceId);
     }
 
-    public static IGD decodeIGD(String igd) {
+    public static IGD decodeThingUniqueId(String uniqueId) {
         IGD decoded = new IGD();
-        String[] split = igd.split("/");
+        String[] split = uniqueId.split("/");
         decoded.installationId = Long.valueOf(split[0]);
         decoded.gatewaySerial = split[1];
         decoded.deviceId = split[2];

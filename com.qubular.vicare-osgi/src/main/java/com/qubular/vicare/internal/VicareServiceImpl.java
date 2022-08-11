@@ -12,12 +12,7 @@ import org.eclipse.jetty.client.util.FormContentProvider;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.util.Fields;
-import org.osgi.service.cm.Configuration;
-import org.osgi.service.cm.ConfigurationAdmin;
-import org.osgi.service.component.annotations.Activate;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Deactivate;
-import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.*;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.NamespaceException;
 import org.slf4j.Logger;
@@ -36,34 +31,32 @@ import java.util.stream.Collectors;
 import static java.util.Optional.of;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 
-@Component
+@Component(configurationPid = "vicare.bridge")
 public class VicareServiceImpl implements VicareService {
     private static final Logger logger = LoggerFactory.getLogger(VicareServiceImpl.class);
     private final HttpService httpService;
     private final HttpClientProvider httpClientProvider;
     private final TokenStore tokenStore;
-    private final VicareServiceConfiguration config;
+    private final VicareConfiguration config;
+    private final VicareServlet vicareServlet;
 
     @Activate
-    public VicareServiceImpl(@Reference HttpService httpService,
-                             @Reference ChallengeStore<?> challengeStore,
-                             @Reference ConfigurationAdmin configurationAdmin,
-                             @Reference HttpClientProvider httpClientProvider,
-                             @Reference TokenStore tokenStore) {
+    public VicareServiceImpl(
+            @Reference VicareConfiguration configuration,
+            @Reference HttpService httpService,
+            @Reference ChallengeStore<?> challengeStore,
+            @Reference HttpClientProvider httpClientProvider,
+            @Reference TokenStore tokenStore) {
         this.httpService = httpService;
         this.httpClientProvider = httpClientProvider;
         this.tokenStore = tokenStore;
+        this.config = configuration;
         logger.info("Activating Viessmann API Service");
         try {
-            Configuration configuration = configurationAdmin.getConfiguration(CONFIG_PID);
-            config = new VicareServiceConfiguration(configuration);
-            VicareServlet servlet = new VicareServlet(this, challengeStore, tokenStore, config.getAccessServerURI(), httpClientProvider, config.getClientId());
-            httpService.registerServlet(VicareServlet.CONTEXT_PATH, servlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+            vicareServlet = new VicareServlet(this, challengeStore, tokenStore, httpClientProvider, config);
+            httpService.registerServlet(VicareServlet.CONTEXT_PATH, vicareServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
         } catch (ServletException | NamespaceException e) {
             logger.error("Unable to register Viessmann API servlet", e);
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            logger.error("Unable to read configuration");
             throw new RuntimeException(e);
         }
     }
@@ -73,8 +66,7 @@ public class VicareServiceImpl implements VicareService {
         logger.info("Deactivating Viessmann API Service");
         httpService.unregister(VicareServlet.CONTEXT_PATH);
     }
-    
-    
+
     private static class InstallationsResponse {
         public List<Installation> data;
     }
@@ -89,7 +81,7 @@ public class VicareServiceImpl implements VicareService {
                 .orElseThrow(()-> new AuthenticationException("No access token for Viessmann API"));
 
         try {
-            URI endpoint = config.getIOTServerURI().resolve("equipment/installations?includeGateways=true");
+            URI endpoint = URI.create(config.getIOTServerURI()).resolve("equipment/installations?includeGateways=true");
             logger.debug("Querying {}", endpoint);
             HttpClient httpClient = httpClientProvider.getHttpClient();
             ContentResponse iotApiResponse = httpClient
@@ -155,7 +147,7 @@ public class VicareServiceImpl implements VicareService {
         TokenStore.AccessToken accessToken = getValidAccessToken()
                 .orElseThrow(()-> new AuthenticationException("No access token for Viessmann API"));
 
-        URI endpoint = config.getIOTServerURI()
+        URI endpoint = URI.create(config.getIOTServerURI())
                 .resolve(String.format("equipment/installations/%s/gateways/%s/devices/%s/features", installationId, gatewaySerial, deviceId));
 
         try {

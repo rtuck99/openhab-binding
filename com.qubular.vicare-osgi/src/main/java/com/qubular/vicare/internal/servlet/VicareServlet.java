@@ -9,7 +9,6 @@ import com.qubular.vicare.internal.oauth.ErrorResponse;
 import com.qubular.vicare.model.Device;
 import com.qubular.vicare.model.Gateway;
 import com.qubular.vicare.model.Installation;
-import org.apache.commons.lang3.StringEscapeUtils;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.util.FormContentProvider;
 import org.eclipse.jetty.util.Fields;
@@ -39,11 +38,10 @@ import static org.apache.commons.lang3.StringEscapeUtils.escapeHtml4;
 
 public class VicareServlet extends HttpServlet {
     private static final String SESSION_ATTR_ACCESS_TOKEN = "accessToken";
+    private final VicareConfiguration config;
     private ChallengeStore<?> challengeStore;
     private final TokenStore tokenStore;
-    private final URI accessServerUri;
     private final HttpClientProvider httpClientProvider;
-    private final String clientId;
     private final VicareService vicareService;
     public static final String CONTEXT_PATH = "/vicare";
 
@@ -54,16 +52,14 @@ public class VicareServlet extends HttpServlet {
     public VicareServlet(VicareService vicareService,
                          ChallengeStore<?> challengeStore,
                          TokenStore tokenStore,
-                         URI accessServerUri,
                          HttpClientProvider httpClientProvider,
-                         String clientId) {
-        logger.info("Configuring servlet with accessServerUri {}", accessServerUri);
+                         VicareConfiguration config) {
+        this.config = config;
+        logger.info("Configuring servlet with accessServerUri {}", config.getAccessServerURI());
         this.vicareService = vicareService;
         this.challengeStore = challengeStore;
         this.tokenStore = tokenStore;
-        this.accessServerUri = accessServerUri;
         this.httpClientProvider = httpClientProvider;
-        this.clientId = clientId;
     }
 
     @Override
@@ -118,15 +114,15 @@ public class VicareServlet extends HttpServlet {
                                 Fields fields = new Fields();
                                 fields.put("grant_type", "authorization_code");
                                 fields.put("code_verifier", challenge.getChallengeCode());
-                                fields.put("client_id", clientId);
+                                fields.put("client_id", config.getClientId());
                                 fields.put("redirect_uri", RedirectURLHelper.getNavigatedURL(req).toString());
                                 fields.put("code", code);
                                 if (logger.isDebugEnabled()) {
-                                    logger.debug("sending to access server {}:", accessServerUri);
+                                    logger.debug("sending to access server {}:", config.getAccessServerURI());
                                     fields.forEach(f -> logger.debug("{}={}", f.getName(), f.getValue()));
                                 }
                                 ContentResponse accessTokenResponse = httpClientProvider.getHttpClient()
-                                        .POST(accessServerUri)
+                                        .POST(config.getAccessServerURI())
                                         .content(new FormContentProvider(fields, StandardCharsets.UTF_8))
                                         .accept("application/json")
                                         .send();
@@ -221,7 +217,7 @@ public class VicareServlet extends HttpServlet {
                 "scope", "IoT User offline_access",
                 "code_challenge", challenge.getChallengeCode(),
                 "state", challenge.getKey(),
-                "client_id", clientId);
+                "client_id", config.getClientId());
 
 
         return AUTHORISE_ENDPOINT.toString() + "?" +

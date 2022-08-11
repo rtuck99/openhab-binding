@@ -28,6 +28,7 @@
 
   <!-- The following channel types are defined in the Data Point definitions as per Viessmann API documentation -->
   <channel-type id="heating_boiler_sensor_temperature_commonSupply">
+    <item-type>Number:Temperature</item-type>
     <label>Common Supply Temperature</label>
     <description>Shows the status and the value of the temperature sensor located on the exit of the boiler</description>
     <category>Temperature</category>
@@ -41,32 +42,38 @@
 <!--    <state readOnly="true"/>-->
 <!--  </channel-type>-->
   <channel-type id="heating_boiler_temperature">
+    <item-type>Number:Temperature</item-type>
     <label>Boiler Target Temperature</label>
     <description>Shows the set target temperature value of the boiler</description>
     <category>Heating</category>
     <state pattern="%.1f °C"/>
   </channel-type>
   <channel-type id="heating_burners_modulation">
+    <item-type>Number</item-type>
     <label>Burner Modulation</label>
     <description>Shows the current burner modulation in percent</description>
     <state pattern="%.0f %" readOnly="true"/>
   </channel-type>
   <channel-type id="heating_burners_statistics_hours">
+    <item-type>Number</item-type>
     <label>Burner Hours</label>
     <description>Shows statistics of burner: hours and times started</description>
     <state pattern="%d" readOnly="true"/>
   </channel-type>
   <channel-type id="heating_burners_statistics_starts">
+    <item-type>Number</item-type>
     <label>Burner Starts</label>
     <description>Shows statistics of burner: hours and times started</description>
     <state pattern="%d" readOnly="true"/>
   </channel-type>
   <channel-type id="heating_circuits_circulation_pump">
+    <item-type>Switch</item-type>
     <label>Heating Circuit Circulation Pump</label>
     <description>Shows the state of the circulation pump (on, off) for heating circuit N</description>
     <state readOnly="true"/>
   </channel-type>
   <channel-type id="heating_circuits_frostprotection">
+    <item-type>Switch</item-type>
     <label>Heating Circuit Frost Protection</label>
     <description>Shows whether frost protection of the installation is turned on for the device</description>
     <state readOnly="true"/>
@@ -78,30 +85,35 @@
 <!--    <state readOnly="true"/>-->
 <!--  </channel-type>-->
   <channel-type id="heating_circuits_sensors_temperature_supply">
+    <item-type>Number:Temperature</item-type>
     <label>Heating Circuit Supply Temperature</label>
     <description>Shows the status and the value of the supply temperature sensor for circuit N</description>
     <category>Temperature</category>
     <state readOnly="true" pattern="%.1f °C"/>
   </channel-type>
   <channel-type id="heating_dhw_sensors_temperature_outlet">
+    <item-type>Number:Temperature</item-type>
     <label>DHW Outlet Temperature</label>
     <description>Shows the status and the value of the temperature sensor located in the hot water storage at the outlet</description>
     <category>Temperature</category>
     <state readOnly="true" pattern="%.1f °C"/>
   </channel-type>
   <channel-type id="heating_dhw_sensors_temperature_hotWaterStorage">
+    <item-type>Number:Temperature</item-type>
     <label>DHW Storage Temperature</label>
     <description>Shows the status and the value of the temperature sensor located in the hot water storage</description>
     <category>Temperature</category>
     <state readOnly="true" pattern="%.1f °C"/>
   </channel-type>
   <channel-type id="heating_dhw_temperature_main">
+    <item-type>Number:Temperature</item-type>
     <label>DHW Target Temperature</label>
     <description>Shows the target temperature value of the domestic hot water (DHW). </description>
     <category>Heating</category>
     <state pattern="%.1f °C"/>
   </channel-type>
   <channel-type id="heating_sensors_temperature_outside">
+    <item-type>Number:Temperature</item-type>
     <label>Outside Temperature</label>
     <description>Shows the temperature value of the outside temperature sensor</description>
     <category>Temperature</category>
@@ -109,11 +121,13 @@
   </channel-type>
   <!-- Below are currently unsupported -->
   <channel-type id="heating_circuits_heating_curve_slope">
+    <item-type>Number</item-type>
     <label>Heating Circuit Heating Curve Slope</label>
     <description>Shows the values for slope and shift of the heating curve</description>
     <state readOnly="true"/>
   </channel-type>
   <channel-type id="heating_circuits_heating_curve_shift">
+    <item-type>Number</item-type>
     <label>Heating Circuit Heating Curve Shift</label>
     <description>Shows the values for slope and shift of the heating curve</description>
     <state readOnly="true"/>

@@ -16,6 +16,8 @@ import org.osgi.framework.FrameworkUtil;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.NamespaceException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
@@ -39,7 +41,7 @@ import static java.util.Optional.ofNullable;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class VicareServiceTest {
-
+    private static final Logger logger = LoggerFactory.getLogger(VicareServiceTest.class);
     private BundleContext bundleContext;
     private HttpClient httpClient;
     private VicareService vicareService;
@@ -61,16 +63,12 @@ public class VicareServiceTest {
         httpClient = new HttpClient();
         httpClient.start();
         httpService = getService(HttpService.class);
-
-        Hashtable<String, Object> newConfig = new Hashtable<>();
+        SimpleConfiguration configuration = (SimpleConfiguration) getService(VicareConfiguration.class);
         String clientId = ofNullable(System.getProperty("com.qubular.vicare.tester.clientId")).orElse("myClientId");
         String accessServerUri = ofNullable(System.getProperty("com.qubular.vicare.tester.accessServerUri")).orElse("http://localhost:9000/grantAccess");
-        newConfig.put(VicareService.CONFIG_CLIENT_ID, clientId);
-        newConfig.put(VicareService.CONFIG_ACCESS_SERVER_URI, accessServerUri);
-        newConfig.put(VicareService.CONFIG_IOT_SERVER_URI, "http://localhost:9000/iot/");
-        getService(ConfigurationAdmin.class)
-                .getConfiguration(VicareService.CONFIG_PID)
-                .update(newConfig);
+        configuration.setClientId(clientId);
+        configuration.setAccessServerURI(accessServerUri);
+        configuration.setIOTServerURI("http://localhost:9000/iot/");
 
         vicareService = getService(VicareService.class);
         tokenStore = (SimpleTokenStore) getService(TokenStore.class);

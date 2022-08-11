@@ -1,6 +1,8 @@
 package com.qubular.openhab.binding.vicare.internal;
 
+import com.qubular.openhab.binding.vicare.internal.configuration.SimpleConfiguration;
 import com.qubular.vicare.AuthenticationException;
+import com.qubular.vicare.VicareConfiguration;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.Feature;
 import org.openhab.core.thing.*;
@@ -12,9 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.PROPERTY_DEVICE_UNIQUE_ID;
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.PROPERTY_FEATURE_NAME;
@@ -23,6 +23,7 @@ import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThing
 public class VicareBridgeHandler extends BaseBridgeHandler {
     private static final Logger logger = LoggerFactory.getLogger(VicareBridgeHandler.class);
     private final ThingRegistry thingRegistry;
+    private final VicareConfiguration config;
 
     private final VicareService vicareService;
     private List<Feature> cachedResponse = null;
@@ -36,10 +37,14 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
      * @param bridge
      * @see BaseThingHandler
      */
-    public VicareBridgeHandler(VicareService vicareService, ThingRegistry thingRegistry, Bridge bridge) {
+    public VicareBridgeHandler(VicareService vicareService,
+                               ThingRegistry thingRegistry,
+                               Bridge bridge,
+                               VicareConfiguration config) {
         super(bridge);
         this.vicareService = vicareService;
         this.thingRegistry = thingRegistry;
+        this.config = config;
     }
 
     @Override
@@ -50,6 +55,12 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
 
+    }
+
+    @Override
+    public void handleConfigurationUpdate(Map<String, Object> configurationParameters) {
+        super.handleConfigurationUpdate(configurationParameters);
+        ((SimpleConfiguration) config).setConfigurationParameters(configurationParameters);
     }
 
     public Optional<Feature> handleBridgedDeviceCommand(ChannelUID channelUID, Command command) throws AuthenticationException, IOException {

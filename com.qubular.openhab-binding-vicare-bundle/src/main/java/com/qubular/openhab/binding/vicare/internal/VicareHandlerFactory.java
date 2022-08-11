@@ -1,11 +1,15 @@
 package com.qubular.openhab.binding.vicare.internal;
 
+import com.qubular.vicare.VicareConfiguration;
 import com.qubular.vicare.VicareService;
 import org.openhab.core.config.discovery.DiscoveryService;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseThingHandlerFactory;
 import org.openhab.core.thing.binding.ThingHandler;
+import org.openhab.core.thing.binding.ThingHandlerFactory;
+import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -16,6 +20,7 @@ import java.util.Set;
 
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.THING_TYPE_BRIDGE;
 
+@Component(service= ThingHandlerFactory.class)
 public class VicareHandlerFactory extends BaseThingHandlerFactory {
 
     private static final Set<ThingTypeUID> SUPPORTED_THING_TYPES =
@@ -23,11 +28,17 @@ public class VicareHandlerFactory extends BaseThingHandlerFactory {
     private static final Logger logger = LoggerFactory.getLogger(VicareHandlerFactory.class);
     private final ThingRegistry thingRegistry;
     private final VicareService vicareService;
+    private final ConfigurationAdmin configurationAdmin;
+    private final VicareConfiguration config;
 
     @Activate
     public VicareHandlerFactory(@Reference ThingRegistry thingRegistry,
-                                @Reference VicareService vicareService) {
+                                @Reference VicareService vicareService,
+                                @Reference ConfigurationAdmin configurationAdmin,
+                                @Reference VicareConfiguration config) {
+        this.config = config;
         logger.info("Activating Vicare Binding");
+        this.configurationAdmin = configurationAdmin;
         this.thingRegistry = thingRegistry;
         this.vicareService = vicareService;
         thingRegistry.addRegistryChangeListener(thingRegistryChangeListener);
@@ -42,7 +53,7 @@ public class VicareHandlerFactory extends BaseThingHandlerFactory {
     @Override
     protected @org.eclipse.jdt.annotation.Nullable ThingHandler createHandler(Thing thing) {
         if (VicareConstants.THING_TYPE_BRIDGE.equals(thing.getThingTypeUID())) {
-            return new VicareBridgeHandler(vicareService, thingRegistry, (Bridge) thing);
+            return new VicareBridgeHandler(vicareService, thingRegistry, (Bridge) thing, config);
         } else if (VicareConstants.THING_TYPE_HEATING.equals(thing.getThingTypeUID())) {
             return new VicareDeviceThingHandler(thing, vicareService);
         }

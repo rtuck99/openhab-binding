@@ -1,5 +1,6 @@
 package com.qubular.openhab.binding.vicare.internal;
 
+import com.qubular.openhab.binding.vicare.internal.configuration.SimpleConfiguration;
 import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.*;
@@ -24,6 +25,7 @@ import org.openhab.core.thing.binding.ThingHandlerCallback;
 import org.openhab.core.types.RefreshType;
 import org.openhab.core.types.State;
 import org.osgi.framework.BundleContext;
+import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.ComponentContext;
 
 import java.io.IOException;
@@ -52,11 +54,14 @@ public class VicareBindingTest {
     public static final String DEVICE_ID = "0";
     @Mock
     private VicareService vicareService;
-
+    private SimpleConfiguration configuration;
     @Mock
     private ThingRegistry thingRegistry;
+    @Mock
+    private ConfigurationAdmin configurationAdmin;
     private ComponentContext componentContext;
     private BundleContext bundleContext;
+
 
     private void simpleHeatingInstallation() throws AuthenticationException, IOException {
         Installation installation = mock(Installation.class);
@@ -81,6 +86,9 @@ public class VicareBindingTest {
         Bridge bridge = mock(Bridge.class);
         doReturn(THING_UID_BRIDGE).when(bridge).getUID();
         doReturn(THING_TYPE_BRIDGE).when(bridge).getThingTypeUID();
+        configuration.setConfigurationParameters(Map.of("clientId", "myClientId",
+                "accessServerUri", "http://localhost:9000/access",
+                "iotServerUri", "http://localhost:9000/iot"));
         return bridge;
     }
 
@@ -88,6 +96,7 @@ public class VicareBindingTest {
     void setUp() {
         componentContext = mock(ComponentContext.class);
         bundleContext = mock(BundleContext.class);
+        configuration = new SimpleConfiguration();
         doReturn(bundleContext).when(componentContext).getBundleContext();
     }
 
@@ -96,7 +105,7 @@ public class VicareBindingTest {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
 
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(thingRegistry, vicareService);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(thingRegistry, vicareService, configurationAdmin, configuration);
         activateHandlerFactory(vicareHandlerFactory);
         ArgumentCaptor<ThingRegistryChangeListener> listenerCaptor = forClass(ThingRegistryChangeListener.class);
         verify(thingRegistry).addRegistryChangeListener(listenerCaptor.capture());
@@ -123,7 +132,7 @@ public class VicareBindingTest {
         simpleHeatingInstallation();
         vicareBridge();
 
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(thingRegistry, vicareService);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(thingRegistry, vicareService, configurationAdmin, configuration);
 
         Thing deviceThing = heatingDeviceThing();
 
@@ -136,10 +145,10 @@ public class VicareBindingTest {
     public void initializeDeviceHandlerCreatesTemperatureSensor() throws AuthenticationException, IOException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
-        VicareBridgeHandler bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge);
+        VicareBridgeHandler bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
         when(bridge.getHandler()).thenReturn(bridgeHandler);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(thingRegistry, vicareService);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(thingRegistry, vicareService, configurationAdmin, configuration);
         Thing deviceThing = heatingDeviceThing();
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = mock(ThingHandlerCallback.class);

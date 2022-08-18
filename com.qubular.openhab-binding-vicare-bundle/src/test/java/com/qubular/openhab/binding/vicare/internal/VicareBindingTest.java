@@ -5,6 +5,7 @@ import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.*;
 import com.qubular.vicare.model.features.NumericSensorFeature;
+import org.eclipse.jdt.annotation.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,16 +15,20 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.openhab.core.config.core.Configuration;
+import org.openhab.core.config.discovery.AbstractDiscoveryService;
 import org.openhab.core.config.discovery.DiscoveryListener;
 import org.openhab.core.config.discovery.DiscoveryResult;
 import org.openhab.core.config.discovery.DiscoveryService;
 import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseThingHandlerFactory;
+import org.openhab.core.thing.binding.BridgeHandler;
 import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerCallback;
 import org.openhab.core.types.RefreshType;
 import org.openhab.core.types.State;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.ComponentContext;
@@ -40,8 +45,8 @@ import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.encodeThingId;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.encodeThingUniqueId;
 import static com.qubular.vicare.model.Device.DEVICE_TYPE_HEATING;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static java.util.Collections.emptyMap;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.*;
 
@@ -86,9 +91,12 @@ public class VicareBindingTest {
         Bridge bridge = mock(Bridge.class);
         doReturn(THING_UID_BRIDGE).when(bridge).getUID();
         doReturn(THING_TYPE_BRIDGE).when(bridge).getThingTypeUID();
-        configuration.setConfigurationParameters(Map.of("clientId", "myClientId",
+        Configuration openhabConfig = mock(Configuration.class);
+        doReturn(openhabConfig).when(bridge).getConfiguration();
+        doReturn(Map.of("clientId", "myClientId",
                 "accessServerUri", "http://localhost:9000/access",
-                "iotServerUri", "http://localhost:9000/iot"));
+                "iotServerUri", "http://localhost:9000/iot"))
+                .when(openhabConfig).getProperties();
         return bridge;
     }
 
@@ -98,25 +106,70 @@ public class VicareBindingTest {
         bundleContext = mock(BundleContext.class);
         configuration = new SimpleConfiguration();
         doReturn(bundleContext).when(componentContext).getBundleContext();
+        Bundle bundle = mock(Bundle.class);
+        doReturn(bundle).when(bundleContext).getBundle();
     }
 
     @Test
-    public void registeringABridgeStartsAScan() throws AuthenticationException, IOException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
+    public void bridgeHandlerReportsDiscoveryService() throws AuthenticationException, IOException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
 
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(thingRegistry, vicareService, configurationAdmin, configuration);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
         activateHandlerFactory(vicareHandlerFactory);
-        ArgumentCaptor<ThingRegistryChangeListener> listenerCaptor = forClass(ThingRegistryChangeListener.class);
-        verify(thingRegistry).addRegistryChangeListener(listenerCaptor.capture());
-        listenerCaptor.getValue().added(bridge);
 
-        ArgumentCaptor<VicareDiscoveryService> discoveryServiceCaptor = forClass(VicareDiscoveryService.class);
+        BridgeHandler handler = (BridgeHandler) vicareHandlerFactory.createHandler(bridge);
+        assertNotNull(handler);
+        assertTrue(handler.getServices().contains(VicareDiscoveryService.class));
+    }
+
+    @Test
+    public void canStartAScan() throws AuthenticationException, IOException, InvocationTargetException, NoSuchMethodException, IllegalAccessException, InstantiationException, InterruptedException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
+        activateHandlerFactory(vicareHandlerFactory);
+
+        BridgeHandler bridgeHandler = (BridgeHandler) vicareHandlerFactory.createHandler(bridge);
+
         DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
-        verify(bundleContext).registerService(eq(DiscoveryService.class.getName()), discoveryServiceCaptor.capture(), any(Dictionary.class));
-        VicareDiscoveryService discoveryService = discoveryServiceCaptor.getValue();
-
+        InOrder inOrder1 = inOrder(vicareService, discoveryListener);
+        VicareDiscoveryService discoveryService = VicareDiscoveryService.class.getConstructor().newInstance();
+        discoveryService.setThingHandler(bridgeHandler);
         discoveryService.addDiscoveryListener(discoveryListener);
+
+        inOrder1.verify(vicareService, timeout(1000).times(1)).getInstallations();
+        ArgumentCaptor<DiscoveryResult> resultArgumentCaptor = forClass(DiscoveryResult.class);
+        inOrder1.verify(discoveryListener, calls(1)).thingDiscovered(same(discoveryService), any(DiscoveryResult.class));
+
+        InOrder inOrder2 = inOrder(vicareService, discoveryListener);
+        Thread.sleep(1000);
+
+        discoveryService.startScan();
+        inOrder2.verify(vicareService, timeout(1000).times(1)).getInstallations();
+        inOrder2.verify(discoveryListener, calls(1)).thingDiscovered(same(discoveryService), resultArgumentCaptor.capture());
+        DiscoveryResult result = resultArgumentCaptor.getValue();
+        assertEquals("vicare:heating:" + THING_UID_BRIDGE.getId() + ":0328bf05-9b58-35fe-9845-edfc5a9b09aa", result.getThingUID().getAsString());
+        assertEquals(THING_UID_BRIDGE, result.getBridgeUID());
+        assertEquals(encodeThingUniqueId(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID), result.getProperties().get("deviceUniqueId"));
+        assertEquals("deviceUniqueId", result.getRepresentationProperty());
+    }
+    @Test
+    public void startsBackgroundScan() throws AuthenticationException, IOException, InvocationTargetException, NoSuchMethodException, IllegalAccessException, InstantiationException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
+        BridgeHandler bridgeHandler = (BridgeHandler) vicareHandlerFactory.createHandler(bridge);
+        VicareDiscoveryService discoveryService = VicareDiscoveryService.class.getConstructor().newInstance();
+        discoveryService.setThingHandler(bridgeHandler);
+        DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
+        discoveryService.addDiscoveryListener(discoveryListener);
+        activateHandlerFactory(vicareHandlerFactory);
+        activateDiscoveryService(discoveryService);
+
+        assertTrue(discoveryService.isBackgroundDiscoveryEnabled());
         verify(vicareService, timeout(1000)).getInstallations();
         ArgumentCaptor<DiscoveryResult> resultArgumentCaptor = forClass(DiscoveryResult.class);
         verify(discoveryListener, timeout(1000)).thingDiscovered(same(discoveryService), resultArgumentCaptor.capture());
@@ -132,7 +185,7 @@ public class VicareBindingTest {
         simpleHeatingInstallation();
         vicareBridge();
 
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(thingRegistry, vicareService, configurationAdmin, configuration);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
 
         Thing deviceThing = heatingDeviceThing();
 
@@ -148,7 +201,7 @@ public class VicareBindingTest {
         VicareBridgeHandler bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
         when(bridge.getHandler()).thenReturn(bridgeHandler);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(thingRegistry, vicareService, configurationAdmin, configuration);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
         Thing deviceThing = heatingDeviceThing();
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = mock(ThingHandlerCallback.class);
@@ -178,6 +231,20 @@ public class VicareBindingTest {
         assertEquals(27.3, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
     }
 
+    @Test
+    public void initializeBridgeSetsStatusToUnknown() {
+        Bridge bridge = vicareBridge();
+        VicareBridgeHandler vicareBridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
+        ThingHandlerCallback callback = mock(ThingHandlerCallback.class);
+        vicareBridgeHandler.setCallback(callback);
+        vicareBridgeHandler.initialize();
+
+        ArgumentCaptor<ThingStatusInfo> thingStatusCaptor = ArgumentCaptor.forClass(ThingStatusInfo.class);
+        verify(callback).statusUpdated(same(bridge), thingStatusCaptor.capture());
+        assertEquals(ThingStatus.UNKNOWN, thingStatusCaptor.getValue().getStatus());
+
+    }
+
     private Thing heatingDeviceThing() {
         Thing deviceThing = mock(Thing.class);
         doReturn(THING_UID_BRIDGE).when(deviceThing).getBridgeUID();
@@ -196,4 +263,9 @@ public class VicareBindingTest {
         activate.invoke(vicareHandlerFactory, componentContext);
     }
 
+    private void activateDiscoveryService(VicareDiscoveryService discoveryService) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+        Method activate = AbstractDiscoveryService.class.getDeclaredMethod("activate", Map.class);
+        activate.setAccessible(true);
+        activate.invoke(discoveryService, emptyMap());
+    }
 }

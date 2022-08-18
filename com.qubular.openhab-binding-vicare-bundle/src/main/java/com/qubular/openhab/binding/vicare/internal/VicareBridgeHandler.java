@@ -7,6 +7,7 @@ import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.Feature;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseBridgeHandler;
+import org.openhab.core.thing.binding.ThingHandlerService;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.RefreshType;
 import org.slf4j.Logger;
@@ -45,11 +46,12 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
         this.vicareService = vicareService;
         this.thingRegistry = thingRegistry;
         this.config = config;
+        ((SimpleConfiguration)config).setConfigurationParameters(getConfig().getProperties());
     }
 
     @Override
     public void initialize() {
-
+        updateStatus(ThingStatus.UNKNOWN);
     }
 
     @Override
@@ -102,5 +104,14 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
                 return cachedResponse;
             }
         }
+    }
+
+    @Override
+    public Collection<Class<? extends ThingHandlerService>> getServices() {
+        return Collections.singleton(VicareDiscoveryService.class);
+    }
+
+    VicareService getVicareService() {
+        return vicareService;
     }
 }

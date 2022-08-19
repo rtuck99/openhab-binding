@@ -9,4 +9,6 @@ public class VicareConstants {
     public static final String PROPERTY_DEVICE_UNIQUE_ID = "deviceUniqueId";
 
     public static final String PROPERTY_FEATURE_NAME = "featureName";
+
+    public static final String PROPERTY_STATISTIC_NAME = "statisticName";
 }

@@ -54,7 +54,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
                         @Override
                         public void visit(NumericSensorFeature f) {
-                            String id = escapeUIDSegment(feature.getName());
+                            String id = escapeUIDSegment(f.getName());
                             channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), id))
                                     .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id)))
                                     .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName()))
@@ -63,7 +63,14 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
                         @Override
                         public void visit(StatisticsFeature f) {
-
+                            f.getStatistics().forEach((name, value) -> {
+                                String id = escapeUIDSegment(f.getName() + "_" + name);
+                                channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), id))
+                                        .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id)))
+                                        .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
+                                                PROPERTY_STATISTIC_NAME, name))
+                                        .build());
+                            });
                         }
 
                         @Override
@@ -76,9 +83,9 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
                         }
                     });
-                    if (!channels.isEmpty()) {
-                        updateThing(editThing().withChannels(channels).build());
-                    }
+                }
+                if (!channels.isEmpty()) {
+                    updateThing(editThing().withChannels(channels).build());
                 }
                 updateStatus(ThingStatus.ONLINE);
             } catch (AuthenticationException e) {
@@ -119,7 +126,10 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
                     @Override
                     public void visit(StatisticsFeature f) {
-
+                        Channel channel = getThing().getChannel(channelUID);
+                        String statisticName = channel.getProperties().get(PROPERTY_STATISTIC_NAME);
+                        double value = f.getStatistics().get(statisticName).getValue();
+                        updateState(channelUID, new DecimalType(value));
                     }
 
                     @Override

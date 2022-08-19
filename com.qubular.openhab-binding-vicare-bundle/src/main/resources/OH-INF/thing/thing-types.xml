@@ -27,7 +27,7 @@
   </thing-type>
 
   <!-- The following channel types are defined in the Data Point definitions as per Viessmann API documentation -->
-  <channel-type id="heating_boiler_sensor_temperature_commonSupply">
+  <channel-type id="heating_boiler_sensors_temperature_commonSupply">
     <item-type>Number:Temperature</item-type>
     <label>Common Supply Temperature</label>
     <description>Shows the status and the value of the temperature sensor located on the exit of the boiler</description>

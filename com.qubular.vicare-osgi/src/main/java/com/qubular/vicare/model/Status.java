@@ -3,6 +3,10 @@ package com.qubular.vicare.model;
 import java.util.Objects;
 
 public class Status {
+    public static final Status NA = new Status("N/A");
+    public static final Status ON = new Status("on");
+    public static final Status OFF = new Status("off");
+
     private final String name;
 
     public Status(String name) {

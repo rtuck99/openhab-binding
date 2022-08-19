@@ -364,6 +364,14 @@ public class VicareServiceTest {
         assertEquals("celsius", commonSupplyTemperature.get().getValue().getUnit().getName());
         assertEquals("connected", commonSupplyTemperature.get().getStatus().getName());
 
+        Optional<NumericSensorFeature> burnerModulation = features.stream()
+                .filter(f -> f.getName().equals("heating.burners.0.modulation"))
+                .map(NumericSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(burnerModulation.isPresent());
+        assertEquals(0, burnerModulation.get().getValue().getValue(), 0.001);
+        assertEquals("percent", burnerModulation.get().getValue().getUnit().getName());
+
         Optional<StatusSensorFeature> pumpStatus = features.stream()
                 .filter(f -> f.getName().equals("heating.circuits.0.circulation.pump"))
                 .map(StatusSensorFeature.class::cast)

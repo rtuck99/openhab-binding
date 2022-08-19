@@ -205,6 +205,10 @@ public class VicareServiceImpl implements VicareService {
                             return new NumericSensorFeature(featureName,
                                     new DimensionalValue(new Unit(unit), numberValue),
                                     new Status(status));
+                        } else {
+                            return new NumericSensorFeature(featureName,
+                                    new DimensionalValue(new Unit(unit), numberValue),
+                                    Status.NA);
                         }
                     }
                 } else if (featureName.endsWith(".statistics")) {

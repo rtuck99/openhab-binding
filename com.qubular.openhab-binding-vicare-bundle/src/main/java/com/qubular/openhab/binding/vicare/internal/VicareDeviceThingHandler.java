@@ -30,6 +30,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
     public VicareDeviceThingHandler(Thing thing, VicareService vicareService) {
         super(thing);
+        logger.info("Creating handler for {}", thing.getUID());
         this.vicareService = vicareService;
     }
 
@@ -79,15 +80,16 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                         updateThing(editThing().withChannels(channels).build());
                     }
                 }
+                updateStatus(ThingStatus.ONLINE);
             } catch (AuthenticationException e) {
-                thing.setStatusInfo(new ThingStatusInfo(ThingStatus.UNINITIALIZED,
+                updateStatus(ThingStatus.UNINITIALIZED,
                         ThingStatusDetail.COMMUNICATION_ERROR,
-                        "Authentication problem fetching device features: " + e.getMessage()));
+                        "Authentication problem fetching device features: " + e.getMessage());
                 logger.warn("Unable to authenticate while fetching device features", e);
             } catch (IOException e) {
-                thing.setStatusInfo(new ThingStatusInfo(ThingStatus.UNINITIALIZED,
+                updateStatus(ThingStatus.UNINITIALIZED,
                         ThingStatusDetail.COMMUNICATION_ERROR,
-                        "Communication problem fetching device features: " + e.getMessage()));
+                        "Communication problem fetching device features: " + e.getMessage());
                 logger.warn("IOException while fetching device features", e);
             }
 

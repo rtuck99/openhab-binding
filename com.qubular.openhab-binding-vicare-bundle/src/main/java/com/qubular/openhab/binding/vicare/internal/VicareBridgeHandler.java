@@ -5,6 +5,9 @@ import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.VicareConfiguration;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.Feature;
+import org.openhab.core.events.EventPublisher;
+import org.openhab.core.items.events.ItemCommandEvent;
+import org.openhab.core.items.events.ItemEventFactory;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseBridgeHandler;
 import org.openhab.core.thing.binding.ThingHandlerService;
@@ -16,6 +19,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.PROPERTY_DEVICE_UNIQUE_ID;
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.PROPERTY_FEATURE_NAME;
@@ -23,6 +28,7 @@ import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThing
 
 public class VicareBridgeHandler extends BaseBridgeHandler {
     private static final Logger logger = LoggerFactory.getLogger(VicareBridgeHandler.class);
+    public static final int POLLING_STARTUP_DELAY_SECS = 10;
     private final ThingRegistry thingRegistry;
     private final VicareConfiguration config;
 
@@ -32,6 +38,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
     private Instant responseTimestamp = Instant.MIN;
 
     private static final int REQUEST_INTERVAL_SECS = 90;
+    private ScheduledFuture<?> featurePollingJob;
 
     /**
      * @param thingRegistry
@@ -52,11 +59,36 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
     @Override
     public void initialize() {
         updateStatus(ThingStatus.UNKNOWN);
+        featurePollingJob = scheduler.scheduleAtFixedRate(featurePoller(), POLLING_STARTUP_DELAY_SECS, REQUEST_INTERVAL_SECS, TimeUnit.SECONDS);
+    }
+
+    @Override
+    public void dispose() {
+        super.dispose();
+        if (featurePollingJob != null) {
+            featurePollingJob.cancel(false);
+        }
+    }
+
+    @Override
+    public void updateStatus(ThingStatus status) {
+        super.updateStatus(status);
     }
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
 
+    }
+
+    private Runnable featurePoller() {
+        return () -> {
+            for (Thing thing : getThing().getThings()) {
+                VicareDeviceThingHandler handler = (VicareDeviceThingHandler) thing.getHandler();
+                for (Channel channel : thing.getChannels()) {
+                    handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+                }
+            }
+        };
     }
 
     @Override
@@ -93,7 +125,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
 
     private List<Feature> getFeatures(Thing thing) throws AuthenticationException, IOException {
         Instant now = Instant.now();
-        if (now.isBefore(responseTimestamp.plusSeconds(REQUEST_INTERVAL_SECS))) {
+        if (now.isBefore(responseTimestamp.plusSeconds(REQUEST_INTERVAL_SECS - 1))) {
             return cachedResponse;
         } else {
             VicareUtil.IGD s = decodeThingUniqueId(thing.getProperties().get(PROPERTY_DEVICE_UNIQUE_ID));

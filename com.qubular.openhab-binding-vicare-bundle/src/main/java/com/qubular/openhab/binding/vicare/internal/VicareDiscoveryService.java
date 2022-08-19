@@ -10,6 +10,7 @@ import org.openhab.core.config.discovery.AbstractDiscoveryService;
 import org.openhab.core.config.discovery.DiscoveryResult;
 import org.openhab.core.config.discovery.DiscoveryResultBuilder;
 import org.openhab.core.config.discovery.DiscoveryService;
+import org.openhab.core.thing.ThingStatus;
 import org.openhab.core.thing.ThingTypeUID;
 import org.openhab.core.thing.ThingUID;
 import org.openhab.core.thing.binding.BridgeHandler;
@@ -56,7 +57,11 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
     }
 
     private VicareService getVicareService() {
-        return ((VicareBridgeHandler)bridgeHandler.join()).getVicareService();
+        return getBridgeHandler().getVicareService();
+    }
+
+    private VicareBridgeHandler getBridgeHandler() {
+        return (VicareBridgeHandler) bridgeHandler.join();
     }
 
     @Override
@@ -71,8 +76,8 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
     protected synchronized void stopBackgroundDiscovery() {
         logger.info("Cancelling background discovery");
         if (backgroundJob != null) {
-            backgroundJob = null;
             backgroundJob.cancel(false);
+            backgroundJob = null;
         }
     }
 
@@ -99,6 +104,7 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
                         }
                     }
                 }
+                getBridgeHandler().updateStatus(ThingStatus.ONLINE);
             } catch (AuthenticationException e) {
                 if (scanListener != null) {
                     logger.warn("Authentication problem scanning Viessmann API:" + e.getMessage());
@@ -154,5 +160,6 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
     @Override
     public void deactivate() {
         ThingHandlerService.super.deactivate();
+        stopBackgroundDiscovery();
     }
 }

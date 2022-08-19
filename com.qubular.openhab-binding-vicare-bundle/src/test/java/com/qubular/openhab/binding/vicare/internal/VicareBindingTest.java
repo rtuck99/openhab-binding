@@ -160,8 +160,10 @@ public class VicareBindingTest {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
 
+        ThingHandlerCallback thingHandlerCallback = mock(ThingHandlerCallback.class);
         VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
         BridgeHandler bridgeHandler = (BridgeHandler) vicareHandlerFactory.createHandler(bridge);
+        bridgeHandler.setCallback(thingHandlerCallback);
         VicareDiscoveryService discoveryService = VicareDiscoveryService.class.getConstructor().newInstance();
         discoveryService.setThingHandler(bridgeHandler);
         DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
@@ -178,6 +180,9 @@ public class VicareBindingTest {
         assertEquals(THING_UID_BRIDGE, result.getBridgeUID());
         assertEquals(encodeThingUniqueId(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID), result.getProperties().get("deviceUniqueId"));
         assertEquals("deviceUniqueId", result.getRepresentationProperty());
+        ArgumentCaptor<ThingStatusInfo> statusInfoArgumentCaptor = forClass(ThingStatusInfo.class);
+        verify(thingHandlerCallback).statusUpdated(same(bridge), statusInfoArgumentCaptor.capture());
+        assertEquals(ThingStatus.ONLINE, statusInfoArgumentCaptor.getValue().getStatus());
     }
 
     @Test

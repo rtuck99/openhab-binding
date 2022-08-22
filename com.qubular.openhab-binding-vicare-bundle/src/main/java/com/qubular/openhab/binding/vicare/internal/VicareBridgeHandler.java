@@ -123,19 +123,17 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
         }
     }
 
-    private List<Feature> getFeatures(Thing thing) throws AuthenticationException, IOException {
+    private synchronized List<Feature> getFeatures(Thing thing) throws AuthenticationException, IOException {
         Instant now = Instant.now();
         if (now.isBefore(responseTimestamp.plusSeconds(REQUEST_INTERVAL_SECS - 1))) {
             return cachedResponse;
-        } else {
-            VicareUtil.IGD s = decodeThingUniqueId(thing.getProperties().get(PROPERTY_DEVICE_UNIQUE_ID));
-            List<Feature> features = vicareService.getFeatures(s.installationId, s.gatewaySerial, s.deviceId);
-            synchronized (this) {
-                cachedResponse = features;
-                responseTimestamp = Instant.now();
-                return cachedResponse;
-            }
         }
+
+        VicareUtil.IGD s = decodeThingUniqueId(thing.getProperties().get(PROPERTY_DEVICE_UNIQUE_ID));
+        List<Feature> features = vicareService.getFeatures(s.installationId, s.gatewaySerial, s.deviceId);
+        cachedResponse = features;
+        responseTimestamp = now;
+        return cachedResponse;
     }
 
     @Override

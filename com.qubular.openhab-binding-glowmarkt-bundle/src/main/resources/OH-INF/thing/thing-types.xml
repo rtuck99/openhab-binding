@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="glowmarkt"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:thing="https://openhab.org/schemas/thing-description/v1.0.0"
+  xsi:schemaLocation="https://openhab.org/schemas/thing-description/v1.0.0 https://openhab.org/schemas/thing-description-1.0.0.xsd">
+
+  <!-- Thing Type -->
+  <thing-type id="virtualEntity">
+    <supported-bridge-type-refs>
+      <bridge-type-ref id="bridge"/>
+    </supported-bridge-type-refs>
+
+    <label>A Virtual Entity</label>
+    <description>A virtual entity exposed by the Glowmarkt API, typically this is something that aggregates all the meter readings</description>
+    <representation-property>virtualEntityId</representation-property>
+  </thing-type>
+
+  <channel-type id="gas_consumption">
+    <item-type>Number:Energy</item-type>
+    <label>Gas Consumption</label>
+    <description>Gas Consumption</description>
+    <category>energy</category>
+    <state pattern="%.3f kWh" readOnly="true"/>
+  </channel-type>
+  <channel-type id="gas_consumption_cost">
+    <item-type>Number</item-type>
+    <label>Gas Cost</label>
+    <description>Cost of gas used in pounds</description>
+    <category>Cost</category>
+    <state pattern="£%.2f" readOnly="true"/>
+  </channel-type>
+  <channel-type id="electricity_consumption">
+    <item-type>Number:Energy</item-type>
+    <label>Electricity Consumption</label>
+    <description>Electricity Consumption</description>
+    <state pattern="%.3f kWh" readOnly="true"/>
+  </channel-type>
+  <channel-type id="electricity_consumption_cost">
+    <item-type>Number</item-type>
+    <label>Electricity cost</label>
+    <description>Cost of electricity used in pounds</description>
+    <state pattern="£%.2f" readOnly="true"/>
+  </channel-type>
+</thing:thing-descriptions>

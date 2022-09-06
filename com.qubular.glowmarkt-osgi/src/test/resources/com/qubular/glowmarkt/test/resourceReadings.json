@@ -1,0 +1,21 @@
+{
+  "status": "OK",
+  "name": "electricity consumption",
+  "resourceTypeId": "ea02304a-2820-4ea0-8399-f1d1b430c3a0",
+  "resourceId": "73f70bcd-3743-4009-a2c4-e98cc959c030",
+  "query": {
+    "from": "2018-04-10T00:00:00",
+    "to": "2018-04-11T23:59:59",
+    "period": "P1D"
+  },
+  "data": [
+    [
+      1523318400,
+      48.79
+    ],
+    [
+      1523404800,
+      48.826
+    ]
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "valid": true,
+  "name": "",
+  "accountId": "9e40d995-4c2r-4e69-828a-09g68057da67",
+  "token":
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbkhhc2giOiJlOTRlYzE2MzgyMzE0YzdjMDdlZDliZmEwZGFiNDhhZTNhOTA0NDhlYjNjZTU0MzI4YWEwOTMwNTEzMjI4ZjY2ZjAwMWNiODRiYTIyZDczMjliZmZlMDlmZjlhZDFkZiIsImlhdCI6MTUzNjEzNDkxMCwiZXhwIjoxNTM2NzM5NzEwfQ.D1lTvyfo5ap69tT6MK9jceEFNLpxmMAz6WGohIuUR4",
+  "exp": 1536739710,
+  "functionalGroupAccounts": [],
+  "userGroups": []
+}

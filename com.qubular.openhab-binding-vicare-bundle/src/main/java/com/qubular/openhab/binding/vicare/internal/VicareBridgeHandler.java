@@ -64,10 +64,10 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
 
     @Override
     public void dispose() {
-        super.dispose();
         if (featurePollingJob != null) {
             featurePollingJob.cancel(false);
         }
+        super.dispose();
     }
 
     @Override

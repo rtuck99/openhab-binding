@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="glowmarkt"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:thing="https://openhab.org/schemas/thing-description/v1.0.0"
+  xsi:schemaLocation="https://openhab.org/schemas/thing-description/v1.0.0 https://openhab.org/schemas/thing-description-1.0.0.xsd">
+
+  <bridge-type id="bridge">
+    <label>Glowmarkt API Bridge</label>
+    <description>This bridge provides access to smart meters exposed by the Glowmarkt API</description>
+
+    <config-description>
+      <parameter name="username" type="text" required="true">
+        <label>User name</label>
+        <description>Username for the Glowmarkt API. This is the same as your Bright app login</description>
+      </parameter>
+      <parameter name="password" type="text" required="true">
+        <label>Password</label>
+        <description>Password for the Glowmarkt API. This is the same as your Bright app password</description>
+      </parameter>
+      <parameter name="applicationId" type="text" required="true">
+        <label>Application ID</label>
+        <description>The application ID. It should be ok to leave this at the default value.</description>
+        <advanced>true</advanced>
+        <default>b0f1b774-a586-4f72-9edd-27ead8aa7a8d</default>
+      </parameter>
+      <parameter name="serverUri" type="text">
+        <label>Server URI</label>
+        <description>URI for the API server endpoint. You should not need to change this.</description>
+        <advanced>true</advanced>
+        <default>https://api.glowmarkt.com/api/v0-1/</default>
+      </parameter>
+    </config-description>
+  </bridge-type>
+</thing:thing-descriptions>

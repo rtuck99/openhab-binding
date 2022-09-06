@@ -10,6 +10,8 @@ target/index.xml;name="app"
 -runrequires: \
     bnd.identity;id='com.qubular.vicare-osgi',\
     bnd.identity;id='com.qubular.vicare-osgi-tests',\
+    bnd.identity;id='com.qubular.glowmarkt-osgi',\
+    bnd.identity;id='com.qubular.glowmarkt-osgi-tests',\
     bnd.identity;id='org.ops4j.pax.logging.pax-logging-log4j2'
 
 -runrequires.junit: \
@@ -65,4 +67,6 @@ target/index.xml;name="app"
 	org.apache.commons.lang3;version='[3.12.0,3.12.1)',\
 	org.apache.felix.log;version='[1.2.0,1.2.1)',\
 	org.eclipse.jetty.http;version='[9.4.20,9.4.21)',\
-	org.eclipse.jetty.util;version='[9.4.20,9.4.21)'
+	org.eclipse.jetty.util;version='[9.4.20,9.4.21)',\
+	com.qubular.glowmarkt-osgi;version='[3.2.0,3.2.1)',\
+	com.qubular.glowmarkt-osgi-tests;version='[3.2.0,3.2.1)'

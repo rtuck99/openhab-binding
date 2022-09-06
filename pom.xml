@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.qubular</groupId>
-  <artifactId>com.qubular.openhab-binding-vicare</artifactId>
+  <artifactId>com.qubular.openhab-binding</artifactId>
   <version>3.2.0-SNAPSHOT</version>
   <licenses>
     <license>
@@ -68,7 +68,17 @@
       </dependency>
       <dependency>
         <groupId>com.qubular</groupId>
+        <artifactId>com.qubular.glowmarkt-osgi</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.qubular</groupId>
         <artifactId>com.qubular.openhab-binding-vicare-bundle</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.qubular</groupId>
+        <artifactId>com.qubular.openhab-binding-glowmarkt-bundle</artifactId>
         <version>${project.version}</version>
       </dependency>
       <!-- Junit -->
@@ -330,9 +340,12 @@
   </build>
   <modules>
     <module>com.qubular.openhab-binding-vicare-bundle</module>
-    <module>com.qubular.vicare-osgi</module>
-    <module>com.qubular.vicare.tester</module>
     <module>com.qubular.openhab-binding-vicare-feature</module>
+    <module>com.qubular.vicare-osgi</module>
+    <module>com.qubular.openhab-binding-glowmarkt-bundle</module>
+    <module>com.qubular.openhab-binding-glowmarkt-feature</module>
+    <module>com.qubular.glowmarkt-osgi</module>
+    <module>com.qubular.vicare.tester</module>
   </modules>
 
 </project>

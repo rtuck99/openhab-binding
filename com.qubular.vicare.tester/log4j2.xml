@@ -11,6 +11,7 @@
     </Root>
     <Logger name="org.apache.felix.configadmin" level="debug"/>
     <Logger name="com.qubular.vicare" level="debug"/>
+    <Logger name="com.qubular.glowmarkt" level="trace"/>
 <!--    <Logger name="org.eclipse.jetty" level="debug"/>-->
   </Loggers>
 </Configuration>

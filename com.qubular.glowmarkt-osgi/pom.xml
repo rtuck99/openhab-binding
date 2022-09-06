@@ -9,7 +9,13 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>com.qubular.vicare-osgi</artifactId>
+  <artifactId>com.qubular.glowmarkt-osgi</artifactId>
+
+  <properties>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
   <dependencies>
     <!-- test dependencies -->
     <dependency>
@@ -44,16 +50,8 @@
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-lang3</artifactId>
-    </dependency>
+
   </dependencies>
-
-  <properties>
-
-  </properties>
-
   <build>
     <plugins>
       <plugin>
@@ -69,9 +67,7 @@
             <configuration>
               <bnd>
                 -exportcontents: \\
-                com.qubular.vicare, \\
-                com.qubular.vicare.model, \\
-                com.qubular.vicare.model.features
+                com.qubular.glowmarkt
               </bnd>
             </configuration>
           </execution>
@@ -89,9 +85,9 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <executions>
           <execution>
-          <id>default-test</id>
-          <phase>none</phase>
-        </execution>
+            <id>default-test</id>
+            <phase>none</phase>
+          </execution>
         </executions>
       </plugin>
     </plugins>

@@ -1,0 +1,10 @@
+{
+  "status": "OK",
+  "name": "electicity consumption",
+  "resourceTypeId": "f8e6fb07-6307-4e0e-8a17-4b94bc7249c2",
+  "resourceId": "8f2a0722-3b59-47a6-a115-d43fcc0c5d1c",
+  "classifier": "electricity.consumption",
+  "data": {
+    "firstTs": 1308400980
+  }
+}

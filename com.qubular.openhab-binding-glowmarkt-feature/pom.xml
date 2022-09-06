@@ -9,8 +9,13 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>com.qubular.openhab-binding-vicare-feature</artifactId>
+  <artifactId>com.qubular.openhab-binding-glowmarkt-feature</artifactId>
   <packaging>kar</packaging>
+  <properties>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
   <build>
     <plugins>
       <plugin>
@@ -44,8 +49,7 @@
   <dependencies>
     <dependency>
       <groupId>com.qubular</groupId>
-      <artifactId>com.qubular.openhab-binding-vicare-bundle</artifactId>
+      <artifactId>com.qubular.openhab-binding-glowmarkt-bundle</artifactId>
     </dependency>
   </dependencies>
-
 </project>

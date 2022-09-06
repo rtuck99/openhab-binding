@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<features name="com.qubular.openhab-binding-glowmarkt-${project.version}" xmlns="http://karaf.apache.org/xmlns/features/v1.4.0">
+  <repository>mvn:org.openhab.core.features.karaf/org.openhab.core.features.karaf.openhab-core/${ohc.version}/xml/features</repository>
+
+  <feature name="openhab-binding-glowmarkt" description="Glowmarkt API Binding" version="${project.version}">
+    <feature>openhab-runtime-base</feature>
+    <bundle start-level="80">mvn:com.qubular/openhab-binding-glowmarkt/${project.version}</bundle>
+  </feature>
+</features>

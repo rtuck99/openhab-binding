@@ -22,6 +22,8 @@ import org.openhab.core.types.RefreshType;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -239,12 +241,12 @@ class GlowmarktVirtualEntityHandlerTest {
         verifyReadingForTimes("2022-01-21T00:00:00Z", "2022-01-31T00:00:00Z");
         verifyReadingForTimes("2022-01-31T00:00:00Z", "2022-02-01T00:00:00Z");
 
-        verify(persistenceService).store(same(item), eq(Date.from(parse("2022-01-01T00:00:00Z"))), eq(new DecimalType("1.0")));
-        verify(persistenceService).store(same(item), eq(Date.from(parse("2022-01-01T00:30:00Z"))), eq(new DecimalType("1.1")));
-        verify(persistenceService).store(same(item), eq(Date.from(parse("2022-01-11T00:00:00Z"))), eq(new DecimalType("0.9")));
-        verify(persistenceService).store(same(item), eq(Date.from(parse("2022-01-11T00:30:00Z"))), eq(new DecimalType("1.12")));
-        verify(persistenceService).store(same(item), eq(Date.from(parse("2022-01-31T00:00:00Z"))), eq(new DecimalType("1.4")));
-        verify(persistenceService).store(same(item), eq(Date.from(parse("2022-01-31T00:30:00Z"))), eq(new DecimalType("20.3")));
+        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-01T00:00:00Z"), ZoneId.systemDefault())), eq(new DecimalType("1.0")));
+        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-01T00:30:00Z"), ZoneId.systemDefault())), eq(new DecimalType("1.1")));
+        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-11T00:00:00Z"), ZoneId.systemDefault())), eq(new DecimalType("0.9")));
+        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-11T00:30:00Z"), ZoneId.systemDefault())), eq(new DecimalType("1.12")));
+        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-31T00:00:00Z"), ZoneId.systemDefault())), eq(new DecimalType("1.4")));
+        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-31T00:30:00Z"), ZoneId.systemDefault())), eq(new DecimalType("20.3")));
     }
 
     private void verifyReadingForTimes(String from, String to) throws IOException, AuthenticationFailedException {

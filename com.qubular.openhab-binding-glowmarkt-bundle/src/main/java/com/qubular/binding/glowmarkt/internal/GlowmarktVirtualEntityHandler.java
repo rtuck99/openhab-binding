@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.TemporalAmount;
 import java.util.*;
@@ -184,7 +185,7 @@ public class GlowmarktVirtualEntityHandler extends BaseThingHandler {
                     aggregationPeriod,
                     AggregationFunction.SUM);
             resourceReadings.forEach(r -> {
-                        getPersistenceService().store(item, Date.from(r.getTimestamp()), new DecimalType(r.getReading()));
+                        getPersistenceService().store(item, ZonedDateTime.ofInstant(r.getTimestamp(), ZoneId.systemDefault()), new DecimalType(r.getReading()));
                     });
         }
     }

@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.qubular</groupId>
   <artifactId>com.qubular.openhab-binding</artifactId>
-  <version>3.2.0-SNAPSHOT</version>
+  <version>3.3.0-SNAPSHOT</version>
   <licenses>
     <license>
       <name>Eclipse Public License 2.0</name>
@@ -16,13 +14,13 @@
   <packaging>pom</packaging>
   <properties>
     <org.osgi.service.http.port>9000</org.osgi.service.http.port>
-    <openhab.version>3.2.0</openhab.version>
+    <openhab.version>3.3.0</openhab.version>
     <oh.java.version>11</oh.java.version>
     <maven.compiler.source>${oh.java.version}</maven.compiler.source>
     <maven.compiler.target>${oh.java.version}</maven.compiler.target>
     <maven.compiler.compilerVersion>${oh.java.version}</maven.compiler.compilerVersion>
     <bnd.version>6.3.1</bnd.version>
-    <bnd.exportpackage/>
+    <bnd.exportpackage />
     <bnd.fixupmessages>"Classes found in the wrong directory"; is:=warning</bnd.fixupmessages>
     <bnd.includeresource>-${.}/NOTICE, -${.}/*.xsd</bnd.includeresource>
     <!-- Exclude all the kitchen-sink optional shit in gRPC / netty -->
@@ -334,7 +332,30 @@
             </execution>
           </executions>
         </plugin>
-
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-release-plugin</artifactId>
+          <version>3.0.0-M6</version>
+        </plugin>
+        <!-- cli target for mvn enforcer:enforce -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>3.1.0</version>
+          <executions>
+            <execution>
+              <id>default-cli</id>
+              <goals>
+                <goal>enforce</goal>
+              </goals>
+              <configuration>
+                <rules>
+                  <dependencyConvergence/>
+                </rules>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>

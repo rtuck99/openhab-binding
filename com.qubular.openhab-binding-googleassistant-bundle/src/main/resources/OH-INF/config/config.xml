@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config-description:config-descriptions
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:config-description="https://openhab.org/schemas/config-description/v1.0.0"
+	xsi:schemaLocation="https://openhab.org/schemas/config-description/v1.0.0 https://openhab.org/schemas/config-description-1.0.0.xsd">
+
+	<config-description uri="channel-type:googleassistant:channel-config-dimmer">
+		<parameter name="stateContent" type="text">
+			<label>State Content</label>
+			<description>Content for state request (only used if method is POST/PUT)</description>
+			<advanced>true</advanced>
+		</parameter>
+		<parameter name="dimmerCommand" type="text">
+			<label>Dimmer Command</label>
+			<description>The command to send to set the brightness to a specific level</description>
+			<default>Set brightness to %d</default>
+		</parameter>
+		<parameter name="increaseCommand" type="text">
+			<label>Increase Command</label>
+			<description>Command to increase the brightness</description>
+		</parameter>
+		<parameter name="decreaseCommand" type="text">
+			<label>Decrease Command</label>
+			<description>Command to decrease the brightness</description>
+		</parameter>
+
+		<parameter name="mode" type="text">
+			<label>Read/Write Mode</label>
+			<options>
+				<option value="READWRITE">Read/Write</option>
+				<option value="READONLY">Read Only</option>
+				<option value="WRITEONLY">Write Only</option>
+			</options>
+			<limitToOptions>true</limitToOptions>
+			<advanced>true</advanced>
+			<default>READWRITE</default>
+		</parameter>
+	</config-description>
+
+	<config-description uri="channel-type:googleassistant:channel-config-switch">
+		<parameter name="onCommand" type="text">
+			<label>On Command</label>
+			<description>Command to send to turn the switch on</description>
+		</parameter>
+		<parameter name="offCommand" type="text">
+			<label>Off Command</label>
+			<description>Command to send to turn the switch off</description>
+		</parameter>
+		<parameter name="queryCommand" type="text">
+			<label>Query Command</label>
+			<description>Command to send in order to query the state</description>
+		</parameter>
+		<parameter name="onValue" type="text" required="true">
+			<label>On Value</label>
+			<description>The value returned by the query when the switch is on</description>
+		</parameter>
+		<parameter name="offValue" type="text" required="true">
+			<label>Off Value</label>
+			<description>The value returned by the query when the switch is off</description>
+		</parameter>
+		<parameter name="mode" type="text">
+			<label>Read/Write Mode</label>
+			<options>
+				<option value="READWRITE">Read/Write</option>
+				<option value="READONLY">Read Only</option>
+				<option value="WRITEONLY">Write Only</option>
+			</options>
+			<limitToOptions>true</limitToOptions>
+			<advanced>true</advanced>
+			<default>READWRITE</default>
+		</parameter>
+	</config-description>
+
+	<config-description uri="channel-type:googleassistant:channel-config-colour-temperature">
+		<parameter name="numberCommand" type="text">
+			<label>Number Command</label>
+			<description>The command to set the colour temperature to a specific level</description>
+			<default>Set light to %d kelvin</default>
+		</parameter>
+	</config-description>
+</config-description:config-descriptions>

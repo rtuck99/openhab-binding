@@ -79,6 +79,11 @@
         <artifactId>com.qubular.openhab-binding-glowmarkt-bundle</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.qubular</groupId>
+        <artifactId>com.qubular.openhab-binding-googleassistant-bundle</artifactId>
+        <version>${project.version}</version>
+      </dependency>
       <!-- Junit -->
       <dependency>
         <groupId>org.junit.jupiter</groupId>
@@ -366,6 +371,8 @@
     <module>com.qubular.openhab-binding-glowmarkt-bundle</module>
     <module>com.qubular.openhab-binding-glowmarkt-feature</module>
     <module>com.qubular.glowmarkt-osgi</module>
+    <module>com.qubular.openhab-binding-googleassistant-bundle</module>
+    <module>com.qubular.openhab-binding-googleassistant-feature</module>
     <module>com.qubular.vicare.tester</module>
   </modules>
 

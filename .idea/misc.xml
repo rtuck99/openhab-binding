@@ -4,6 +4,7 @@
   <component name="FrameworkDetectionExcludesConfiguration">
     <file type="Osmorc" url="file://$PROJECT_DIR$/com.qubular.glowmarkt-osgi" />
     <file type="Osmorc" url="file://$PROJECT_DIR$/com.qubular.openhab-binding-glowmarkt-bundle" />
+    <file type="Osmorc" url="file://$PROJECT_DIR$/com.qubular.openhab-binding-googleassistant-bundle" />
     <file type="Osmorc" url="file://$PROJECT_DIR$/com.qubular.openhab-binding-vicare-bundle" />
     <file type="Osmorc" url="file://$PROJECT_DIR$/com.qubular.vicare-osgi" />
     <file type="Osmorc" url="file://$PROJECT_DIR$/com.qubular.vicare.tester" />

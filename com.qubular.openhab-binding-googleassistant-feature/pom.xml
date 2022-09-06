@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.qubular</groupId>
+    <artifactId>com.qubular.openhab-binding</artifactId>
+    <version>3.3.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>com.qubular.openhab-binding-googleassistant-feature</artifactId>
+  <packaging>kar</packaging>
+
+  <name>openHAB Add-ons :: Features :: Karaf :: Google Assistant Addon</name>
+  <description>openHAB Add-on for Google Assistant</description>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.karaf.tooling</groupId>
+        <artifactId>karaf-maven-plugin</artifactId>
+        <version>4.3.4</version>
+        <extensions>true</extensions>
+        <executions>
+          <execution>
+            <id>default-kar</id>
+            <goals><goal>kar</goal></goals>
+            <configuration>
+
+            </configuration>
+          </execution>
+          <execution>
+            <id>default-features-generate-descriptor</id>
+            <goals><goal>features-generate-descriptor</goal></goals>
+            <configuration>
+              <startLevel>80</startLevel>
+              <checkDependencyChange>true</checkDependencyChange>
+              <failOnDependencyChange>false</failOnDependencyChange>
+              <logDependencyChanges>true</logDependencyChanges>
+              <overwriteChangedDependencies>true</overwriteChangedDependencies>
+              <includeTransitiveDependency>false</includeTransitiveDependency>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+  <dependencies>
+    <dependency>
+      <groupId>com.qubular</groupId>
+      <artifactId>com.qubular.openhab-binding-googleassistant-bundle</artifactId>
+    </dependency>
+  </dependencies>
+</project>

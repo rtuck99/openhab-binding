@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<features xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" name="com.qubular.openhab-binding-googleassistant-feature">
+    <feature version="0.0.0">
+        <bundle>mvn:com.qubular/com.qubular.openhab-binding-googleassistant-bundle/3.3.0-SNAPSHOT</bundle>
+    </feature>
+</features>

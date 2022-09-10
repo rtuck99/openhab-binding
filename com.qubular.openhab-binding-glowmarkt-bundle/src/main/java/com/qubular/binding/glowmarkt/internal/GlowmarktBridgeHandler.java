@@ -3,6 +3,10 @@ package com.qubular.binding.glowmarkt.internal;
 import com.qubular.glowmarkt.*;
 import org.eclipse.jetty.client.HttpClient;
 import org.openhab.core.io.net.http.HttpClientFactory;
+import org.openhab.core.persistence.ModifiablePersistenceService;
+import org.openhab.core.persistence.PersistenceManager;
+import org.openhab.core.persistence.PersistenceService;
+import org.openhab.core.persistence.PersistenceServiceRegistry;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseBridgeHandler;
 import org.openhab.core.thing.binding.ThingHandler;
@@ -23,15 +27,26 @@ import java.util.concurrent.TimeUnit;
 import static java.util.Optional.ofNullable;
 
 public class GlowmarktBridgeHandler extends BaseBridgeHandler {
+    public static final String CONFIG_PARAM_APPLICATION_ID = "applicationId";
+    public static final String CONFIG_PARAM_SERVER_URI = "serverUri";
+
+    public static final String CONFIG_PARAM_PERSISTENCE_SERVICE = "persistenceService";
+    public static final String CONFIG_PARAM_USERNAME = "username";
+    public static final String CONFIG_PARAM_PASSWORD = "password";
     private final GlowmarktService glowmarktService;
     private final HttpClientFactory httpClientFactory;
+    private final PersistenceServiceRegistry persistenceServiceRegistry;
     private GlowmarktSession currentSession;
     private ScheduledFuture<?> resourceUpdateJob;
 
-    public GlowmarktBridgeHandler(Bridge bridge, GlowmarktService glowmarktService, HttpClientFactory httpClientFactory) {
+    public GlowmarktBridgeHandler(Bridge bridge,
+                                  GlowmarktService glowmarktService,
+                                  HttpClientFactory httpClientFactory,
+                                  PersistenceServiceRegistry persistenceServiceRegistry) {
         super(bridge);
         this.glowmarktService = glowmarktService;
         this.httpClientFactory = httpClientFactory;
+        this.persistenceServiceRegistry = persistenceServiceRegistry;
     }
 
     @Override
@@ -78,12 +93,12 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
         return new GlowmarktSettings() {
             @Override
             public String getApplicationId() {
-                return ofNullable((String) getConfig().get("applicationId")).orElse(DEFAULT_APPLICATION_ID);
+                return ofNullable((String) getConfig().get(CONFIG_PARAM_APPLICATION_ID)).orElse(DEFAULT_APPLICATION_ID);
             }
 
             @Override
             public URI getApiEndpoint() {
-                String serverUri = (String) getConfig().get("serverUri");
+                String serverUri = (String) getConfig().get(CONFIG_PARAM_SERVER_URI);
                 return serverUri == null ? DEFAULT_URI_ENDPOINT : URI.create(serverUri);
             }
 
@@ -97,8 +112,8 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
     synchronized GlowmarktSession getGlowmarktSession() throws AuthenticationFailedException, IOException {
         if (currentSession == null ||
                 Instant.now().plus(1, ChronoUnit.HOURS).isAfter(currentSession.getExpiry())) {
-            String username = (String) getConfig().get("username");
-            String password = (String) getConfig().get("password");
+            String username = (String) getConfig().get(CONFIG_PARAM_USERNAME);
+            String password = (String) getConfig().get(CONFIG_PARAM_PASSWORD);
             currentSession = glowmarktService.authenticate(getGlowmarktSettings(), username, password);
         }
         return currentSession;
@@ -116,5 +131,9 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
             updateStatus(ThingStatus.UNINITIALIZED, ThingStatusDetail.CONFIGURATION_ERROR, "Unable to authenticate with Glowmarkt API: " + e.getMessage());
             throw e;
         }
+    }
+
+    ModifiablePersistenceService getPersistenceService() {
+        return (ModifiablePersistenceService) persistenceServiceRegistry.get((String) getConfig().get(CONFIG_PARAM_PERSISTENCE_SERVICE));
     }
 }

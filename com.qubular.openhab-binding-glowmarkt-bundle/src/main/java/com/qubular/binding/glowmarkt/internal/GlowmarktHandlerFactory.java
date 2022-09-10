@@ -4,6 +4,7 @@ import com.qubular.glowmarkt.GlowmarktService;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.core.io.net.http.HttpClientFactory;
 import org.openhab.core.persistence.PersistenceService;
+import org.openhab.core.persistence.PersistenceServiceRegistry;
 import org.openhab.core.thing.Bridge;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingTypeUID;
@@ -27,27 +28,27 @@ public class GlowmarktHandlerFactory extends BaseThingHandlerFactory {
 
     private final GlowmarktService glowmarktService;
     private final HttpClientFactory httpClientFactory;
-    private final PersistenceService persistenceService;
+    private final PersistenceServiceRegistry persistenceServiceRegistry;
     private final ItemChannelLinkRegistry itemChannelLinkRegistry;
 
     @Activate
     public GlowmarktHandlerFactory(@Reference GlowmarktService glowmarktService,
                                    @Reference HttpClientFactory httpClientFactory,
-                                   @Reference PersistenceService persistenceService,
+                                   @Reference PersistenceServiceRegistry persistenceServiceRegistry,
                                    @Reference ItemChannelLinkRegistry itemChannelLinkRegistry) {
         this.glowmarktService = glowmarktService;
         this.httpClientFactory = httpClientFactory;
-        this.persistenceService = persistenceService;
+        this.persistenceServiceRegistry = persistenceServiceRegistry;
         this.itemChannelLinkRegistry = itemChannelLinkRegistry;
     }
 
     @Override
     protected @Nullable ThingHandler createHandler(Thing thing) {
         if(THING_TYPE_BRIDGE.equals(thing.getThingTypeUID())) {
-            return new GlowmarktBridgeHandler((Bridge) thing, glowmarktService, httpClientFactory);
+            return new GlowmarktBridgeHandler((Bridge) thing, glowmarktService, httpClientFactory, persistenceServiceRegistry);
         }
         if (THING_TYPE_VIRTUAL_ENTITY.equals(thing.getThingTypeUID())) {
-            return new GlowmarktVirtualEntityHandler(thing, glowmarktService, persistenceService, itemChannelLinkRegistry);
+            return new GlowmarktVirtualEntityHandler(thing, glowmarktService, itemChannelLinkRegistry);
         }
         return null;
     }

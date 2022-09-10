@@ -1,7 +1,6 @@
 package com.qubular.binding.glowmarkt.internal;
 
 import com.qubular.glowmarkt.*;
-import org.eclipse.jdt.annotation.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,12 +13,12 @@ import org.openhab.core.config.discovery.DiscoveryResult;
 import org.openhab.core.config.discovery.DiscoveryService;
 import org.openhab.core.io.net.http.HttpClientFactory;
 import org.openhab.core.persistence.PersistenceService;
+import org.openhab.core.persistence.PersistenceServiceRegistry;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerCallback;
 import org.openhab.core.thing.link.ItemChannelLinkRegistry;
 
-import javax.lang.model.util.Types;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -47,12 +46,13 @@ class GlowmarktBridgeHandlerTest {
     @Mock
     private HttpClientFactory httpClientFactory;
     @Mock
-    private PersistenceService persistenceService;
-    @Mock
     private ItemChannelLinkRegistry itemChannelLinkRegistry;
+    @Mock
+    private PersistenceServiceRegistry persistenceServiceRegistry;
 
 
     private AutoCloseable mockHandle;
+
     @BeforeEach
     public void setUp() {
         mockHandle = MockitoAnnotations.openMocks(this);
@@ -86,7 +86,7 @@ class GlowmarktBridgeHandlerTest {
 
     @Test
     public void hasDiscoveryService() {
-        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceService, itemChannelLinkRegistry).createHandler(bridge);
+        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry).createHandler(bridge);
         assertTrue(handler.getServices().stream().anyMatch(DiscoveryService.class::isAssignableFrom));
     }
 
@@ -96,7 +96,7 @@ class GlowmarktBridgeHandlerTest {
         gasAndElectricityMeter();
 
         DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
-        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceService, itemChannelLinkRegistry).createHandler(bridge);
+        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry).createHandler(bridge);
         GlowmarktDiscoveryService discoveryService = new GlowmarktDiscoveryService();
         discoveryService.addDiscoveryListener(discoveryListener);
         discoveryService.setThingHandler(handler);
@@ -122,7 +122,7 @@ class GlowmarktBridgeHandlerTest {
                 .thenThrow(new IOException("test exception"));
 
         DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
-        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceService, itemChannelLinkRegistry).createHandler(bridge);
+        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry).createHandler(bridge);
         ThingHandlerCallback thingHandlerCallback = mock(ThingHandlerCallback.class);
         handler.setCallback(thingHandlerCallback);
 
@@ -142,7 +142,7 @@ class GlowmarktBridgeHandlerTest {
                 .thenThrow(new AuthenticationFailedException("test exception"));
 
         DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
-        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceService, itemChannelLinkRegistry).createHandler(bridge);
+        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry).createHandler(bridge);
         ThingHandlerCallback thingHandlerCallback = mock(ThingHandlerCallback.class);
         handler.setCallback(thingHandlerCallback);
 
@@ -158,7 +158,7 @@ class GlowmarktBridgeHandlerTest {
 
     @Test
     public void initialiseUpdatesStatus() {
-        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceService, itemChannelLinkRegistry).createHandler(bridge);
+        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry).createHandler(bridge);
         ThingHandlerCallback thingHandlerCallback = mock(ThingHandlerCallback.class);
         handler.setCallback(thingHandlerCallback);
         handler.initialize();

@@ -12,6 +12,7 @@ import org.openhab.core.io.net.http.HttpClientFactory;
 import org.openhab.core.items.Item;
 import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.persistence.ModifiablePersistenceService;
+import org.openhab.core.persistence.PersistenceServiceRegistry;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerCallback;
@@ -56,6 +57,9 @@ class GlowmarktVirtualEntityHandlerTest {
     @Mock
     private ModifiablePersistenceService persistenceService;
     @Mock
+    private PersistenceServiceRegistry persistenceServiceRegistry;
+
+    @Mock
     private ItemChannelLinkRegistry itemChannelLinkRegistry;
 
     private AutoCloseable mockHandle;
@@ -73,11 +77,13 @@ class GlowmarktVirtualEntityHandlerTest {
         when(virtualEntity.getProperties()).thenReturn(Map.of(PROPERTY_VIRTUAL_ENTITY_ID, VIRTUAL_ENTITY_ID));
         Configuration configuration = mock(Configuration.class);
         Map<String, Object> config = Map.of("username", "testuser",
-                "password", "testpassword");
+                "password", "testpassword",
+                "persistenceService", "mysql");
         when(configuration.getProperties()).thenReturn(config);
         doAnswer(invocation -> config.get(invocation.getArgument(0))).when(configuration).get(anyString());
         when(bridge.getConfiguration()).thenReturn(configuration);
         doAnswer(invocation -> ChannelBuilder.create((ChannelUID)invocation.getArgument(0))).when(thingHandlerCallback).createChannelBuilder(any(ChannelUID.class), any(ChannelTypeUID.class));
+        when(persistenceServiceRegistry.get("mysql")).thenReturn(persistenceService);
     }
 
     @AfterEach
@@ -167,7 +173,7 @@ class GlowmarktVirtualEntityHandlerTest {
     }
 
     private ThingHandler createThingHandler() {
-        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceService, itemChannelLinkRegistry);
+        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry);
         GlowmarktBridgeHandler bridgeHandler = (GlowmarktBridgeHandler) factory.createHandler(bridge);
         when(bridge.getHandler()).thenReturn(bridgeHandler);
         ThingHandler handler = factory.createHandler(virtualEntity);

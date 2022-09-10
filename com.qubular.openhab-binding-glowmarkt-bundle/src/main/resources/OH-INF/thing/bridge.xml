@@ -17,6 +17,10 @@
         <label>Password</label>
         <description>Password for the Glowmarkt API. This is the same as your Bright app password</description>
       </parameter>
+      <parameter name="persistenceService" type="text" required="true">
+        <label>Persistence Service</label>
+        <description>The persistence service to use. It must support the ModifiablePersistenceService interface.</description>
+      </parameter>
       <parameter name="applicationId" type="text" required="true">
         <label>Application ID</label>
         <description>The application ID. It should be ok to leave this at the default value.</description>

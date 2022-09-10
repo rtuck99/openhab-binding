@@ -1,10 +1,11 @@
 package com.qubular.binding.glowmarkt.internal;
 
 import com.qubular.glowmarkt.*;
-import org.openhab.core.io.net.http.HttpClientFactory;
 import org.openhab.core.items.Item;
 import org.openhab.core.library.types.DecimalType;
-import org.openhab.core.persistence.*;
+import org.openhab.core.persistence.FilterCriteria;
+import org.openhab.core.persistence.HistoricItem;
+import org.openhab.core.persistence.ModifiablePersistenceService;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseThingHandler;
 import org.openhab.core.thing.link.ItemChannelLinkRegistry;
@@ -24,7 +25,6 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.qubular.binding.glowmarkt.internal.GlowmarktConstants.*;
 import static com.qubular.glowmarkt.AggregationPeriod.*;
-import static java.lang.String.format;
 import static java.time.Duration.ofDays;
 import static java.util.Optional.of;
 import static java.util.stream.StreamSupport.stream;
@@ -32,24 +32,17 @@ import static java.util.stream.StreamSupport.stream;
 public class GlowmarktVirtualEntityHandler extends BaseThingHandler {
     private static final Logger logger = LoggerFactory.getLogger(GlowmarktVirtualEntityHandler.class);
     private final GlowmarktService glowmarktService;
-    private final PersistenceService persistenceService;
     private final ItemChannelLinkRegistry itemChannelLinkRegistry;
 
-    public GlowmarktVirtualEntityHandler(Thing thing, GlowmarktService glowmarktService, PersistenceService persistenceService, ItemChannelLinkRegistry itemChannelLinkRegistry) {
+    public GlowmarktVirtualEntityHandler(Thing thing, GlowmarktService glowmarktService, ItemChannelLinkRegistry itemChannelLinkRegistry) {
         super(thing);
         this.glowmarktService = glowmarktService;
-        this.persistenceService = persistenceService;
         this.itemChannelLinkRegistry = itemChannelLinkRegistry;
     }
 
 
     @Override
     public void initialize() {
-        if (!(persistenceService instanceof ModifiablePersistenceService)) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                    format("Persistence service %s does not implement ModifiablePersistenceService", persistenceService));
-            return;
-        }
         CompletableFuture.runAsync(() -> {
             GlowmarktBridgeHandler bridgeHandler = (GlowmarktBridgeHandler) getBridge().getHandler();
             String virtualEntityId = getThing().getProperties().get(PROPERTY_VIRTUAL_ENTITY_ID);
@@ -93,10 +86,6 @@ public class GlowmarktVirtualEntityHandler extends BaseThingHandler {
         return resource.getClassifier().replaceAll("[^\\w-]", "_");
     }
 
-    private ModifiablePersistenceService getPersistenceService() {
-        return (ModifiablePersistenceService) persistenceService;
-    }
-
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
         if (RefreshType.REFRESH.equals(command)) {
@@ -127,7 +116,8 @@ public class GlowmarktVirtualEntityHandler extends BaseThingHandler {
         ZonedDateTime persistenceQueryEndDate = ZonedDateTime.now();
         filterCriteria.setEndDate(persistenceQueryEndDate);
         filterCriteria.setItemName(item.getName());
-        Iterable<HistoricItem> dataSeries = getPersistenceService().query(filterCriteria);
+        ModifiablePersistenceService persistenceService = getBridgeHandler().getPersistenceService();
+        Iterable<HistoricItem> dataSeries = persistenceService.query(filterCriteria);
         var i = dataSeries.iterator();
 
         Optional<ZonedDateTime> earliestPersistedTimestamp = stream(dataSeries.spliterator(), true)
@@ -185,7 +175,7 @@ public class GlowmarktVirtualEntityHandler extends BaseThingHandler {
                     aggregationPeriod,
                     AggregationFunction.SUM);
             resourceReadings.forEach(r -> {
-                        getPersistenceService().store(item, ZonedDateTime.ofInstant(r.getTimestamp(), ZoneId.systemDefault()), new DecimalType(r.getReading()));
+                        getBridgeHandler().getPersistenceService().store(item, ZonedDateTime.ofInstant(r.getTimestamp(), ZoneId.systemDefault()), new DecimalType(r.getReading()));
                     });
         }
     }

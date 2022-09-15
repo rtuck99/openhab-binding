@@ -21,6 +21,11 @@
         <label>Persistence Service</label>
         <description>The persistence service to use. It must support the ModifiablePersistenceService interface.</description>
       </parameter>
+      <parameter name="cronSchedule" type="text">
+        <label>Update schedule</label>
+        <description>This is a cron schedule for updating the meter readings.</description>
+        <default>0 2 * * *</default>
+      </parameter>
       <parameter name="applicationId" type="text" required="true">
         <label>Application ID</label>
         <description>The application ID. It should be ok to leave this at the default value.</description>

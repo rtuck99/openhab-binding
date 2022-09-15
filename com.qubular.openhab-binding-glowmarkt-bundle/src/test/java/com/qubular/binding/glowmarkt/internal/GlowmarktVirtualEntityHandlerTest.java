@@ -13,6 +13,7 @@ import org.openhab.core.items.Item;
 import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.persistence.ModifiablePersistenceService;
 import org.openhab.core.persistence.PersistenceServiceRegistry;
+import org.openhab.core.scheduler.CronScheduler;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerCallback;
@@ -61,6 +62,8 @@ class GlowmarktVirtualEntityHandlerTest {
 
     @Mock
     private ItemChannelLinkRegistry itemChannelLinkRegistry;
+    @Mock
+    private CronScheduler cronScheduler;
 
     private AutoCloseable mockHandle;
 
@@ -173,7 +176,7 @@ class GlowmarktVirtualEntityHandlerTest {
     }
 
     private ThingHandler createThingHandler() {
-        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry);
+        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler);
         GlowmarktBridgeHandler bridgeHandler = (GlowmarktBridgeHandler) factory.createHandler(bridge);
         when(bridge.getHandler()).thenReturn(bridgeHandler);
         ThingHandler handler = factory.createHandler(virtualEntity);

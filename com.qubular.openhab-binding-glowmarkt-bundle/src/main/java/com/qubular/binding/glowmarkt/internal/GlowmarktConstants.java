@@ -12,4 +12,5 @@ public class GlowmarktConstants {
     public static final String PROPERTY_VIRTUAL_ENTITY_ID = "virtualEntityId";
     public static final String PROPERTY_CLASSIFIER = "classifier";
     public static final String PROPERTY_RESOURCE_ID = "resourceId";
+    public static final String DEFAULT_CRON_SCHEDULE = "0 2 * * *";
 }

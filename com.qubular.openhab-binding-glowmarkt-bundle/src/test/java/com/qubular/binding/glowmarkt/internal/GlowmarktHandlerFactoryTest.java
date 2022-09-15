@@ -8,6 +8,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.openhab.core.io.net.http.HttpClientFactory;
 import org.openhab.core.persistence.PersistenceServiceRegistry;
+import org.openhab.core.scheduler.CronScheduler;
 import org.openhab.core.thing.Bridge;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.binding.ThingHandler;
@@ -38,6 +39,8 @@ class GlowmarktHandlerFactoryTest {
     private AutoCloseable mockHandle;
     @Mock
     private PersistenceServiceRegistry persistenceServiceRegistry;
+    @Mock
+    private CronScheduler cronScheduler;
 
     @BeforeEach
     public void setUp() {
@@ -54,28 +57,28 @@ class GlowmarktHandlerFactoryTest {
 
     @Test
     public void supportsBridgeType() {
-        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry);
+        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler);
 
         assertTrue(factory.supportsThingType(THING_TYPE_BRIDGE));
     }
 
     @Test
     public void supportsVirtualEntityType() {
-        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry);
+        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler);
 
         assertTrue(factory.supportsThingType(THING_TYPE_VIRTUAL_ENTITY));
     }
 
     @Test
     public void createsBridgeHandler() {
-        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry);
+        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler);
         ThingHandler handler = factory.createHandler(bridge);
         assertNotNull(handler);
     }
 
     @Test
     public void createsVirtualEntityHandler() {
-        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry);
+        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler);
         ThingHandler handler = factory.createHandler(virtualEntity);
         assertNotNull(handler);
     }

@@ -5,6 +5,7 @@ import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.core.io.net.http.HttpClientFactory;
 import org.openhab.core.persistence.PersistenceService;
 import org.openhab.core.persistence.PersistenceServiceRegistry;
+import org.openhab.core.scheduler.CronScheduler;
 import org.openhab.core.thing.Bridge;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingTypeUID;
@@ -30,22 +31,25 @@ public class GlowmarktHandlerFactory extends BaseThingHandlerFactory {
     private final HttpClientFactory httpClientFactory;
     private final PersistenceServiceRegistry persistenceServiceRegistry;
     private final ItemChannelLinkRegistry itemChannelLinkRegistry;
+    private CronScheduler cronScheduler;
 
     @Activate
     public GlowmarktHandlerFactory(@Reference GlowmarktService glowmarktService,
                                    @Reference HttpClientFactory httpClientFactory,
                                    @Reference PersistenceServiceRegistry persistenceServiceRegistry,
-                                   @Reference ItemChannelLinkRegistry itemChannelLinkRegistry) {
+                                   @Reference ItemChannelLinkRegistry itemChannelLinkRegistry,
+                                   @Reference CronScheduler cronScheduler) {
         this.glowmarktService = glowmarktService;
         this.httpClientFactory = httpClientFactory;
         this.persistenceServiceRegistry = persistenceServiceRegistry;
         this.itemChannelLinkRegistry = itemChannelLinkRegistry;
+        this.cronScheduler = cronScheduler;
     }
 
     @Override
     protected @Nullable ThingHandler createHandler(Thing thing) {
         if(THING_TYPE_BRIDGE.equals(thing.getThingTypeUID())) {
-            return new GlowmarktBridgeHandler((Bridge) thing, glowmarktService, httpClientFactory, persistenceServiceRegistry);
+            return new GlowmarktBridgeHandler((Bridge) thing, glowmarktService, httpClientFactory, persistenceServiceRegistry, cronScheduler);
         }
         if (THING_TYPE_VIRTUAL_ENTITY.equals(thing.getThingTypeUID())) {
             return new GlowmarktVirtualEntityHandler(thing, glowmarktService, itemChannelLinkRegistry);

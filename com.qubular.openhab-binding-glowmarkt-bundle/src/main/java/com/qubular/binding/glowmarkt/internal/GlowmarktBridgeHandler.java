@@ -4,9 +4,10 @@ import com.qubular.glowmarkt.*;
 import org.eclipse.jetty.client.HttpClient;
 import org.openhab.core.io.net.http.HttpClientFactory;
 import org.openhab.core.persistence.ModifiablePersistenceService;
-import org.openhab.core.persistence.PersistenceManager;
-import org.openhab.core.persistence.PersistenceService;
 import org.openhab.core.persistence.PersistenceServiceRegistry;
+import org.openhab.core.scheduler.CronScheduler;
+import org.openhab.core.scheduler.ScheduledCompletableFuture;
+import org.openhab.core.scheduler.SchedulerRunnable;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseBridgeHandler;
 import org.openhab.core.thing.binding.ThingHandler;
@@ -33,33 +34,44 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
     public static final String CONFIG_PARAM_PERSISTENCE_SERVICE = "persistenceService";
     public static final String CONFIG_PARAM_USERNAME = "username";
     public static final String CONFIG_PARAM_PASSWORD = "password";
+    public static final String CONFIG_PARAM_CRON_SCHEDULE = "cronSchedule";
+
     private final GlowmarktService glowmarktService;
     private final HttpClientFactory httpClientFactory;
     private final PersistenceServiceRegistry persistenceServiceRegistry;
+    private final CronScheduler cronScheduler;
     private GlowmarktSession currentSession;
-    private ScheduledFuture<?> resourceUpdateJob;
+    private ScheduledFuture<?> oneTimeUpdateJob;
+    private ScheduledCompletableFuture<Void> cronUpdateJob;
 
     public GlowmarktBridgeHandler(Bridge bridge,
                                   GlowmarktService glowmarktService,
                                   HttpClientFactory httpClientFactory,
-                                  PersistenceServiceRegistry persistenceServiceRegistry) {
+                                  PersistenceServiceRegistry persistenceServiceRegistry,
+                                  CronScheduler cronScheduler) {
         super(bridge);
         this.glowmarktService = glowmarktService;
         this.httpClientFactory = httpClientFactory;
         this.persistenceServiceRegistry = persistenceServiceRegistry;
+        this.cronScheduler = cronScheduler;
     }
 
     @Override
     public void initialize() {
         updateStatus(ThingStatus.UNKNOWN);
-        resourceUpdateJob = scheduler.scheduleAtFixedRate(resourceUpdateJob(), 0, 1, TimeUnit.DAYS);
+        oneTimeUpdateJob = scheduler.schedule(resourceUpdateJob(),5, TimeUnit.SECONDS);
+        cronUpdateJob = cronScheduler.schedule(() -> resourceUpdateJob(), getCronSchedule());
     }
 
     @Override
     public void dispose() {
-        if (resourceUpdateJob != null) {
-            resourceUpdateJob.cancel(false);
-            resourceUpdateJob = null;
+        if (oneTimeUpdateJob != null) {
+            oneTimeUpdateJob.cancel(false);
+            oneTimeUpdateJob = null;
+        }
+        if (cronUpdateJob != null) {
+            cronUpdateJob.cancel(false);
+            cronUpdateJob = null;
         }
         super.dispose();
     }
@@ -135,5 +147,9 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
 
     ModifiablePersistenceService getPersistenceService() {
         return (ModifiablePersistenceService) persistenceServiceRegistry.get((String) getConfig().get(CONFIG_PARAM_PERSISTENCE_SERVICE));
+    }
+
+    private String getCronSchedule() {
+        return (String) ofNullable(getConfig().get(CONFIG_PARAM_CRON_SCHEDULE)).orElse(GlowmarktConstants.DEFAULT_CRON_SCHEDULE);
     }
 }

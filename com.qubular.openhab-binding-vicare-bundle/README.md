@@ -19,7 +19,9 @@ Supported Features
 * Burner statistics (hours and starts)
 * Circulation pump status
 * Frost protection status
-* Basic text properties: device serial number
+* Basic text properties: device serial number etc.
+* Consumption statistics
+* Program mode temperature settings
 
 Configuring
 -----------

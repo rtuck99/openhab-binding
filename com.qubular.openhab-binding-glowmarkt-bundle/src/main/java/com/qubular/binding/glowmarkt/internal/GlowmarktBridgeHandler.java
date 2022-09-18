@@ -14,6 +14,8 @@ import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerService;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.RefreshType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -35,6 +37,8 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
     public static final String CONFIG_PARAM_USERNAME = "username";
     public static final String CONFIG_PARAM_PASSWORD = "password";
     public static final String CONFIG_PARAM_CRON_SCHEDULE = "cronSchedule";
+
+    private static final Logger logger = LoggerFactory.getLogger(GlowmarktBridgeHandler.class);
 
     private final GlowmarktService glowmarktService;
     private final HttpClientFactory httpClientFactory;
@@ -58,6 +62,7 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
 
     @Override
     public void initialize() {
+        logger.trace("Initializing GlowmarktBridgeHandler");
         updateStatus(ThingStatus.UNKNOWN);
         oneTimeUpdateJob = scheduler.schedule(resourceUpdateJob(),5, TimeUnit.SECONDS);
         cronUpdateJob = cronScheduler.schedule(() -> resourceUpdateJob(), getCronSchedule());
@@ -65,6 +70,7 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
 
     @Override
     public void dispose() {
+        logger.trace("Disposing GlowmarktBridgeHandler");
         if (oneTimeUpdateJob != null) {
             oneTimeUpdateJob.cancel(false);
             oneTimeUpdateJob = null;

@@ -2,6 +2,7 @@ package com.qubular.openhab.binding.vicare.internal;
 
 import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.VicareService;
+import com.qubular.vicare.model.DimensionalValue;
 import com.qubular.vicare.model.Feature;
 import com.qubular.vicare.model.Status;
 import com.qubular.vicare.model.features.*;
@@ -20,6 +21,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThingUniqueId;
@@ -30,6 +33,13 @@ import static com.qubular.vicare.model.Status.ON;
 public class VicareDeviceThingHandler extends BaseThingHandler {
     private static final Logger logger = LoggerFactory.getLogger(VicareDeviceThingHandler.class);
     private final VicareService vicareService;
+
+    private static final Map<String, Function<ConsumptionFeature, DimensionalValue>> consumptionAccessorMap = Map.of(
+            "currentDay", ConsumptionFeature::getToday,
+            "lastSevenDays", ConsumptionFeature::getSevenDays,
+            "currentMonth", ConsumptionFeature::getMonth,
+            "currentYear", ConsumptionFeature::getYear
+    );
 
     public VicareDeviceThingHandler(Thing thing, VicareService vicareService) {
         super(thing);
@@ -53,7 +63,19 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                     feature.accept(new Feature.Visitor() {
                         @Override
                         public void visit(ConsumptionFeature f) {
+                            String id = escapeUIDSegment(f.getName());
+                            channels.add(consumptionChannel(id, f, "currentDay"));
+                            channels.add(consumptionChannel(id, f, "lastSevenDays"));
+                            channels.add(consumptionChannel(id, f, "currentMonth"));
+                            channels.add(consumptionChannel(id, f, "currentYear"));
+                        }
 
+                        private Channel consumptionChannel(String id, Feature feature, String statName) {
+                            return ChannelBuilder.create(new ChannelUID(thing.getUID(), id + "_" + statName))
+                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id + "_" + statName)))
+                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
+                                            PROPERTY_STATISTIC_NAME, statName))
+                                    .build();
                         }
 
                         @Override
@@ -63,6 +85,13 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                                     .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id)))
                                     .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName()))
                                     .build());
+                            if (f.getStatus() != null && !Status.NA.equals(f.getStatus())) {
+                                String activeId = id + "_active";
+                                channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), activeId))
+                                        .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(activeId)))
+                                        .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName()))
+                                        .build());
+                            }
                         }
 
                         @Override
@@ -132,13 +161,25 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                 f.accept(new Feature.Visitor() {
                     @Override
                     public void visit(ConsumptionFeature f) {
+                        Channel channel = getThing().getChannel(channelUID);
+                        String statName = channel.getProperties().get(PROPERTY_STATISTIC_NAME);
+                        updateConsumptionStat(() -> consumptionAccessorMap.get(statName).apply(f).getValue());
+                    }
 
+                    private void updateConsumptionStat(Supplier<Double> valueSupplier) {
+                        updateState(channelUID, new DecimalType(valueSupplier.get()));
                     }
 
                     @Override
                     public void visit(NumericSensorFeature f) {
                         double value = f.getValue().getValue();
-                        updateState(channelUID, new DecimalType(value));
+                        Channel channel = getThing().getChannel(channelUID);
+                        ChannelTypeUID channelTypeUID = channel.getChannelTypeUID();
+                        if (channelTypeUID.getId().endsWith("_active")) {
+                            updateState(channelUID, Status.ON.equals(f.getStatus()) ? OnOffType.ON : OnOffType.OFF);
+                        } else {
+                            updateState(channelUID, new DecimalType(value));
+                        }
                     }
 
                     @Override

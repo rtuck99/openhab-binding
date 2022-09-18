@@ -28,6 +28,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
+import static com.qubular.vicare.model.Status.OFF;
+import static com.qubular.vicare.model.Status.ON;
 import static java.util.Optional.of;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 
@@ -239,6 +241,16 @@ public class VicareServiceImpl implements VicareService {
                             stats.get("lastSevenDays"),
                             stats.get("currentMonth"),
                             stats.get("currentYear"));
+                } else if (featureName.contains(".operating.programs.")) {
+                    JsonObject temperature = properties.getAsJsonObject("temperature");
+                    if (temperature != null) {
+                        JsonObject active = properties.getAsJsonObject("active");
+                        boolean activeStatus = active.get("value").getAsBoolean();
+                        Unit unit = new Unit(temperature.get("unit").getAsString());
+                        double tempValue = temperature.get("value").getAsDouble();
+                        DimensionalValue temperatureValue = new DimensionalValue(unit, tempValue);
+                        return new NumericSensorFeature(featureName, temperatureValue, activeStatus ? ON : OFF);
+                    }
                 } else if (statusObject != null) {
                     String status = statusObject.get("value").getAsString();
                     return new StatusSensorFeature(featureName, new Status(status));

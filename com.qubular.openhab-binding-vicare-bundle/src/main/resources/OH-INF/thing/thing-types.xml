@@ -132,4 +132,145 @@
     <description>Shows the values for slope and shift of the heating curve</description>
     <state readOnly="true"/>
   </channel-type>
+  <channel-type id="heating_circuits_operating_programs_active">
+    <item-type>String</item-type>
+    <label>Active Operating Program</label>
+    <description>Shows the current active operating program on the device</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_programs_comfort_active">
+    <item-type>Switch</item-type>
+    <label>Comfort Operating Program Active</label>
+    <description>Shows whether the comfort program is active</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_programs_comfort">
+    <item-type>Number:Temperature</item-type>
+    <label>Comfort Operating Program Temperature</label>
+    <description>Shows the comfort program target temperature</description>
+    <category>Heating</category>
+    <state readOnly="true" pattern="%d °C"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_programs_reduced_active">
+    <item-type>Switch</item-type>
+    <label>Setback Operating Program Active</label>
+    <description>Shows whether the reduced temperature program is active</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_programs_reduced">
+    <item-type>Number:Temperature</item-type>
+    <label>Setback Operating Program Temperature</label>
+    <description>Shows the reduced temperature program target temperature</description>
+    <category>Heating</category>
+    <state readOnly="true" pattern="%d °C"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_programs_normal_active">
+    <item-type>Switch</item-type>
+    <label>Normal Operating Program Active</label>
+    <description>Shows whether the normal program is active</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_programs_normal">
+    <item-type>Number:Temperature</item-type>
+    <label>Normal Operating Program Temperature</label>
+    <description>Shows the normal program target temperature</description>
+    <category>Heating</category>
+    <state readOnly="true" pattern="%d °C"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_summary_dhw_currentDay">
+    <item-type>Number:Volume</item-type>
+    <label>DHW Gas Consumption Current Day</label>
+    <description>Shows statistics of gas usage for heating up the DHW for the current day</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_summary_dhw_lastSevenDays">
+    <item-type>Number:Volume</item-type>
+    <label>DHW Gas Consumption Last 7 Days</label>
+    <description>Shows statistics of gas usage for heating up the DHW for the last 7 days</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_summary_dhw_currentMonth">
+    <item-type>Number:Volume</item-type>
+    <label>DHW Gas Consumption Current Month</label>
+    <description>Shows statistics of gas usage for heating up the DHW for the current month</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_summary_dhw_currentYear">
+    <item-type>Number:Volume</item-type>
+    <label>DHW Gas Consumption Current Year</label>
+    <description>Shows statistics of gas usage for heating up the DHW for the current year</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_summary_dhw_currentDay">
+    <item-type>Number:Energy</item-type>
+    <label>DHW Power Consumption Current Day</label>
+    <description>Shows statistics of power usage for heating up the DHW for the current day</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_summary_dhw_lastSevenDays">
+    <item-type>Number:Energy</item-type>
+    <label>DHW Power Consumption Last 7 Days</label>
+    <description>Shows statistics of power usage for heating up the DHW for the last 7 days</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_summary_dhw_currentMonth">
+    <item-type>Number:Energy</item-type>
+    <label>DHW Power Consumption Current Month</label>
+    <description>Shows statistics of power usage for heating up the DHW for the current month</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_summary_dhw_currentYear">
+    <item-type>Number:Energy</item-type>
+    <label>DHW Power Consumption Current Year</label>
+    <description>Shows statistics of power usage for heating up the DHW for the current year</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_summary_heating_currentDay">
+    <item-type>Number:Volume</item-type>
+    <label>Heating Gas Consumption Current Day</label>
+    <description>Shows statistics of gas usage for heating up rooms for the current day</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_summary_heating_lastSevenDays">
+    <item-type>Number:Volume</item-type>
+    <label>Heating Gas Consumption Last 7 Days</label>
+    <description>Shows statistics of gas usage for heating up rooms for the last 7 days</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_summary_heating_currentMonth">
+    <item-type>Number:Volume</item-type>
+    <label>Heating Gas Consumption Current Month</label>
+    <description>Shows statistics of gas usage for heating up rooms for the current month</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_summary_heating_currentYear">
+    <item-type>Number:Volume</item-type>
+    <label>Heating Gas Consumption Current Year</label>
+    <description>Shows statistics of gas usage for heating up rooms for the current year</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_summary_heating_currentDay">
+    <item-type>Number:Energy</item-type>
+    <label>Heating Power Consumption Current Day</label>
+    <description>Shows statistics of power usage for heating up rooms for the current day</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_summary_heating_lastSevenDays">
+    <item-type>Number:Energy</item-type>
+    <label>Heating Power Consumption Last 7 Days</label>
+    <description>Shows statistics of power usage for heating up rooms for the last 7 days</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_summary_heating_currentMonth">
+    <item-type>Number:Energy</item-type>
+    <label>Heating Power Consumption Current Month</label>
+    <description>Shows statistics of power usage for heating up rooms for the current month</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_summary_heating_currentYear">
+    <item-type>Number:Energy</item-type>
+    <label>Heating Power Consumption Current Year</label>
+    <description>Shows statistics of power usage for heating up rooms for the current year</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
 </thing:thing-descriptions>

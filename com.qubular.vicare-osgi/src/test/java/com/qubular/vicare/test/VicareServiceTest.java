@@ -403,5 +403,13 @@ public class VicareServiceTest {
         assertEquals("kilowattHour", dhwConsumption.get().getYear().getUnit().getName());
         assertEquals(0.9, dhwConsumption.get().getYear().getValue(), 0.001);
 
+        Optional<NumericSensorFeature> normalMode = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.0.operating.programs.normal"))
+                .map(NumericSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(normalMode.isPresent());
+        assertEquals(Status.OFF, normalMode.get().getStatus());
+        assertEquals(20, normalMode.get().getValue().getValue(), 0.001);
+        assertEquals("celsius", normalMode.get().getValue().getUnit().getName());
     }
 }

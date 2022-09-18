@@ -24,7 +24,7 @@
       <parameter name="cronSchedule" type="text">
         <label>Update schedule</label>
         <description>This is a cron schedule for updating the meter readings.</description>
-        <default>0 2 * * *</default>
+        <default>0 0 2 * * *</default>
       </parameter>
       <parameter name="applicationId" type="text" required="true">
         <label>Application ID</label>

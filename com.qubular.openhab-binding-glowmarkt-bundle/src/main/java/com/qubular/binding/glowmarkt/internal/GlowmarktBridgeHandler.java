@@ -65,7 +65,7 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
         logger.trace("Initializing GlowmarktBridgeHandler");
         updateStatus(ThingStatus.UNKNOWN);
         oneTimeUpdateJob = scheduler.schedule(resourceUpdateJob(),5, TimeUnit.SECONDS);
-        cronUpdateJob = cronScheduler.schedule(() -> resourceUpdateJob(), getCronSchedule());
+        cronUpdateJob = cronScheduler.schedule(() -> resourceUpdateJob().run(), getCronSchedule());
     }
 
     @Override

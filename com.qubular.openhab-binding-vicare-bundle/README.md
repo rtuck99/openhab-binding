@@ -41,4 +41,4 @@ and they will appear in your Inbox.
 Changelog
 ---------
 
-3.3.0 This is the initial release
+3.3.1 This is the initial release

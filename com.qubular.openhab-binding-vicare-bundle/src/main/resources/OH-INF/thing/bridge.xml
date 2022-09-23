@@ -22,6 +22,13 @@
         <label>IoT Service Endpoint</label>
         <description>URI for the Viessmann IoT service endpoint. You should not need to change this.</description>
         <default>https://api.viessmann.com/iot/v1/</default>
-      </parameter>    </config-description>
+      </parameter>
+      <parameter name="responseCapture" type="boolean">
+        <label>Response Capture Debug</label>
+        <description>Debug setting to enable recording of responses from Viessmann API</description>
+        <advanced>true</advanced>
+        <default>false</default>
+      </parameter>
+    </config-description>
   </bridge-type>
 </thing:thing-descriptions>

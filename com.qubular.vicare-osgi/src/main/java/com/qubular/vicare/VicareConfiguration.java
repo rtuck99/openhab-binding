@@ -2,6 +2,7 @@ package com.qubular.vicare;
 
 import org.osgi.service.component.annotations.ComponentPropertyType;
 
+import java.io.File;
 import java.net.URI;
 
 public interface VicareConfiguration {
@@ -12,4 +13,12 @@ public interface VicareConfiguration {
     String getAccessServerURI();
 
     String getIOTServerURI();
+
+    default File getResponseCaptureFile() {
+        return null;
+    }
+
+    default boolean isResponseCaptureEnabled() {
+        return getResponseCaptureFile() != null;
+    }
 }

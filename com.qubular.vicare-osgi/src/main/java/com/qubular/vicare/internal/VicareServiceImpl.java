@@ -19,9 +19,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
@@ -160,6 +163,8 @@ public class VicareServiceImpl implements VicareService {
                     .send();
 
             if (contentResponse.getStatus() == SC_OK) {
+                captureResponse(contentResponse.getContentAsString());
+
                 List<Feature> data = apiGson().fromJson(contentResponse.getContentAsString(), FeatureResponse.class).data;
                 return data.stream()
                         .filter(Objects::nonNull)
@@ -170,6 +175,16 @@ public class VicareServiceImpl implements VicareService {
         } catch (InterruptedException | TimeoutException | ExecutionException e) {
             logger.warn("Unable to request features from IoT API", e);
             throw new IOException("Unable to request features from IoT API", e);
+        }
+    }
+
+    private void captureResponse(String contentAsString) {
+        if (config.isResponseCaptureEnabled()) {
+            try (var fos = new FileOutputStream(config.getResponseCaptureFile(), false)) {
+                fos.write(contentAsString.getBytes(StandardCharsets.UTF_8));
+            } catch (IOException e) {
+                logger.warn("Unable to write to capture file {}: {}", config.getResponseCaptureFile(), e.getMessage());
+            }
         }
     }
 

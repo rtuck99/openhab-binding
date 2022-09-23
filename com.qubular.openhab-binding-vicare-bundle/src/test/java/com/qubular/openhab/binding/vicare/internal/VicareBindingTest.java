@@ -114,7 +114,7 @@ public class VicareBindingTest {
     void setUp() {
         componentContext = mock(ComponentContext.class);
         bundleContext = mock(BundleContext.class);
-        configuration = new SimpleConfiguration();
+        configuration = new SimpleConfiguration(bundleContext);
         doReturn(bundleContext).when(componentContext).getBundleContext();
         Bundle bundle = mock(Bundle.class);
         doReturn(bundle).when(bundleContext).getBundle();

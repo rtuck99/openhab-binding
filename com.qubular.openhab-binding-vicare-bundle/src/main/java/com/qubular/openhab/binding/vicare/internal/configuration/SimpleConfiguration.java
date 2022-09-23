@@ -1,11 +1,13 @@
 package com.qubular.openhab.binding.vicare.internal.configuration;
 
 import com.qubular.vicare.VicareConfiguration;
+import org.osgi.framework.BundleContext;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
+import java.io.File;
 import java.util.Collections;
 import java.util.Map;
 
@@ -13,11 +15,12 @@ import static java.util.Optional.ofNullable;
 
 @Component(service= VicareConfiguration.class)
 public class SimpleConfiguration implements VicareConfiguration {
+    private final BundleContext bundleContext;
     private Map<String, Object> configurationParameters = Collections.emptyMap();
 
     @Activate
-    public SimpleConfiguration() {
-
+    public SimpleConfiguration(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
     }
 
     @Override
@@ -37,5 +40,15 @@ public class SimpleConfiguration implements VicareConfiguration {
 
     public void setConfigurationParameters(Map<String, Object> configurationParameters) {
         this.configurationParameters = configurationParameters;
+    }
+
+    @Override
+    public File getResponseCaptureFile() {
+        return bundleContext.getDataFile("responseCapture.json");
+    }
+
+    @Override
+    public boolean isResponseCaptureEnabled() {
+        return (Boolean) ofNullable(configurationParameters.get("responseCapture")).orElse(false);
     }
 }

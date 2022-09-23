@@ -129,7 +129,7 @@
     <item-type>Number</item-type>
     <label>Heating Circuit Heating Curve Slope</label>
     <description>Shows the values for slope and shift of the heating curve</description>
-    <state readOnly="true"/>
+    <state readOnly="true" pattern="%.1f"/>
   </channel-type>
   <channel-type id="heating_circuits_heating_curve_shift">
     <item-type>Number</item-type>
@@ -149,13 +149,13 @@
     <description>Shows whether the holiday program is active</description>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_operating_program_holiday_start">
+  <channel-type id="heating_circuits_operating_programs_holiday_start">
     <item-type>DateTime</item-type>
     <label>Holiday Operating Program Start</label>
     <description>Shows the start date of the holiday program</description>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_operating_program_holiday_end">
+  <channel-type id="heating_circuits_operating_programs_holiday_end">
     <item-type>DateTime</item-type>
     <label>Holiday Operating Program End</label>
     <description>Shows the end date of the holiday program</description>
@@ -295,5 +295,23 @@
     <label>Heating Power Consumption Current Year</label>
     <description>Shows statistics of power usage for heating up rooms for the current year</description>
     <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_operating_programs_holiday_active">
+    <item-type>Switch</item-type>
+    <label>Holiday Operating Program Active</label>
+    <description>Shows whether the holiday program is active</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_operating_programs_holiday_start">
+    <item-type>DateTime</item-type>
+    <label>Holiday Operating Program Start</label>
+    <description>Shows the start date of the holiday program</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_operating_programs_holiday_end">
+    <item-type>DateTime</item-type>
+    <label>Holiday Operating Program End</label>
+    <description>Shows the end date of the holiday program</description>
+    <state readOnly="true"/>
   </channel-type>
 </thing:thing-descriptions>

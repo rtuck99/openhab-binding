@@ -16,10 +16,12 @@ import org.openhab.core.thing.binding.builder.ThingBuilder;
 import org.openhab.core.thing.type.ChannelTypeUID;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.State;
+import org.openhab.core.types.UnDefType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -268,20 +270,25 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                     @Override
                     public void visit(DatePeriodFeature datePeriodFeature) {
                         Channel channel = getThing().getChannel(channelUID);
+                        State newState = UnDefType.UNDEF;
                         switch (channel.getProperties().get(PROPERTY_STATISTIC_NAME)) {
                             case "active":
-                                OnOffType onOffType = Status.ON.equals(datePeriodFeature.getActive()) ? OnOffType.ON : OnOffType.OFF;
-                                updateState(channelUID, onOffType);
+                                newState = Status.ON.equals(datePeriodFeature.getActive()) ? OnOffType.ON : OnOffType.OFF;
                                 break;
                             case "start":
-                                DateTimeType start = new DateTimeType(datePeriodFeature.getStart().atStartOfDay(ZoneId.systemDefault()));
-                                updateState(channelUID, start);
+                                LocalDate startDate = datePeriodFeature.getStart();
+                                if (startDate != null) {
+                                    newState = new DateTimeType(startDate.atStartOfDay(ZoneId.systemDefault()));
+                                }
                                 break;
                             case "end":
-                                DateTimeType end = new DateTimeType(datePeriodFeature.getEnd().atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()));
-                                updateState(channelUID, end);
+                                LocalDate endDate = datePeriodFeature.getEnd();
+                                if (endDate != null) {
+                                    newState = new DateTimeType(endDate.atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()));
+                                }
                                 break;
                         }
+                        updateState(channelUID, newState);
                     }
                 });
             });

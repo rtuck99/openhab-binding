@@ -48,6 +48,12 @@
     <category>Heating</category>
     <state pattern="%.1f °C"/>
   </channel-type>
+  <channel-type id="heating_burners">
+    <item-type>Switch</item-type>
+    <label>Burner Status</label>
+    <description>Shows the state of the burner i.e. on or off</description>
+    <state readOnly="true"/>
+  </channel-type>
   <channel-type id="heating_burners_modulation">
     <item-type>Number</item-type>
     <label>Burner Modulation</label>
@@ -119,7 +125,6 @@
     <category>Temperature</category>
     <state readOnly="true" pattern="%.1f °C"/>
   </channel-type>
-  <!-- Below are currently unsupported -->
   <channel-type id="heating_circuits_heating_curve_slope">
     <item-type>Number</item-type>
     <label>Heating Circuit Heating Curve Slope</label>
@@ -136,6 +141,24 @@
     <item-type>String</item-type>
     <label>Active Operating Program</label>
     <description>Shows the current active operating program on the device</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_programs_holiday_active">
+    <item-type>Switch</item-type>
+    <label>Holiday Operating Program Active</label>
+    <description>Shows whether the holiday program is active</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_program_holiday_start">
+    <item-type>DateTime</item-type>
+    <label>Holiday Operating Program Start</label>
+    <description>Shows the start date of the holiday program</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_program_holiday_end">
+    <item-type>DateTime</item-type>
+    <label>Holiday Operating Program End</label>
+    <description>Shows the end date of the holiday program</description>
     <state readOnly="true"/>
   </channel-type>
   <channel-type id="heating_circuits_operating_programs_comfort_active">

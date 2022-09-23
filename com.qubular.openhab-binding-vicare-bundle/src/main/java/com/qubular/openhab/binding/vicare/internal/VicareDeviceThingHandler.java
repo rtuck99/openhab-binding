@@ -6,6 +6,7 @@ import com.qubular.vicare.model.DimensionalValue;
 import com.qubular.vicare.model.Feature;
 import com.qubular.vicare.model.Status;
 import com.qubular.vicare.model.features.*;
+import org.openhab.core.library.types.DateTimeType;
 import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.library.types.OnOffType;
 import org.openhab.core.thing.*;
@@ -19,6 +20,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -120,6 +124,44 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                             String name = f.getName();
                             newPropValues.put(name, f.getValue());
                         }
+
+                        @Override
+                        public void visit(CurveFeature f) {
+                            String slopeId = escapeUIDSegment(f.getName() + "_slope");
+                            channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), slopeId))
+                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(slopeId)))
+                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
+                                            PROPERTY_STATISTIC_NAME, "slope"))
+                                    .build());
+                            String shiftId = escapeUIDSegment(f.getName() + "_shift");
+                            channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), shiftId))
+                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(shiftId)))
+                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
+                                            PROPERTY_STATISTIC_NAME, "shift"))
+                                    .build());
+                        }
+
+                        @Override
+                        public void visit(DatePeriodFeature datePeriodFeature) {
+                            String activeId = escapeUIDSegment(feature.getName() + "_active");
+                            String startId = escapeUIDSegment(feature.getName() + "_start");
+                            String endId = escapeUIDSegment(feature.getName() + "_end");
+                            channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), activeId))
+                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(activeId)))
+                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
+                                            PROPERTY_STATISTIC_NAME, "active"))
+                                    .build());
+                            channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), startId))
+                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(startId)))
+                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
+                                            PROPERTY_STATISTIC_NAME, "start"))
+                                    .build());
+                            channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), endId))
+                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(endId)))
+                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
+                                            PROPERTY_STATISTIC_NAME, "end"))
+                                    .build());
+                        }
                     });
 
                 }
@@ -150,7 +192,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
     }
 
     private String channelIdToChannelType(String channelId) {
-        return channelId.replaceAll("(_[\\d+])_", "_");
+        return channelId.replaceAll("(_[\\d+])(_?)", "$2");
     }
 
     @Override
@@ -206,6 +248,40 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                     @Override
                     public void visit(TextFeature f) {
 
+                    }
+
+                    @Override
+                    public void visit(CurveFeature f) {
+                        Channel channel = getThing().getChannel(channelUID);
+                        switch (channel.getProperties().get(PROPERTY_STATISTIC_NAME)) {
+                            case "slope":
+                                State slopeState = new DecimalType(f.getSlope().getValue());
+                                updateState(channelUID, slopeState);
+                                break;
+                            case "shift":
+                                State shiftState = new DecimalType(f.getShift().getValue());
+                                updateState(channelUID, shiftState);
+                                break;
+                        }
+                    }
+
+                    @Override
+                    public void visit(DatePeriodFeature datePeriodFeature) {
+                        Channel channel = getThing().getChannel(channelUID);
+                        switch (channel.getProperties().get(PROPERTY_STATISTIC_NAME)) {
+                            case "active":
+                                OnOffType onOffType = Status.ON.equals(datePeriodFeature.getActive()) ? OnOffType.ON : OnOffType.OFF;
+                                updateState(channelUID, onOffType);
+                                break;
+                            case "start":
+                                DateTimeType start = new DateTimeType(datePeriodFeature.getStart().atStartOfDay(ZoneId.systemDefault()));
+                                updateState(channelUID, start);
+                                break;
+                            case "end":
+                                DateTimeType end = new DateTimeType(datePeriodFeature.getEnd().atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()));
+                                updateState(channelUID, end);
+                                break;
+                        }
                     }
                 });
             });

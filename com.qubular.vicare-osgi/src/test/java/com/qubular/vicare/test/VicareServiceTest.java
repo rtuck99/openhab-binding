@@ -13,7 +13,6 @@ import org.junit.jupiter.api.condition.EnabledIf;
 import org.opentest4j.AssertionFailedError;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
-import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.NamespaceException;
 import org.slf4j.Logger;
@@ -29,6 +28,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.*;
@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.qubular.vicare.model.Status.OFF;
 import static java.util.Optional.ofNullable;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -408,8 +409,32 @@ public class VicareServiceTest {
                 .map(NumericSensorFeature.class::cast)
                 .findFirst();
         assertTrue(normalMode.isPresent());
-        assertEquals(Status.OFF, normalMode.get().getStatus());
+        assertEquals(OFF, normalMode.get().getStatus());
         assertEquals(20, normalMode.get().getValue().getValue(), 0.001);
         assertEquals("celsius", normalMode.get().getValue().getUnit().getName());
+
+        Optional<StatusSensorFeature> burnerFeature = features.stream()
+                .filter(f -> f.getName().equals("heating.burners.0"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(burnerFeature.isPresent());
+        assertEquals(OFF, burnerFeature.get().getStatus());
+
+        Optional<CurveFeature> curveFeature = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.0.heating.curve"))
+                .map(CurveFeature.class::cast)
+                .findFirst();
+        assertTrue(curveFeature.isPresent());
+        assertEquals(0, curveFeature.get().getShift().getValue(), 0.01);
+        assertEquals(2, curveFeature.get().getSlope().getValue(), 0.01);
+
+        Optional<DatePeriodFeature> dateFeature = features.stream()
+                .filter(f -> f.getName().equals("heating.operating.programs.holiday"))
+                .map(DatePeriodFeature.class::cast)
+                .findFirst();
+        assertTrue(dateFeature.isPresent());
+        assertEquals(LocalDate.parse("2022-12-23"), dateFeature.get().getStart());
+        assertEquals(LocalDate.parse("2022-12-26"), dateFeature.get().getEnd());
+        assertEquals(OFF, dateFeature.get().getActive());
     }
 }

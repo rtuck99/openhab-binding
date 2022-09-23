@@ -12,20 +12,23 @@ import org.eclipse.jetty.client.util.FormContentProvider;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.util.Fields;
-import org.osgi.service.component.annotations.*;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.NamespaceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -209,22 +212,21 @@ public class VicareServiceImpl implements VicareService {
             if (properties != null) {
                 JsonObject value = properties.getAsJsonObject("value");
                 JsonObject statusObject = properties.getAsJsonObject("status");
+                JsonObject activeObject = properties.getAsJsonObject("active");
                 if (value != null) {
                     String valueType = value.get("type").getAsString();
                     if ("string".equals(valueType)) {
                         String textValue = value.get("value").getAsString();
                         return new TextFeature(featureName, textValue);
                     } else if ("number".equals(valueType)) {
-                        double numberValue = value.get("value").getAsDouble();
-                        String unit = value.get("unit").getAsString();
                         if (statusObject != null) {
                             String status = statusObject.get("value").getAsString();
                             return new NumericSensorFeature(featureName,
-                                    new DimensionalValue(new Unit(unit), numberValue),
+                                    dimensionalValueFromUnitValue(value),
                                     new Status(status));
                         } else {
                             return new NumericSensorFeature(featureName,
-                                    new DimensionalValue(new Unit(unit), numberValue),
+                                    dimensionalValueFromUnitValue(value),
                                     Status.NA);
                         }
                     }
@@ -235,9 +237,7 @@ public class VicareServiceImpl implements VicareService {
                             .collect(Collectors.toMap(Map.Entry::getKey,
                                     e -> {
                                         JsonObject prop = e.getValue().getAsJsonObject();
-                                        String unit = prop.get("unit").getAsString();
-                                        double numberValue = prop.get("value").getAsDouble();
-                                        return new DimensionalValue(new Unit(unit), numberValue);
+                                        return dimensionalValueFromUnitValue(prop);
                                     }));
                     return new StatisticsFeature(featureName, stats);
                 } else if (featureName.contains(".consumption.summary")) {
@@ -247,9 +247,7 @@ public class VicareServiceImpl implements VicareService {
                             .collect(Collectors.toMap(Map.Entry::getKey,
                                     e -> {
                                         JsonObject prop = e.getValue().getAsJsonObject();
-                                        String unit = prop.get("unit").getAsString();
-                                        double numberValue = prop.get("value").getAsDouble();
-                                        return new DimensionalValue(new Unit(unit), numberValue);
+                                        return dimensionalValueFromUnitValue(prop);
                                     }));
                     return new ConsumptionFeature(featureName,
                             stats.get("currentDay"),
@@ -258,21 +256,48 @@ public class VicareServiceImpl implements VicareService {
                             stats.get("currentYear"));
                 } else if (featureName.contains(".operating.programs.")) {
                     JsonObject temperature = properties.getAsJsonObject("temperature");
+                    JsonObject startObject = properties.getAsJsonObject("start");
+                    JsonObject endObject = properties.getAsJsonObject("end");
                     if (temperature != null) {
-                        JsonObject active = properties.getAsJsonObject("active");
-                        boolean activeStatus = active.get("value").getAsBoolean();
-                        Unit unit = new Unit(temperature.get("unit").getAsString());
-                        double tempValue = temperature.get("value").getAsDouble();
-                        DimensionalValue temperatureValue = new DimensionalValue(unit, tempValue);
+                        boolean activeStatus = activeObject.get("value").getAsBoolean();
+                        DimensionalValue temperatureValue = dimensionalValueFromUnitValue(temperature);
                         return new NumericSensorFeature(featureName, temperatureValue, activeStatus ? ON : OFF);
+                    } else if (startObject != null && endObject != null) {
+                        boolean activeStatus = activeObject.get("value").getAsBoolean();
+                        return new DatePeriodFeature(featureName, activeStatus ? ON : OFF, dateFromYYYYMMDD(startObject), dateFromYYYYMMDD(endObject));
+                    }
+                } else if (featureName.endsWith(".heating.curve")) {
+                    JsonObject shiftObject = properties.getAsJsonObject("shift");
+                    JsonObject slopeObject = properties.getAsJsonObject("slope");
+                    if (shiftObject != null && slopeObject != null) {
+                        DimensionalValue shift = dimensionalValueFromUnitValue(shiftObject);
+                        DimensionalValue slope = dimensionalValueFromUnitValue(slopeObject);
+                        return new CurveFeature(featureName, slope, shift);
                     }
                 } else if (statusObject != null) {
                     String status = statusObject.get("value").getAsString();
                     return new StatusSensorFeature(featureName, new Status(status));
+                } else if (activeObject != null) {
+                    boolean activeStatus = activeObject.get("value").getAsBoolean();
+                    return new StatusSensorFeature(featureName, activeStatus ? ON : OFF);
                 }
-
             }
             return null;
         }
+    }
+
+    private static LocalDate dateFromYYYYMMDD(JsonObject prop) {
+        JsonElement value = prop.get("value");
+        if (value != null) {
+            String valueAsString = value.getAsString();
+            return valueAsString.isEmpty() ? null : LocalDate.parse(valueAsString);
+        }
+        return null;
+    }
+
+    private static DimensionalValue dimensionalValueFromUnitValue(JsonObject prop) {
+        String unit = prop.get("unit").getAsString();
+        double numberValue = prop.get("value").getAsDouble();
+        return new DimensionalValue(new Unit(unit), numberValue);
     }
 }

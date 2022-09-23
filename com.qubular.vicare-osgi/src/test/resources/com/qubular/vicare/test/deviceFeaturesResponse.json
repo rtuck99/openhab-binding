@@ -1868,11 +1868,11 @@
           "type": "boolean"
         },
         "start": {
-          "value": "",
+          "value": "2022-12-23",
           "type": "string"
         },
         "end": {
-          "value": "",
+          "value": "2022-12-26",
           "type": "string"
         }
       },
@@ -1925,7 +1925,7 @@
       "uri": "https://api.viessmann.com/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.operating.programs.holiday",
       "gatewayId": "7633107093013212",
       "feature": "heating.operating.programs.holiday",
-      "timestamp": "2022-07-06T07:58:00.380Z",
+      "timestamp": "2022-09-23T16:30:35.096Z",
       "isEnabled": true,
       "isReady": true,
       "deviceId": "0"

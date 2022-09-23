@@ -9,6 +9,8 @@ public abstract class Feature {
         void visit(StatisticsFeature f);
         void visit(StatusSensorFeature f);
         void visit(TextFeature f);
+        void visit(CurveFeature f);
+        void visit(DatePeriodFeature datePeriodFeature);
     }
 
     private String name;

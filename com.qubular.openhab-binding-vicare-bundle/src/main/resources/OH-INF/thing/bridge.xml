@@ -22,6 +22,13 @@
         <label>IoT Service Endpoint</label>
         <description>URI for the Viessmann IoT service endpoint. You should not need to change this.</description>
         <default>https://api.viessmann.com/iot/v1/</default>
-      </parameter>    </config-description>
+      </parameter>
+      <parameter name="pollingInterval" type="integer" required="true" min="1">
+        <label>Polling Interval</label>
+        <description>The polling interval in seconds. The free version of the API is rate limited to 1450 requests per day.
+          If you intend to monitor more than one boiler you may need to increase this.</description>
+        <default>90</default>
+      </parameter>
+    </config-description>
   </bridge-type>
 </thing:thing-descriptions>

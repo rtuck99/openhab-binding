@@ -5,7 +5,7 @@ import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.*;
 import com.qubular.vicare.model.features.*;
-import org.eclipse.jdt.annotation.Nullable;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,7 +19,6 @@ import org.openhab.core.config.core.Configuration;
 import org.openhab.core.config.discovery.AbstractDiscoveryService;
 import org.openhab.core.config.discovery.DiscoveryListener;
 import org.openhab.core.config.discovery.DiscoveryResult;
-import org.openhab.core.config.discovery.DiscoveryService;
 import org.openhab.core.library.types.DateTimeType;
 import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.library.types.OnOffType;
@@ -35,7 +34,6 @@ import org.osgi.framework.BundleContext;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.ComponentContext;
 
-import java.awt.*;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -61,7 +59,8 @@ public class VicareBindingTest {
     public static final ThingUID THING_UID_BRIDGE = new ThingUID(THING_TYPE_BRIDGE, UUID.randomUUID().toString());
     public static final long INSTALLATION_ID = 1234L;
     public static final String GATEWAY_SERIAL = "SERIAL_1234";
-    public static final String DEVICE_ID = "0";
+    public static final String DEVICE_1_ID = "0";
+    public static final String DEVICE_2_ID = "1";
     @Mock
     private VicareService vicareService;
     private SimpleConfiguration configuration;
@@ -72,13 +71,15 @@ public class VicareBindingTest {
     private ComponentContext componentContext;
     private BundleContext bundleContext;
 
+    private ThingHandler bridgeHandler;
+
 
     private void simpleHeatingInstallation() throws AuthenticationException, IOException {
         Installation installation = mock(Installation.class);
         Gateway gateway = mock(Gateway.class);
         doReturn(GATEWAY_SERIAL).when(gateway).getSerial();
         Device device = mock(Device.class);
-        doReturn(DEVICE_ID).when(device).getId();
+        doReturn(DEVICE_1_ID).when(device).getId();
         doReturn(DEVICE_TYPE_HEATING).when(device).getDeviceType();
         doReturn(List.of(device)).when(gateway).getDevices();
         doReturn(List.of(gateway)).when(installation).getGateways();
@@ -104,8 +105,31 @@ public class VicareBindingTest {
                 Status.ON,
                 LocalDate.parse("2022-12-23"),
                 LocalDate.parse("2022-12-26"));
-        when(vicareService.getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID))
+        when(vicareService.getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID))
                 .thenReturn(List.of(temperatureSensor, statisticsFeature, textFeature, statusFeature, normalProgramFeature, consumptionFeature, burnerFeature, curveFeature, holidayFeature));
+    }
+
+    private void oneHeatingInstallationTwoBoilers() throws AuthenticationException, IOException {
+        Installation installation = mock(Installation.class);
+        Gateway gateway = mock(Gateway.class);
+        doReturn(GATEWAY_SERIAL).when(gateway).getSerial();
+        Device device1 = mock(Device.class);
+        doReturn(DEVICE_1_ID).when(device1).getId();
+        doReturn(DEVICE_TYPE_HEATING).when(device1).getDeviceType();
+        Device device2 = mock(Device.class);
+        doReturn(DEVICE_2_ID).when(device2).getId();
+        doReturn(DEVICE_TYPE_HEATING).when(device2).getDeviceType();
+        doReturn(List.of(device1, device2)).when(gateway).getDevices();
+        doReturn(List.of(gateway)).when(installation).getGateways();
+        doReturn(INSTALLATION_ID).when(installation).getId();
+        List<Installation> installations = List.of(installation);
+        doReturn(installations).when(vicareService).getInstallations();
+        Feature textFeature1 = new TextFeature("device.serial", "1111111111111111");
+        Feature textFeature2 = new TextFeature("device.serial", "2222222222222222");
+        when(vicareService.getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID))
+                .thenReturn(List.of(textFeature1));
+        when(vicareService.getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_2_ID))
+                .thenReturn(List.of(textFeature2));
     }
 
     private Bridge vicareBridge() {
@@ -131,6 +155,14 @@ public class VicareBindingTest {
         doReturn(bundle).when(bundleContext).getBundle();
     }
 
+    @AfterEach
+    void tearDown() {
+        if (bridgeHandler != null) {
+            bridgeHandler.dispose();
+            bridgeHandler = null;
+        }
+    }
+
     @Test
     public void bridgeHandlerReportsDiscoveryService() throws AuthenticationException, IOException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
         simpleHeatingInstallation();
@@ -152,7 +184,7 @@ public class VicareBindingTest {
         VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
         activateHandlerFactory(vicareHandlerFactory);
 
-        BridgeHandler bridgeHandler = (BridgeHandler) vicareHandlerFactory.createHandler(bridge);
+        bridgeHandler = vicareHandlerFactory.createHandler(bridge);
 
         DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
         InOrder inOrder1 = inOrder(vicareService, discoveryListener);
@@ -173,7 +205,7 @@ public class VicareBindingTest {
         DiscoveryResult result = resultArgumentCaptor.getValue();
         assertEquals("vicare:heating:" + THING_UID_BRIDGE.getId() + ":0328bf05-9b58-35fe-9845-edfc5a9b09aa", result.getThingUID().getAsString());
         assertEquals(THING_UID_BRIDGE, result.getBridgeUID());
-        assertEquals(encodeThingUniqueId(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID), result.getProperties().get("deviceUniqueId"));
+        assertEquals(encodeThingUniqueId(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID), result.getProperties().get("deviceUniqueId"));
         assertEquals("deviceUniqueId", result.getRepresentationProperty());
     }
     @Test
@@ -183,7 +215,7 @@ public class VicareBindingTest {
 
         ThingHandlerCallback thingHandlerCallback = mock(ThingHandlerCallback.class);
         VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
-        BridgeHandler bridgeHandler = (BridgeHandler) vicareHandlerFactory.createHandler(bridge);
+        bridgeHandler = vicareHandlerFactory.createHandler(bridge);
         bridgeHandler.setCallback(thingHandlerCallback);
         VicareDiscoveryService discoveryService = VicareDiscoveryService.class.getConstructor().newInstance();
         discoveryService.setThingHandler(bridgeHandler);
@@ -199,7 +231,7 @@ public class VicareBindingTest {
         DiscoveryResult result = resultArgumentCaptor.getValue();
         assertEquals("vicare:heating:" + THING_UID_BRIDGE.getId() + ":0328bf05-9b58-35fe-9845-edfc5a9b09aa", result.getThingUID().getAsString());
         assertEquals(THING_UID_BRIDGE, result.getBridgeUID());
-        assertEquals(encodeThingUniqueId(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID), result.getProperties().get("deviceUniqueId"));
+        assertEquals(encodeThingUniqueId(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID), result.getProperties().get("deviceUniqueId"));
         assertEquals("deviceUniqueId", result.getRepresentationProperty());
         ArgumentCaptor<ThingStatusInfo> statusInfoArgumentCaptor = forClass(ThingStatusInfo.class);
         verify(thingHandlerCallback).statusUpdated(same(bridge), statusInfoArgumentCaptor.capture());
@@ -213,7 +245,7 @@ public class VicareBindingTest {
 
         VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
 
-        Thing deviceThing = heatingDeviceThing();
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
 
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
 
@@ -224,16 +256,16 @@ public class VicareBindingTest {
     public void initializeDeviceHandlerCreatesTemperatureSensor() throws AuthenticationException, IOException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
-        VicareBridgeHandler bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
+        bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
-        when(bridge.getHandler()).thenReturn(bridgeHandler);
+        when(bridge.getHandler()).thenReturn((BridgeHandler) bridgeHandler);
         VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
-        Thing deviceThing = heatingDeviceThing();
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
         handler.initialize();
         InOrder inOrder = inOrder(vicareService);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
         Channel channel = thingCaptor.getAllValues().stream()
@@ -246,7 +278,7 @@ public class VicareBindingTest {
         assertEquals("heating.dhw.sensors.temperature.outlet", channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
         verify(callback).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
         assertEquals(27.3, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
@@ -256,16 +288,16 @@ public class VicareBindingTest {
     public void initializeDeviceHandlerCreatesOperatingProgramTemperatureSetting() throws AuthenticationException, IOException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
-        VicareBridgeHandler bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
+        bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
-        when(bridge.getHandler()).thenReturn(bridgeHandler);
+        when(bridge.getHandler()).thenReturn((BridgeHandler) bridgeHandler);
         VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
-        Thing deviceThing = heatingDeviceThing();
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
         handler.initialize();
         InOrder inOrder = inOrder(vicareService);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
         Channel channel = thingCaptor.getAllValues().stream()
@@ -287,7 +319,7 @@ public class VicareBindingTest {
         assertEquals("heating.circuits.0.operating.programs.normal", activeChannel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
         verify(callback).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
         assertEquals(21, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
@@ -301,11 +333,11 @@ public class VicareBindingTest {
     public void initializeDeviceHandlerCreatesConsumptionChannels() throws AuthenticationException, IOException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
-        VicareBridgeHandler bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
+        bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
-        when(bridge.getHandler()).thenReturn(bridgeHandler);
+        when(bridge.getHandler()).thenReturn((BridgeHandler) bridgeHandler);
         VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
-        Thing deviceThing = heatingDeviceThing();
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = mock(ThingHandlerCallback.class);
         when(callback.getBridge(THING_UID_BRIDGE)).thenReturn(bridge);
@@ -320,7 +352,7 @@ public class VicareBindingTest {
         }).when(callback).thingUpdated(any(Thing.class));
         handler.initialize();
         InOrder inOrder = inOrder(vicareService);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
         Map<String, Channel> channelsById = thingCaptor.getAllValues().stream()
@@ -357,11 +389,11 @@ public class VicareBindingTest {
     public void initializeDeviceHandlerCreatesStatisticsSensor() throws AuthenticationException, IOException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
-        VicareBridgeHandler bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
+        bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
-        when(bridge.getHandler()).thenReturn(bridgeHandler);
+        when(bridge.getHandler()).thenReturn((BridgeHandler) bridgeHandler);
         VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
-        Thing deviceThing = heatingDeviceThing();
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = mock(ThingHandlerCallback.class);
         when(callback.getBridge(THING_UID_BRIDGE)).thenReturn(bridge);
@@ -376,7 +408,7 @@ public class VicareBindingTest {
         }).when(callback).thingUpdated(any(Thing.class));
         handler.initialize();
         InOrder inOrder = inOrder(vicareService);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
         Channel channel = thingCaptor.getAllValues().stream()
@@ -389,7 +421,7 @@ public class VicareBindingTest {
         assertEquals("heating.burners.0.statistics", channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
         verify(callback).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
         assertEquals(5.0, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
@@ -399,37 +431,51 @@ public class VicareBindingTest {
     public void initializeDeviceHandlerCreatesTextProperty() throws AuthenticationException, IOException, InterruptedException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
-        VicareBridgeHandler bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
+        bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
-        when(bridge.getHandler()).thenReturn(bridgeHandler);
+        when(bridge.getHandler()).thenReturn((BridgeHandler) bridgeHandler);
         VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
-        Thing deviceThing = heatingDeviceThing();
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
         handler.initialize();
 //        Thread.sleep(1000);
         InOrder inOrder = inOrder(vicareService);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
 
         assertEquals("7723181102527121", thingCaptor.getValue().getProperties().get("device.serial"));
     }
 
+    private ThingHandlerCallback simpleHandlerCallback(Bridge bridge, ThingHandler handler) {
+        ThingHandlerCallback callback = mock(ThingHandlerCallback.class);
+        when(callback.getBridge(THING_UID_BRIDGE)).thenReturn(bridge);
+        handler.setCallback(callback);
+
+        doAnswer(invocation -> {
+            Thing thing = invocation.getArgument(0);
+            ThingUID uid = thing.getUID();
+            doReturn(thing).when(thingRegistry).get(uid);
+            return null;
+        }).when(callback).thingUpdated(any(Thing.class));
+        return callback;
+    }
+
     @Test
     public void initializeDeviceHandlerCreatesCurve() throws AuthenticationException, IOException, InterruptedException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
-        VicareBridgeHandler bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
+        bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
-        when(bridge.getHandler()).thenReturn(bridgeHandler);
+        when(bridge.getHandler()).thenReturn((BridgeHandler) bridgeHandler);
         VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
-        Thing deviceThing = heatingDeviceThing();
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
         handler.initialize();
         InOrder inOrder = inOrder(vicareService);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
 
@@ -452,29 +498,15 @@ public class VicareBindingTest {
         assertEquals("heating.circuits.0.heating.curve", shiftChannel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(slopeChannel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
         verify(callback).stateUpdated(eq(slopeChannel.getUID()), stateCaptor.capture());
         assertEquals(1.6, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
 
         handler.handleCommand(shiftChannel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService, never()).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService, never()).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         verify(callback).stateUpdated(eq(shiftChannel.getUID()), stateCaptor.capture());
         assertEquals(-4.0, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
-    }
-
-    private ThingHandlerCallback simpleHandlerCallback(Bridge bridge, ThingHandler handler) {
-        ThingHandlerCallback callback = mock(ThingHandlerCallback.class);
-        when(callback.getBridge(THING_UID_BRIDGE)).thenReturn(bridge);
-        handler.setCallback(callback);
-
-        doAnswer(invocation -> {
-            Thing thing = invocation.getArgument(0);
-            ThingUID uid = thing.getUID();
-            doReturn(thing).when(thingRegistry).get(uid);
-            return null;
-        }).when(callback).thingUpdated(any(Thing.class));
-        return callback;
     }
 
     @Test
@@ -485,12 +517,12 @@ public class VicareBindingTest {
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
         when(bridge.getHandler()).thenReturn(bridgeHandler);
         VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
-        Thing deviceThing = heatingDeviceThing();
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
         handler.initialize();
         InOrder inOrder = inOrder(vicareService);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
 
@@ -514,13 +546,13 @@ public class VicareBindingTest {
         assertEquals("heating.burners.0", burnerChannel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
         verify(callback).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
         assertEquals(OnOffType.ON, stateCaptor.getValue());
 
         handler.handleCommand(burnerChannel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService, never()).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService, never()).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         verify(callback).stateUpdated(eq(burnerChannel.getUID()), stateCaptor.capture());
         assertEquals(OnOffType.ON, stateCaptor.getValue());
     }
@@ -532,12 +564,12 @@ public class VicareBindingTest {
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
         when(bridge.getHandler()).thenReturn(bridgeHandler);
         VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
-        Thing deviceThing = heatingDeviceThing();
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
         handler.initialize();
         InOrder inOrder = inOrder(vicareService);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
 
@@ -571,18 +603,18 @@ public class VicareBindingTest {
         assertEquals("heating.circuits.0.operating.programs.holiday", endChannel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
         verify(callback).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
         assertEquals(OnOffType.ON, stateCaptor.getValue());
 
         handler.handleCommand(startChannel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService, never()).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService, never()).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         verify(callback).stateUpdated(eq(startChannel.getUID()), stateCaptor.capture());
         assertEquals(ZonedDateTime.parse("2022-12-23T00:00:00Z"), ((DateTimeType)stateCaptor.getValue()).getZonedDateTime());
 
         handler.handleCommand(endChannel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService, never()).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID);
+        inOrder.verify(vicareService, never()).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         verify(callback).stateUpdated(eq(endChannel.getUID()), stateCaptor.capture());
         assertEquals(ZonedDateTime.parse("2022-12-26T23:59:59.999999999Z"), ((DateTimeType)stateCaptor.getValue()).getZonedDateTime());
     }
@@ -601,13 +633,42 @@ public class VicareBindingTest {
 
     }
 
-    private Thing heatingDeviceThing() {
+    @Test
+    public void bridgeCachesResponsesPerDevice() throws AuthenticationException, IOException {
+        oneHeatingInstallationTwoBoilers();
+        Bridge bridge = vicareBridge();
+        Thing boiler1 = heatingDeviceThing(DEVICE_1_ID);
+        Thing boiler2 = heatingDeviceThing(DEVICE_2_ID);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
+        bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
+        ThingHandler boilerHandler1 = vicareHandlerFactory.createHandler(boiler1);
+        ThingHandler boilerHandler2 = vicareHandlerFactory.createHandler(boiler2);
+        ThingHandlerCallback thingHandlerCallback1 = simpleHandlerCallback(bridge, boilerHandler1);
+        boilerHandler1.setCallback(thingHandlerCallback1);
+        ThingHandlerCallback thingHandlerCallback2 = simpleHandlerCallback(bridge, boilerHandler2);
+        boilerHandler2.setCallback(thingHandlerCallback2);
+
+        boilerHandler1.initialize();
+        verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+
+        boilerHandler2.initialize();
+        verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_2_ID);
+
+        verify(thingHandlerCallback1, timeout(1000)).thingUpdated(any(Thing.class));
+        assertEquals("1111111111111111", boilerHandler1.getThing().getProperties().get("device.serial"));
+
+        verify(thingHandlerCallback2, timeout(1000)).thingUpdated(any(Thing.class));
+        assertEquals("2222222222222222", boilerHandler2.getThing().getProperties().get("device.serial"));
+    }
+
+
+    private Thing heatingDeviceThing(String deviceId) {
         Thing deviceThing = mock(Thing.class);
         doReturn(THING_UID_BRIDGE).when(deviceThing).getBridgeUID();
         doReturn(THING_TYPE_HEATING).when(deviceThing).getThingTypeUID();
-        ThingUID deviceThingId = new ThingUID(THING_TYPE_HEATING, THING_UID_BRIDGE, encodeThingId(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID));
+        ThingUID deviceThingId = new ThingUID(THING_TYPE_HEATING, THING_UID_BRIDGE, encodeThingId(INSTALLATION_ID, GATEWAY_SERIAL, deviceId));
         doReturn(deviceThingId).when(deviceThing).getUID();
-        Map<String, String> propMap = new HashMap<>(Map.of(PROPERTY_DEVICE_UNIQUE_ID, encodeThingUniqueId(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_ID)));
+        Map<String, String> propMap = new HashMap<>(Map.of(PROPERTY_DEVICE_UNIQUE_ID, encodeThingUniqueId(INSTALLATION_ID, GATEWAY_SERIAL, deviceId)));
         doReturn(propMap).when(deviceThing).getProperties();
         doAnswer(i -> {
             propMap.put(i.getArgument(0), i.getArgument(1));

@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ScheduledFuture;
@@ -38,6 +39,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
     private Instant responseTimestamp = Instant.MIN;
 
     private static final int REQUEST_INTERVAL_SECS = 90;
+
     private ScheduledFuture<?> featurePollingJob;
 
     /**
@@ -59,7 +61,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
     @Override
     public void initialize() {
         updateStatus(ThingStatus.UNKNOWN);
-        featurePollingJob = scheduler.scheduleAtFixedRate(featurePoller(), POLLING_STARTUP_DELAY_SECS, REQUEST_INTERVAL_SECS, TimeUnit.SECONDS);
+        featurePollingJob = scheduler.scheduleAtFixedRate(featurePoller(), POLLING_STARTUP_DELAY_SECS, getPollingInterval(), TimeUnit.SECONDS);
     }
 
     @Override
@@ -68,6 +70,11 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
             featurePollingJob.cancel(false);
         }
         super.dispose();
+    }
+
+    private int getPollingInterval() {
+        BigDecimal pollingInterval = (BigDecimal) getConfig().getProperties().get("pollingInterval");
+        return pollingInterval == null ? REQUEST_INTERVAL_SECS : pollingInterval.intValue();
     }
 
     @Override
@@ -125,7 +132,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
 
     private synchronized List<Feature> getFeatures(Thing thing) throws AuthenticationException, IOException {
         Instant now = Instant.now();
-        if (now.isBefore(responseTimestamp.plusSeconds(REQUEST_INTERVAL_SECS - 1))) {
+        if (now.isBefore(responseTimestamp.plusSeconds(getPollingInterval() - 1))) {
             return cachedResponse;
         }
 

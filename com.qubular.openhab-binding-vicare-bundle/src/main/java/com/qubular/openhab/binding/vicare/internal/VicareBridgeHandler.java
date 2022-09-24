@@ -5,9 +5,7 @@ import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.VicareConfiguration;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.Feature;
-import org.openhab.core.events.EventPublisher;
-import org.openhab.core.items.events.ItemCommandEvent;
-import org.openhab.core.items.events.ItemEventFactory;
+import de.jollyday.util.Cache;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseBridgeHandler;
 import org.openhab.core.thing.binding.ThingHandlerService;
@@ -34,9 +32,17 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
     private final VicareConfiguration config;
 
     private final VicareService vicareService;
-    private List<Feature> cachedResponse = null;
+    private final Map<String, CachedResponse> cachedResponses = new HashMap<>();
 
-    private Instant responseTimestamp = Instant.MIN;
+    private static class CachedResponse {
+        final List<Feature> response;
+        final Instant responseTimestamp;
+
+        public CachedResponse(List<Feature> response, Instant responseTimestamp) {
+            this.response = response;
+            this.responseTimestamp = responseTimestamp;
+        }
+    }
 
     private static final int REQUEST_INTERVAL_SECS = 90;
 
@@ -132,15 +138,16 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
 
     private synchronized List<Feature> getFeatures(Thing thing) throws AuthenticationException, IOException {
         Instant now = Instant.now();
-        if (now.isBefore(responseTimestamp.plusSeconds(getPollingInterval() - 1))) {
-            return cachedResponse;
+        String key = thing.getUID().getId();
+        CachedResponse response = cachedResponses.get(key);
+        if (response != null && now.isBefore(response.responseTimestamp.plusSeconds(getPollingInterval() - 1))) {
+            return response.response;
         }
 
         VicareUtil.IGD s = decodeThingUniqueId(thing.getProperties().get(PROPERTY_DEVICE_UNIQUE_ID));
         List<Feature> features = vicareService.getFeatures(s.installationId, s.gatewaySerial, s.deviceId);
-        cachedResponse = features;
-        responseTimestamp = now;
-        return cachedResponse;
+        cachedResponses.put(key, new CachedResponse(features, now));
+        return features;
     }
 
     @Override

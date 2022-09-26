@@ -22,6 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -34,9 +36,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-import static com.qubular.vicare.model.Status.OFF;
-import static com.qubular.vicare.model.Status.ON;
+import static com.qubular.vicare.model.Status.*;
 import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 
 @Component(configurationPid = "vicare.bridge")
@@ -159,32 +161,60 @@ public class VicareServiceImpl implements VicareService {
                 .resolve(String.format("equipment/installations/%s/gateways/%s/devices/%s/features", installationId, gatewaySerial, deviceId));
 
         try {
-            ContentResponse contentResponse = httpClientProvider.getHttpClient()
-                    .newRequest(endpoint)
-                    .header(HttpHeader.AUTHORIZATION, "Bearer " + accessToken.token)
-                    .method(HttpMethod.GET)
-                    .send();
-
-            if (contentResponse.getStatus() == SC_OK) {
-                captureResponse(contentResponse.getContentAsString());
-
-                List<Feature> data = apiGson().fromJson(contentResponse.getContentAsString(), FeatureResponse.class).data;
-                return data.stream()
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toList());
+            String responseContent = maybeInjectResponse();
+            if (responseContent == null) {
+                ContentResponse contentResponse = httpClientProvider.getHttpClient()
+                        .newRequest(endpoint)
+                        .header(HttpHeader.AUTHORIZATION, "Bearer " + accessToken.token)
+                        .method(HttpMethod.GET)
+                        .send();
+                responseContent = contentResponse.getContentAsString();
+                maybeCaptureResponse(responseContent);
+                if (contentResponse.getStatus() == SC_OK) {
+                    return extractFeatures(responseContent);
+                } else {
+                    throw new IOException("Unable to request features from IoT API, server returned " + contentResponse.getStatus());
+                }
             } else {
-                throw new IOException("Unable to request features from IoT API, server returned " + contentResponse.getStatus());
+                return extractFeatures(responseContent);
             }
+
         } catch (InterruptedException | TimeoutException | ExecutionException e) {
             logger.warn("Unable to request features from IoT API", e);
             throw new IOException("Unable to request features from IoT API", e);
         }
     }
 
-    private void captureResponse(String contentAsString) {
+    private List<Feature> extractFeatures(String responseContent) {
+                List<Feature> data = apiGson().fromJson(responseContent, FeatureResponse.class).data;
+                return data.stream()
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
+    }
+
+    /**
+     * inject the feature response from a file in order to aid debugging.
+     * @return the injected or null.
+     */
+    private String maybeInjectResponse() {
+        if (config.isResponseInjectionEnabled()) {
+            try (var fis = new FileInputStream(config.getResponseInjectionFile())) {
+                return new String(fis.readAllBytes(), StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                logger.warn("Unable to read response injection file {}: {}", config.getResponseInjectionFile(), e.getMessage());
+            }
+        }
+        return null;
+    }
+
+    /**
+     * capture the feature response to a file in order to aid debugging.
+     * @param responseJson The json response
+     */
+    private void maybeCaptureResponse(String responseJson) {
         if (config.isResponseCaptureEnabled()) {
             try (var fos = new FileOutputStream(config.getResponseCaptureFile(), false)) {
-                fos.write(contentAsString.getBytes(StandardCharsets.UTF_8));
+                fos.write(responseJson.getBytes(StandardCharsets.UTF_8));
             } catch (IOException e) {
                 logger.warn("Unable to write to capture file {}: {}", config.getResponseCaptureFile(), e.getMessage());
             }
@@ -223,11 +253,11 @@ public class VicareServiceImpl implements VicareService {
                             String status = statusObject.get("value").getAsString();
                             return new NumericSensorFeature(featureName,
                                     dimensionalValueFromUnitValue(value),
-                                    new Status(status));
+                                    new Status(status), null);
                         } else {
                             return new NumericSensorFeature(featureName,
                                     dimensionalValueFromUnitValue(value),
-                                    Status.NA);
+                                    NA, null);
                         }
                     }
                 } else if (featureName.endsWith(".statistics")) {
@@ -261,7 +291,7 @@ public class VicareServiceImpl implements VicareService {
                     if (temperature != null) {
                         boolean activeStatus = activeObject.get("value").getAsBoolean();
                         DimensionalValue temperatureValue = dimensionalValueFromUnitValue(temperature);
-                        return new NumericSensorFeature(featureName, temperatureValue, activeStatus ? ON : OFF);
+                        return new NumericSensorFeature(featureName, temperatureValue, NA, activeStatus);
                     } else if (startObject != null && endObject != null) {
                         boolean activeStatus = activeObject.get("value").getAsBoolean();
                         return new DatePeriodFeature(featureName, activeStatus ? ON : OFF, dateFromYYYYMMDD(startObject), dateFromYYYYMMDD(endObject));
@@ -274,12 +304,15 @@ public class VicareServiceImpl implements VicareService {
                         DimensionalValue slope = dimensionalValueFromUnitValue(slopeObject);
                         return new CurveFeature(featureName, slope, shift);
                     }
-                } else if (statusObject != null) {
-                    String status = statusObject.get("value").getAsString();
-                    return new StatusSensorFeature(featureName, new Status(status));
-                } else if (activeObject != null) {
-                    boolean activeStatus = activeObject.get("value").getAsBoolean();
-                    return new StatusSensorFeature(featureName, activeStatus ? ON : OFF);
+                } else if (statusObject != null || activeObject != null) {
+                    Status status = ofNullable(statusObject).map(o -> o.get("value"))
+                            .map(JsonElement::getAsString)
+                            .map(Status::new)
+                            .orElse(NA);
+                    Boolean active = ofNullable(activeObject).map(o -> o.get("value"))
+                            .map(JsonElement::getAsBoolean)
+                            .orElse(null);
+                    return new StatusSensorFeature(featureName, status, active);
                 }
             }
             return null;

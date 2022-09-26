@@ -318,8 +318,152 @@ public class VicareServiceTest {
 
     @Test
     @DisabledIf("realConnection")
-    public void getDeviceFeatures() throws ServletException, NamespaceException, AuthenticationException, IOException {
+    public void supports_heating_boiler_serial() throws ServletException, NamespaceException, AuthenticationException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse.json");
 
+        Optional<Feature> boilerSerial = features.stream()
+                .filter(f -> f.getName().equals("heating.boiler.serial"))
+                .findFirst();
+        assertTrue(boilerSerial.isPresent());
+        assertEquals("7723181102527121", ((TextFeature) boilerSerial.get()).getValue());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_boiler_sensors_temperature_commonSupply() throws ServletException, NamespaceException, AuthenticationException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse.json");
+
+        Optional<NumericSensorFeature> commonSupplyTemperature = features.stream()
+                .filter(f -> f.getName().equals("heating.boiler.sensors.temperature.commonSupply"))
+                .map(NumericSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(commonSupplyTemperature.isPresent());
+        assertEquals(34.4, commonSupplyTemperature.get().getValue().getValue(), 0.001);
+        assertEquals("celsius", commonSupplyTemperature.get().getValue().getUnit().getName());
+        assertEquals("connected", commonSupplyTemperature.get().getStatus().getName());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_burners_n_modulation() throws ServletException, NamespaceException, AuthenticationException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse.json");
+
+        Optional<NumericSensorFeature> burnerModulation = features.stream()
+                .filter(f -> f.getName().equals("heating.burners.0.modulation"))
+                .map(NumericSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(burnerModulation.isPresent());
+        assertEquals(0, burnerModulation.get().getValue().getValue(), 0.001);
+        assertEquals("percent", burnerModulation.get().getValue().getUnit().getName());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_circuits_n_circuilation_pump() throws ServletException, NamespaceException, AuthenticationException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse.json");
+
+        Optional<StatusSensorFeature> pumpStatus = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.0.circulation.pump"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(pumpStatus.isPresent());
+        assertEquals("off", pumpStatus.get().getStatus().getName());
+    }
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_burners_n_statistics() throws ServletException, NamespaceException, AuthenticationException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse.json");
+
+        Optional<StatisticsFeature> burnerStats = features.stream()
+                .filter(f -> f.getName().equals("heating.burners.0.statistics"))
+                .map(StatisticsFeature.class::cast)
+                .findFirst();
+        assertTrue(burnerStats.isPresent());
+        assertEquals("hour", burnerStats.get().getStatistics().get("hours").getUnit().getName());
+        assertEquals(5, burnerStats.get().getStatistics().get("hours").getValue());
+        assertEquals("", burnerStats.get().getStatistics().get("starts").getUnit().getName());
+        assertEquals(312, burnerStats.get().getStatistics().get("starts").getValue());
+
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_power_consumption_summary_dhw() throws ServletException, NamespaceException, AuthenticationException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse.json");
+
+        Optional<ConsumptionFeature> dhwConsumption = features.stream()
+                .filter(f -> f.getName().equals("heating.power.consumption.summary.dhw"))
+                .map(ConsumptionFeature.class::cast)
+                .findFirst();
+        assertTrue(dhwConsumption.isPresent());
+        assertEquals("kilowattHour", dhwConsumption.get().getToday().getUnit().getName());
+        assertEquals(0, dhwConsumption.get().getToday().getValue());
+        assertEquals("kilowattHour", dhwConsumption.get().getSevenDays().getUnit().getName());
+        assertEquals(0.2, dhwConsumption.get().getSevenDays().getValue(), 0.001);
+        assertEquals("kilowattHour", dhwConsumption.get().getMonth().getUnit().getName());
+        assertEquals(0.2, dhwConsumption.get().getMonth().getValue(), 0.001);
+        assertEquals("kilowattHour", dhwConsumption.get().getYear().getUnit().getName());
+        assertEquals(0.9, dhwConsumption.get().getYear().getValue(), 0.001);
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_circuits_0_operating_programs_normal() throws ServletException, NamespaceException, AuthenticationException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse.json");
+
+        Optional<NumericSensorFeature> normalMode = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.0.operating.programs.normal"))
+                .map(NumericSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(normalMode.isPresent());
+        assertEquals(false, normalMode.get().isActive());
+        assertEquals(20, normalMode.get().getValue().getValue(), 0.001);
+        assertEquals("celsius", normalMode.get().getValue().getUnit().getName());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_burners_n() throws ServletException, NamespaceException, AuthenticationException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse.json");
+
+        Optional<StatusSensorFeature> burnerFeature = features.stream()
+                .filter(f -> f.getName().equals("heating.burners.0"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(burnerFeature.isPresent());
+        assertEquals(false, burnerFeature.get().isActive());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_circuits_n_heating_curve() throws ServletException, NamespaceException, AuthenticationException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse.json");
+
+        Optional<CurveFeature> curveFeature = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.0.heating.curve"))
+                .map(CurveFeature.class::cast)
+                .findFirst();
+        assertTrue(curveFeature.isPresent());
+        assertEquals(0, curveFeature.get().getShift().getValue(), 0.01);
+        assertEquals(2, curveFeature.get().getSlope().getValue(), 0.01);
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_operating_programs_holiday() throws ServletException, NamespaceException, AuthenticationException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse.json");
+
+        Optional<DatePeriodFeature> dateFeature = features.stream()
+                .filter(f -> f.getName().equals("heating.operating.programs.holiday"))
+                .map(DatePeriodFeature.class::cast)
+                .findFirst();
+        assertTrue(dateFeature.isPresent());
+        assertEquals(LocalDate.parse("2022-12-23"), dateFeature.get().getStart());
+        assertEquals(LocalDate.parse("2022-12-26"), dateFeature.get().getEnd());
+        assertEquals(OFF, dateFeature.get().getActive());
+    }
+
+    private List<Feature> getFeatures(final String fileName) throws ServletException, NamespaceException, AuthenticationException, IOException {
         CompletableFuture<Void> servletTestResult = new CompletableFuture<>();
         tokenStore.storeAccessToken("mytoken", Instant.now().plus(1, ChronoUnit.DAYS));
         iotServlet = new HttpServlet() {
@@ -329,7 +473,7 @@ public class VicareServiceTest {
                 try {
                     assertEquals("/iot/equipment/installations/2012616/gateways/7633107093013212/devices/0/features", URI.create(req.getRequestURI()).getPath());
                     assertEquals("Bearer mytoken", req.getHeader("Authorization"));
-                    String jsonResponse = new String(getClass().getResourceAsStream("deviceFeaturesResponse.json").readAllBytes(), StandardCharsets.UTF_8);
+                    String jsonResponse = new String(getClass().getResourceAsStream(fileName).readAllBytes(), StandardCharsets.UTF_8);
 
                     resp.setContentType("application/json");
                     resp.setStatus(200);
@@ -347,94 +491,62 @@ public class VicareServiceTest {
         List<Feature> features = vicareService.getFeatures(2012616, "7633107093013212", "0");
 
         servletTestResult.orTimeout(10, TimeUnit.SECONDS).join();
-
-        assertTrue(features.size() > 0);
-
-        Optional<Feature> boilerSerial = features.stream()
-                .filter(f -> f.getName().equals("heating.boiler.serial"))
-                .findFirst();
-        assertTrue(boilerSerial.isPresent());
-        assertEquals("7723181102527121", ((TextFeature)boilerSerial.get()).getValue());
-
-        Optional<NumericSensorFeature> commonSupplyTemperature = features.stream()
-                .filter(f -> f.getName().equals("heating.boiler.sensors.temperature.commonSupply"))
-                .map(NumericSensorFeature.class::cast)
-                .findFirst();
-        assertTrue(commonSupplyTemperature.isPresent());
-        assertEquals(34.4, commonSupplyTemperature.get().getValue().getValue(), 0.001);
-        assertEquals("celsius", commonSupplyTemperature.get().getValue().getUnit().getName());
-        assertEquals("connected", commonSupplyTemperature.get().getStatus().getName());
-
-        Optional<NumericSensorFeature> burnerModulation = features.stream()
-                .filter(f -> f.getName().equals("heating.burners.0.modulation"))
-                .map(NumericSensorFeature.class::cast)
-                .findFirst();
-        assertTrue(burnerModulation.isPresent());
-        assertEquals(0, burnerModulation.get().getValue().getValue(), 0.001);
-        assertEquals("percent", burnerModulation.get().getValue().getUnit().getName());
-
-        Optional<StatusSensorFeature> pumpStatus = features.stream()
-                .filter(f -> f.getName().equals("heating.circuits.0.circulation.pump"))
-                .map(StatusSensorFeature.class::cast)
-                .findFirst();
-        assertTrue(pumpStatus.isPresent());
-        assertEquals("off", pumpStatus.get().getStatus().getName());
-
-        Optional<StatisticsFeature> burnerStats = features.stream()
-                .filter(f -> f.getName().equals("heating.burners.0.statistics"))
-                .map(StatisticsFeature.class::cast)
-                .findFirst();
-        assertTrue(burnerStats.isPresent());
-        assertEquals("hour", burnerStats.get().getStatistics().get("hours").getUnit().getName());
-        assertEquals(5, burnerStats.get().getStatistics().get("hours").getValue());
-        assertEquals("", burnerStats.get().getStatistics().get("starts").getUnit().getName());
-        assertEquals(312, burnerStats.get().getStatistics().get("starts").getValue());
-
-        Optional<ConsumptionFeature> dhwConsumption = features.stream()
-                .filter(f -> f.getName().equals("heating.power.consumption.summary.dhw"))
-                .map(ConsumptionFeature.class::cast)
-                .findFirst();
-        assertTrue(dhwConsumption.isPresent());
-        assertEquals("kilowattHour", dhwConsumption.get().getToday().getUnit().getName());
-        assertEquals(0, dhwConsumption.get().getToday().getValue());
-        assertEquals("kilowattHour", dhwConsumption.get().getSevenDays().getUnit().getName());
-        assertEquals(0.2, dhwConsumption.get().getSevenDays().getValue(), 0.001);
-        assertEquals("kilowattHour", dhwConsumption.get().getMonth().getUnit().getName());
-        assertEquals(0.2, dhwConsumption.get().getMonth().getValue(), 0.001);
-        assertEquals("kilowattHour", dhwConsumption.get().getYear().getUnit().getName());
-        assertEquals(0.9, dhwConsumption.get().getYear().getValue(), 0.001);
-
-        Optional<NumericSensorFeature> normalMode = features.stream()
-                .filter(f -> f.getName().equals("heating.circuits.0.operating.programs.normal"))
-                .map(NumericSensorFeature.class::cast)
-                .findFirst();
-        assertTrue(normalMode.isPresent());
-        assertEquals(OFF, normalMode.get().getStatus());
-        assertEquals(20, normalMode.get().getValue().getValue(), 0.001);
-        assertEquals("celsius", normalMode.get().getValue().getUnit().getName());
-
-        Optional<StatusSensorFeature> burnerFeature = features.stream()
-                .filter(f -> f.getName().equals("heating.burners.0"))
-                .map(StatusSensorFeature.class::cast)
-                .findFirst();
-        assertTrue(burnerFeature.isPresent());
-        assertEquals(OFF, burnerFeature.get().getStatus());
-
-        Optional<CurveFeature> curveFeature = features.stream()
-                .filter(f -> f.getName().equals("heating.circuits.0.heating.curve"))
-                .map(CurveFeature.class::cast)
-                .findFirst();
-        assertTrue(curveFeature.isPresent());
-        assertEquals(0, curveFeature.get().getShift().getValue(), 0.01);
-        assertEquals(2, curveFeature.get().getSlope().getValue(), 0.01);
-
-        Optional<DatePeriodFeature> dateFeature = features.stream()
-                .filter(f -> f.getName().equals("heating.operating.programs.holiday"))
-                .map(DatePeriodFeature.class::cast)
-                .findFirst();
-        assertTrue(dateFeature.isPresent());
-        assertEquals(LocalDate.parse("2022-12-23"), dateFeature.get().getStart());
-        assertEquals(LocalDate.parse("2022-12-26"), dateFeature.get().getEnd());
-        assertEquals(OFF, dateFeature.get().getActive());
+        return features;
     }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_dhw() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse2.json");
+
+        Optional<StatusSensorFeature> dhwFeature = features.stream()
+                .filter(f -> f.getName().equals("heating.dhw"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(dhwFeature.isPresent());
+        assertEquals(Status.ON, dhwFeature.get().getStatus());
+        assertEquals(true, dhwFeature.get().isActive());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_dhw_pumps_primary() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse2.json");
+
+        Optional<StatusSensorFeature> dhwFeature = features.stream()
+                .filter(f -> f.getName().equals("heating.dhw.pumps.primary"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(dhwFeature.isPresent());
+        assertEquals(Status.OFF, dhwFeature.get().getStatus());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_dhw_pumps_circulation() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse2.json");
+
+        Optional<StatusSensorFeature> dhwFeature = features.stream()
+                .filter(f -> f.getName().equals("heating.dhw.pumps.circulation"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(dhwFeature.isPresent());
+        assertEquals(Status.ON, dhwFeature.get().getStatus());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_dhw_sensors_temperature_hotWaterStorage() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse2.json");
+
+        Optional<NumericSensorFeature> tempSensor = features.stream()
+                .filter(f -> f.getName().equals("heating.dhw.sensors.temperature.hotWaterStorage"))
+                .map(NumericSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(tempSensor.isPresent());
+        assertEquals(54.3, tempSensor.get().getValue().getValue(), 0.01);
+        assertEquals(new Unit("celsius"), tempSensor.get().getValue().getUnit());
+        assertEquals(new Status("connected"), tempSensor.get().getStatus());
+    }
+
 }

@@ -21,4 +21,12 @@ public interface VicareConfiguration {
     default boolean isResponseCaptureEnabled() {
         return getResponseCaptureFile() != null;
     }
+
+    default File getResponseInjectionFile() {
+        return null;
+    }
+
+    default boolean isResponseInjectionEnabled() {
+        return getResponseInjectionFile() != null;
+    }
 }

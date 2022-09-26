@@ -51,4 +51,14 @@ public class SimpleConfiguration implements VicareConfiguration {
     public boolean isResponseCaptureEnabled() {
         return (Boolean) ofNullable(configurationParameters.get("responseCapture")).orElse(false);
     }
+
+    @Override
+    public File getResponseInjectionFile() {
+        return bundleContext.getDataFile("responseInjection.json");
+    }
+
+    @Override
+    public boolean isResponseInjectionEnabled() {
+        return (Boolean) ofNullable(configurationParameters.get("responseInjection")).orElse(false);
+    }
 }

@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -58,7 +57,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
      */
     @Override
     public void initialize() {
-        String deviceUniqueId = thing.getProperties().get(PROPERTY_DEVICE_UNIQUE_ID);
+        String deviceUniqueId = getDeviceUniqueId(thing);
         VicareUtil.IGD igd = decodeThingUniqueId(deviceUniqueId);
         CompletableFuture.runAsync(() -> {
             try {
@@ -80,7 +79,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                             return ChannelBuilder.create(new ChannelUID(thing.getUID(), id + "_" + statName))
                                     .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id + "_" + statName)))
                                     .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
-                                            PROPERTY_STATISTIC_NAME, statName))
+                                            PROPERTY_PROP_NAME, statName))
                                     .build();
                         }
 
@@ -92,10 +91,18 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                                     .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName()))
                                     .build());
                             if (f.getStatus() != null && !Status.NA.equals(f.getStatus())) {
+                                String statusId = id + "_status";
+                                channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), statusId))
+                                        .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(statusId)))
+                                        .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
+                                                PROPERTY_PROP_NAME, "status"))
+                                        .build());
+                            } else if (f.isActive() != null) {
                                 String activeId = id + "_active";
                                 channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), activeId))
                                         .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(activeId)))
-                                        .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName()))
+                                        .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
+                                                PROPERTY_PROP_NAME, "active"))
                                         .build());
                             }
                         }
@@ -107,17 +114,24 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                                 channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), id))
                                         .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id)))
                                         .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
-                                                PROPERTY_STATISTIC_NAME, name))
+                                                PROPERTY_PROP_NAME, name))
                                         .build());
                             });
                         }
 
                         @Override
                         public void visit(StatusSensorFeature f) {
-                            String id = escapeUIDSegment(f.getName());
-                            channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), id))
-                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id)))
-                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName()))
+                            String activeId = escapeUIDSegment(f.getName() + "_active");
+                            String statusId = escapeUIDSegment(f.getName() + "_status");
+                            channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), activeId))
+                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(activeId)))
+                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
+                                            PROPERTY_PROP_NAME, "active"))
+                                    .build());
+                            channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), statusId))
+                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(statusId)))
+                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
+                                            PROPERTY_PROP_NAME, "status"))
                                     .build());
                         }
 
@@ -133,13 +147,13 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                             channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), slopeId))
                                     .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(slopeId)))
                                     .withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
-                                            PROPERTY_STATISTIC_NAME, "slope"))
+                                            PROPERTY_PROP_NAME, "slope"))
                                     .build());
                             String shiftId = escapeUIDSegment(f.getName() + "_shift");
                             channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), shiftId))
                                     .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(shiftId)))
                                     .withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
-                                            PROPERTY_STATISTIC_NAME, "shift"))
+                                            PROPERTY_PROP_NAME, "shift"))
                                     .build());
                         }
 
@@ -151,17 +165,17 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                             channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), activeId))
                                     .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(activeId)))
                                     .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
-                                            PROPERTY_STATISTIC_NAME, "active"))
+                                            PROPERTY_PROP_NAME, "active"))
                                     .build());
                             channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), startId))
                                     .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(startId)))
                                     .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
-                                            PROPERTY_STATISTIC_NAME, "start"))
+                                            PROPERTY_PROP_NAME, "start"))
                                     .build());
                             channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), endId))
                                     .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(endId)))
                                     .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
-                                            PROPERTY_STATISTIC_NAME, "end"))
+                                            PROPERTY_PROP_NAME, "end"))
                                     .build());
                         }
                     });
@@ -179,18 +193,27 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                 }
                 updateStatus(ThingStatus.ONLINE);
             } catch (AuthenticationException e) {
-                updateStatus(ThingStatus.UNINITIALIZED,
+                logger.warn("Unable to authenticate while fetching device features", e);
+                updateStatus(ThingStatus.OFFLINE,
                         ThingStatusDetail.COMMUNICATION_ERROR,
                         "Authentication problem fetching device features: " + e.getMessage());
-                logger.warn("Unable to authenticate while fetching device features", e);
             } catch (IOException e) {
-                updateStatus(ThingStatus.UNINITIALIZED,
+                logger.warn("IOException while fetching device features", e);
+                updateStatus(ThingStatus.OFFLINE,
                         ThingStatusDetail.COMMUNICATION_ERROR,
                         "Communication problem fetching device features: " + e.getMessage());
-                logger.warn("IOException while fetching device features", e);
             }
 
         }).exceptionally(t -> { logger.warn("Unexpected error initializing Thing", t); return null; });
+    }
+
+    static String getDeviceUniqueId(Thing t) {
+        // Hidden configuration option for testing purposes
+        String deviceUniqueId = (String) t.getConfiguration().get("deviceUniqueId");
+        if (deviceUniqueId != null) {
+            return deviceUniqueId;
+        }
+        return t.getProperties().get(PROPERTY_DEVICE_UNIQUE_ID);
     }
 
     private String channelIdToChannelType(String channelId) {
@@ -206,7 +229,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                     @Override
                     public void visit(ConsumptionFeature f) {
                         Channel channel = getThing().getChannel(channelUID);
-                        String statName = channel.getProperties().get(PROPERTY_STATISTIC_NAME);
+                        String statName = channel.getProperties().get(PROPERTY_PROP_NAME);
                         updateConsumptionStat(() -> consumptionAccessorMap.get(statName).apply(f).getValue());
                     }
 
@@ -216,12 +239,14 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
                     @Override
                     public void visit(NumericSensorFeature f) {
-                        double value = f.getValue().getValue();
                         Channel channel = getThing().getChannel(channelUID);
-                        ChannelTypeUID channelTypeUID = channel.getChannelTypeUID();
-                        if (channelTypeUID.getId().endsWith("_active")) {
+                        String propName = channel.getProperties().get(PROPERTY_PROP_NAME);
+                        if ("active".equals(propName)) {
+                            updateState(channelUID, f.isActive() ? OnOffType.ON : OnOffType.OFF);
+                        } else if ("status".equals(propName)) {
                             updateState(channelUID, Status.ON.equals(f.getStatus()) ? OnOffType.ON : OnOffType.OFF);
                         } else {
+                            double value = f.getValue().getValue();
                             updateState(channelUID, new DecimalType(value));
                         }
                     }
@@ -229,20 +254,31 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                     @Override
                     public void visit(StatisticsFeature f) {
                         Channel channel = getThing().getChannel(channelUID);
-                        String statisticName = channel.getProperties().get(PROPERTY_STATISTIC_NAME);
+                        String statisticName = channel.getProperties().get(PROPERTY_PROP_NAME);
                         double value = f.getStatistics().get(statisticName).getValue();
                         updateState(channelUID, new DecimalType(value));
                     }
 
                     @Override
                     public void visit(StatusSensorFeature f) {
+                        Channel channel = getThing().getChannel(channelUID);
+                        String propertyName = channel.getProperties().get(PROPERTY_PROP_NAME);
                         State state = null;
-                        if (ON.equals(f.getStatus())) {
-                            state = OnOffType.ON;
-                        } else if (OFF.equals(f.getStatus())) {
-                            state = OnOffType.OFF;
-                        } else {
-                            logger.debug("Unable to map state {} for {}", f.getStatus(), f.getName());
+                        if ("active".equals(propertyName)) {
+                            if (f.isActive() == null) {
+                                state = UnDefType.UNDEF;
+                            } else {
+                                state = f.isActive() ? OnOffType.ON : OnOffType.OFF;
+                            }
+                        } else if ("status".equals(propertyName)) {
+                            if (ON.equals(f.getStatus())) {
+                                state = OnOffType.ON;
+                            } else if (OFF.equals(f.getStatus())) {
+                                state = OnOffType.OFF;
+                            } else {
+                                state = UnDefType.UNDEF;
+                                logger.debug("Unable to map state {} for {}", f.getStatus(), f.getName());
+                            }
                         }
                         updateState(channelUID, state);
                     }
@@ -255,7 +291,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                     @Override
                     public void visit(CurveFeature f) {
                         Channel channel = getThing().getChannel(channelUID);
-                        switch (channel.getProperties().get(PROPERTY_STATISTIC_NAME)) {
+                        switch (channel.getProperties().get(PROPERTY_PROP_NAME)) {
                             case "slope":
                                 State slopeState = new DecimalType(f.getSlope().getValue());
                                 updateState(channelUID, slopeState);
@@ -271,7 +307,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                     public void visit(DatePeriodFeature datePeriodFeature) {
                         Channel channel = getThing().getChannel(channelUID);
                         State newState = UnDefType.UNDEF;
-                        switch (channel.getProperties().get(PROPERTY_STATISTIC_NAME)) {
+                        switch (channel.getProperties().get(PROPERTY_PROP_NAME)) {
                             case "active":
                                 newState = Status.ON.equals(datePeriodFeature.getActive()) ? OnOffType.ON : OnOffType.OFF;
                                 break;

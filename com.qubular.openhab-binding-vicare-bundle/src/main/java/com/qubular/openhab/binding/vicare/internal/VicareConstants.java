@@ -10,5 +10,5 @@ public class VicareConstants {
 
     public static final String PROPERTY_FEATURE_NAME = "featureName";
 
-    public static final String PROPERTY_STATISTIC_NAME = "statisticName";
+    public static final String PROPERTY_PROP_NAME = "propertyName";
 }

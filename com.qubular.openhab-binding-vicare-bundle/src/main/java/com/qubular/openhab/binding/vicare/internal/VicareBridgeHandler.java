@@ -5,7 +5,6 @@ import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.VicareConfiguration;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.Feature;
-import de.jollyday.util.Cache;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseBridgeHandler;
 import org.openhab.core.thing.binding.ThingHandlerService;
@@ -21,7 +20,6 @@ import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import static com.qubular.openhab.binding.vicare.internal.VicareConstants.PROPERTY_DEVICE_UNIQUE_ID;
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.PROPERTY_FEATURE_NAME;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThingUniqueId;
 
@@ -144,7 +142,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
             return response.response;
         }
 
-        VicareUtil.IGD s = decodeThingUniqueId(thing.getProperties().get(PROPERTY_DEVICE_UNIQUE_ID));
+        VicareUtil.IGD s = decodeThingUniqueId(VicareDeviceThingHandler.getDeviceUniqueId(thing));
         List<Feature> features = vicareService.getFeatures(s.installationId, s.gatewaySerial, s.deviceId);
         cachedResponses.put(key, new CachedResponse(features, now));
         return features;

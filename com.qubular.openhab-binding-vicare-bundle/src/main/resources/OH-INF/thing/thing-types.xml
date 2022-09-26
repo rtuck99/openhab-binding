@@ -48,7 +48,7 @@
     <category>Heating</category>
     <state pattern="%.1f °C"/>
   </channel-type>
-  <channel-type id="heating_burners">
+  <channel-type id="heating_burners_active">
     <item-type>Switch</item-type>
     <label>Burner Status</label>
     <description>Shows the state of the burner i.e. on or off</description>
@@ -72,13 +72,13 @@
     <description>Shows statistics of burner: hours and times started</description>
     <state pattern="%d" readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_circulation_pump">
+  <channel-type id="heating_circuits_circulation_pump_status">
     <item-type>Switch</item-type>
     <label>Heating Circuit Circulation Pump</label>
     <description>Shows the state of the circulation pump (on, off) for heating circuit N</description>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_frostprotection">
+  <channel-type id="heating_circuits_frostprotection_status">
     <item-type>Switch</item-type>
     <label>Heating Circuit Frost Protection</label>
     <description>Shows whether frost protection of the installation is turned on for the device</description>
@@ -96,6 +96,30 @@
     <description>Shows the status and the value of the supply temperature sensor for circuit N</description>
     <category>Temperature</category>
     <state readOnly="true" pattern="%.1f °C"/>
+  </channel-type>
+  <channel-type id="heating_dhw_active">
+    <item-type>Switch</item-type>
+    <label>DHW active</label>
+    <description>Whether domestic hot water (DHW) is activated</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_dhw_status">
+    <item-type>Switch</item-type>
+    <label>DHW Status</label>
+    <description>Status of domestic hot water (DHW)</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_dhw_pumps_primary_status">
+    <item-type>Switch</item-type>
+    <label>DHW Primary Pump Status</label>
+    <description>Status of the domestic hot water (DHW) primary pump</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_dhw_pumps_circulation_status">
+    <item-type>Switch</item-type>
+    <label>DHW Circulation Pump Status</label>
+    <description>Status of the domestic hot water (DHW) circulation pump</description>
+    <state readOnly="true"/>
   </channel-type>
   <channel-type id="heating_dhw_sensors_temperature_outlet">
     <item-type>Number:Temperature</item-type>
@@ -171,6 +195,19 @@
     <item-type>Number:Temperature</item-type>
     <label>Comfort Operating Program Temperature</label>
     <description>Shows the comfort program target temperature</description>
+    <category>Heating</category>
+    <state readOnly="true" pattern="%d °C"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_programs_eco_active">
+    <item-type>Switch</item-type>
+    <label>Eco Operating Program Active</label>
+    <description>Shows whether the eco program is active</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_programs_eco">
+    <item-type>Number:Temperature</item-type>
+    <label>Eco Operating Program Temperature</label>
+    <description>Shows the eco program target temperature</description>
     <category>Heating</category>
     <state readOnly="true" pattern="%d °C"/>
   </channel-type>

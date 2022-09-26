@@ -8,10 +8,13 @@ public class NumericSensorFeature extends Feature {
     private final DimensionalValue value;
     private final Status status;
 
-    public NumericSensorFeature(String name, DimensionalValue value, Status status) {
+    private final Boolean active;
+
+    public NumericSensorFeature(String name, DimensionalValue value, Status status, Boolean active) {
         super(name);
         this.value = value;
         this.status = status;
+        this.active = active;
     }
 
     public DimensionalValue getValue() {
@@ -20,6 +23,10 @@ public class NumericSensorFeature extends Feature {
 
     public Status getStatus() {
         return status;
+    }
+
+    public Boolean isActive() {
+        return active;
     }
 
     @Override

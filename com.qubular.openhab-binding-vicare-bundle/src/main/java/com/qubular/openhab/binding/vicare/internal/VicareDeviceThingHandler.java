@@ -9,6 +9,7 @@ import com.qubular.vicare.model.features.*;
 import org.openhab.core.library.types.DateTimeType;
 import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.library.types.OnOffType;
+import org.openhab.core.library.types.StringType;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseThingHandler;
 import org.openhab.core.thing.binding.builder.ChannelBuilder;
@@ -244,7 +245,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                         if ("active".equals(propName)) {
                             updateState(channelUID, f.isActive() ? OnOffType.ON : OnOffType.OFF);
                         } else if ("status".equals(propName)) {
-                            updateState(channelUID, Status.ON.equals(f.getStatus()) ? OnOffType.ON : OnOffType.OFF);
+                            updateState(channelUID, StringType.valueOf(f.getStatus() == null ? null : f.getStatus().getName()));
                         } else {
                             double value = f.getValue().getValue();
                             updateState(channelUID, new DecimalType(value));
@@ -271,14 +272,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                                 state = f.isActive() ? OnOffType.ON : OnOffType.OFF;
                             }
                         } else if ("status".equals(propertyName)) {
-                            if (ON.equals(f.getStatus())) {
-                                state = OnOffType.ON;
-                            } else if (OFF.equals(f.getStatus())) {
-                                state = OnOffType.OFF;
-                            } else {
-                                state = UnDefType.UNDEF;
-                                logger.debug("Unable to map state {} for {}", f.getStatus(), f.getName());
-                            }
+                            state = StringType.valueOf(f.getStatus() == null ? null : f.getStatus().getName());
                         }
                         updateState(channelUID, state);
                     }

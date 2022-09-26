@@ -22,6 +22,7 @@ import org.openhab.core.config.discovery.DiscoveryResult;
 import org.openhab.core.library.types.DateTimeType;
 import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.library.types.OnOffType;
+import org.openhab.core.library.types.StringType;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseThingHandlerFactory;
 import org.openhab.core.thing.binding.BridgeHandler;
@@ -537,7 +538,7 @@ public class VicareBindingTest {
         inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
         verify(callback).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(OnOffType.ON, stateCaptor.getValue());
+        assertEquals(StringType.valueOf("on"), stateCaptor.getValue());
 
         handler.handleCommand(burnerChannel.getUID(), RefreshType.REFRESH);
         verify(callback).stateUpdated(eq(burnerChannel.getUID()), stateCaptor.capture());
@@ -549,7 +550,7 @@ public class VicareBindingTest {
 
         handler.handleCommand(heatingDhwStatusChannel.getUID(), RefreshType.REFRESH);
         verify(callback).stateUpdated(eq(heatingDhwStatusChannel.getUID()), stateCaptor.capture());
-        assertEquals(OnOffType.ON, stateCaptor.getValue());
+        assertEquals(StringType.valueOf("on"), stateCaptor.getValue());
         inOrder.verify(vicareService, never()).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
     }
 

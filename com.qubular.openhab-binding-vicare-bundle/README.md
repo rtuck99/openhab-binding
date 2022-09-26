@@ -57,8 +57,11 @@ Read-only support for additional features:
 * DHW Primary and Circulation Pump Status
 * Holiday Program settings
 * Heating curve settings
-* Note that the names of some channels may have changed slightly in order to
-  distinguish between "active" and "status" 
+
+Note that the names of some channels may have changed slightly in order to
+distinguish between "active" and "status". Status channels are now of String type
+and not Switch - you may need to either change your linked item type accordingly or
+apply a transformation to the value. 
 
 Fix #2 If more than one boiler is configured, the binding doesn't work correctly
 

@@ -4,6 +4,8 @@ Viessmann API Binding
 This binding integrates Viessmann heating devices using the [Viessmann API](https://developer.viessmann.com/start.html).
 It provides information similar to what you can get through the ViCare mobile app.
 
+Please note this binding is unofficial and not endorsed by Viessmann in any way.
+
 Supported Devices
 ----------------
 
@@ -34,7 +36,7 @@ Configuring
 
 In order to use the binding, you will need to have a Viessmann API account and
 configure it with the redirect URL for your OpenHAB installation and then authorise 
-the binding. Follow the instructions in openhab at http://<Your OpenHAB>/vicare/setup
+the binding. Follow the instructions in openhab at `http://<Your OpenHAB>/vicare/setup`
 
 After authorising the binding, you should be able to add the Viessmann API Bridge item.
 Configure it with your Client ID which you should obtain from the Viessmann Developer

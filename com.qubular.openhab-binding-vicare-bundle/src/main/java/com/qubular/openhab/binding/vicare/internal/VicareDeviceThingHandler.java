@@ -29,6 +29,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThingUniqueId;
@@ -188,7 +189,10 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                         thingBuilder = thingBuilder.withProperties(newPropValues);
                     }
                     if (!channels.isEmpty()) {
-                        thingBuilder = thingBuilder.withChannels(channels);
+                        var sortedChannels = channels.stream()
+                                .sorted(Comparator.comparing(c -> c.getUID().getId()))
+                                .collect(Collectors.toList());
+                        thingBuilder = thingBuilder.withChannels(sortedChannels);
                     }
                     updateThing(thingBuilder.build());
                 }

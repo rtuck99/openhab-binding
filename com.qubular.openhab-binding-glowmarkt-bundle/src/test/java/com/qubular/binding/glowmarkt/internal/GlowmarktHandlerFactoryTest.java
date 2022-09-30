@@ -13,12 +13,18 @@ import org.openhab.core.thing.Bridge;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.link.ItemChannelLinkRegistry;
+import org.osgi.service.cm.Configuration;
+import org.osgi.service.cm.ConfigurationAdmin;
+
+import java.io.IOException;
+import java.util.Hashtable;
 
 import static com.qubular.binding.glowmarkt.internal.GlowmarktConstants.THING_TYPE_BRIDGE;
 import static com.qubular.binding.glowmarkt.internal.GlowmarktConstants.THING_TYPE_VIRTUAL_ENTITY;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
 class GlowmarktHandlerFactoryTest {
     @Mock
@@ -35,6 +41,8 @@ class GlowmarktHandlerFactoryTest {
 
     @Mock
     private ItemChannelLinkRegistry itemChannelLinkRegistry;
+    @Mock
+    private ConfigurationAdmin configurationAdmin;
 
     private AutoCloseable mockHandle;
     @Mock
@@ -43,11 +51,14 @@ class GlowmarktHandlerFactoryTest {
     private CronScheduler cronScheduler;
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws IOException {
         mockHandle = MockitoAnnotations.openMocks(this);
 
         when(bridge.getThingTypeUID()).thenReturn(THING_TYPE_BRIDGE);
         when(virtualEntity.getThingTypeUID()).thenReturn(THING_TYPE_VIRTUAL_ENTITY);
+        Configuration config = mock(Configuration.class);
+        doReturn(config).when(configurationAdmin).getConfiguration(anyString());
+        doReturn(new Hashtable<>()).when(config).getProperties();
     }
 
     @AfterEach
@@ -57,28 +68,28 @@ class GlowmarktHandlerFactoryTest {
 
     @Test
     public void supportsBridgeType() {
-        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler);
+        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin);
 
         assertTrue(factory.supportsThingType(THING_TYPE_BRIDGE));
     }
 
     @Test
     public void supportsVirtualEntityType() {
-        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler);
+        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin);
 
         assertTrue(factory.supportsThingType(THING_TYPE_VIRTUAL_ENTITY));
     }
 
     @Test
     public void createsBridgeHandler() {
-        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler);
+        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin);
         ThingHandler handler = factory.createHandler(bridge);
         assertNotNull(handler);
     }
 
     @Test
     public void createsVirtualEntityHandler() {
-        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler);
+        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin);
         ThingHandler handler = factory.createHandler(virtualEntity);
         assertNotNull(handler);
     }

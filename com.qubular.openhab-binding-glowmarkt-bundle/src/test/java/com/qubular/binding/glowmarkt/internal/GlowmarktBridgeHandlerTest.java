@@ -5,6 +5,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.openhab.core.config.core.Configuration;
@@ -12,7 +13,6 @@ import org.openhab.core.config.discovery.DiscoveryListener;
 import org.openhab.core.config.discovery.DiscoveryResult;
 import org.openhab.core.config.discovery.DiscoveryService;
 import org.openhab.core.io.net.http.HttpClientFactory;
-import org.openhab.core.persistence.PersistenceService;
 import org.openhab.core.persistence.PersistenceServiceRegistry;
 import org.openhab.core.scheduler.CronScheduler;
 import org.openhab.core.scheduler.SchedulerRunnable;
@@ -22,10 +22,12 @@ import org.openhab.core.thing.binding.ThingHandlerCallback;
 import org.openhab.core.thing.binding.builder.ChannelBuilder;
 import org.openhab.core.thing.link.ItemChannelLinkRegistry;
 import org.openhab.core.types.RefreshType;
+import org.osgi.service.cm.ConfigurationAdmin;
 
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -56,26 +58,33 @@ class GlowmarktBridgeHandlerTest {
     private PersistenceServiceRegistry persistenceServiceRegistry;
     @Mock
     private CronScheduler cronScheduler;
+    @Mock
+    private ConfigurationAdmin configurationAdmin;
 
     private AutoCloseable mockHandle;
+    private ThingHandler bridgeHandler;
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws IOException {
         mockHandle = MockitoAnnotations.openMocks(this);
         when(bridge.getThingTypeUID()).thenReturn(THING_TYPE_BRIDGE);
         when(bridge.getUID()).thenReturn(new ThingUID(THING_TYPE_BRIDGE, BRIDGE_UID));
-        Configuration configuration = mock(Configuration.class);
-        Map<String, Object> config = Map.of("username", "testuser",
+        Configuration configuration = new Configuration(Map.of("username", "testuser",
                 "password", "testpassword",
-                "cronSchedule", "30 4 * * *");
-        when(configuration.getProperties()).thenReturn(config);
-        doAnswer(invocation -> config.get(invocation.getArgument(0))).when(configuration).get(anyString());
+                "cronSchedule", "30 4 * * *"));
         when(bridge.getConfiguration()).thenReturn(configuration);
+        org.osgi.service.cm.Configuration osgiConfig = mock(org.osgi.service.cm.Configuration.class);
+        doReturn(osgiConfig).when(configurationAdmin).getConfiguration(anyString());
+        doReturn(new Hashtable<>()).when(osgiConfig).getProperties();
     }
 
     @AfterEach
     public void tearDown() throws Exception {
         mockHandle.close();
+        if (bridgeHandler != null) {
+            bridgeHandler.dispose();
+            bridgeHandler = null;
+        }
     }
 
     private void successfullyAuthenticate() throws AuthenticationFailedException, IOException {
@@ -93,7 +102,7 @@ class GlowmarktBridgeHandlerTest {
 
     @Test
     public void hasDiscoveryService() {
-        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler).createHandler(bridge);
+        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin).createHandler(bridge);
         assertTrue(handler.getServices().stream().anyMatch(DiscoveryService.class::isAssignableFrom));
     }
 
@@ -103,10 +112,12 @@ class GlowmarktBridgeHandlerTest {
         gasAndElectricityMeter();
 
         DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
-        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler).createHandler(bridge);
+        bridgeHandler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin).createHandler(bridge);
+        bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
+        bridgeHandler.initialize();
         GlowmarktDiscoveryService discoveryService = new GlowmarktDiscoveryService();
         discoveryService.addDiscoveryListener(discoveryListener);
-        discoveryService.setThingHandler(handler);
+        discoveryService.setThingHandler(bridgeHandler);
 
         ArgumentCaptor<DiscoveryResult> resultCaptor = ArgumentCaptor.forClass(DiscoveryResult.class);
         verify(glowmarktService, timeout(3000)).authenticate(any(GlowmarktSettings.class), eq("testuser"), eq("testpassword"));
@@ -129,16 +140,20 @@ class GlowmarktBridgeHandlerTest {
                 .thenThrow(new IOException("test exception"));
 
         DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
-        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler).createHandler(bridge);
+        bridgeHandler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin).createHandler(bridge);
         ThingHandlerCallback thingHandlerCallback = mock(ThingHandlerCallback.class);
-        handler.setCallback(thingHandlerCallback);
+        bridgeHandler.setCallback(thingHandlerCallback);
+        bridgeHandler.initialize();
+        ArgumentCaptor<ThingStatusInfo> statusCaptor = ArgumentCaptor.forClass(ThingStatusInfo.class);
+        InOrder inOrder = inOrder(thingHandlerCallback);
+        inOrder.verify(thingHandlerCallback, timeout(3000)).statusUpdated(same(bridge), statusCaptor.capture());
+        assertEquals(ThingStatus.UNKNOWN, statusCaptor.getValue().getStatus());
 
         GlowmarktDiscoveryService discoveryService = new GlowmarktDiscoveryService();
         discoveryService.addDiscoveryListener(discoveryListener);
-        discoveryService.setThingHandler(handler);
+        discoveryService.setThingHandler(bridgeHandler);
 
-        ArgumentCaptor<ThingStatusInfo> statusCaptor = ArgumentCaptor.forClass(ThingStatusInfo.class);
-        verify(thingHandlerCallback, timeout(3000)).statusUpdated(same(bridge), statusCaptor.capture());
+        inOrder.verify(thingHandlerCallback, timeout(3000)).statusUpdated(same(bridge), statusCaptor.capture());
         assertEquals(ThingStatus.OFFLINE, statusCaptor.getValue().getStatus());
         assertEquals(ThingStatusDetail.COMMUNICATION_ERROR, statusCaptor.getValue().getStatusDetail());
     }
@@ -149,23 +164,26 @@ class GlowmarktBridgeHandlerTest {
                 .thenThrow(new AuthenticationFailedException("test exception"));
 
         DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
-        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler).createHandler(bridge);
+        bridgeHandler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin).createHandler(bridge);
         ThingHandlerCallback thingHandlerCallback = mock(ThingHandlerCallback.class);
-        handler.setCallback(thingHandlerCallback);
+        InOrder inOrder = inOrder(thingHandlerCallback);
+        bridgeHandler.setCallback(thingHandlerCallback);
+        bridgeHandler.initialize();
+        ArgumentCaptor<ThingStatusInfo> statusCaptor = ArgumentCaptor.forClass(ThingStatusInfo.class);
+        inOrder.verify(thingHandlerCallback, timeout(3000)).statusUpdated(same(bridge), statusCaptor.capture());
 
         GlowmarktDiscoveryService discoveryService = new GlowmarktDiscoveryService();
         discoveryService.addDiscoveryListener(discoveryListener);
-        discoveryService.setThingHandler(handler);
+        discoveryService.setThingHandler(bridgeHandler);
 
-        ArgumentCaptor<ThingStatusInfo> statusCaptor = ArgumentCaptor.forClass(ThingStatusInfo.class);
-        verify(thingHandlerCallback, timeout(3000)).statusUpdated(same(bridge), statusCaptor.capture());
+        inOrder.verify(thingHandlerCallback, timeout(3000)).statusUpdated(same(bridge), statusCaptor.capture());
         assertEquals(ThingStatus.UNINITIALIZED, statusCaptor.getValue().getStatus());
         assertEquals(ThingStatusDetail.CONFIGURATION_ERROR, statusCaptor.getValue().getStatusDetail());
     }
 
     @Test
     public void initialiseUpdatesStatus() {
-        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler).createHandler(bridge);
+        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin).createHandler(bridge);
         ThingHandlerCallback thingHandlerCallback = mock(ThingHandlerCallback.class);
         handler.setCallback(thingHandlerCallback);
         handler.initialize();
@@ -181,7 +199,7 @@ class GlowmarktBridgeHandlerTest {
         gasAndElectricityMeter();
         ThingHandler childHandler = childVirtualEntityThingHandler();
 
-        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler).createHandler(bridge);
+        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin).createHandler(bridge);
         ThingHandlerCallback thingHandlerCallback = mock(ThingHandlerCallback.class);
         handler.setCallback(thingHandlerCallback);
         handler.initialize();

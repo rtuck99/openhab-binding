@@ -21,6 +21,7 @@ import org.openhab.core.thing.binding.builder.ChannelBuilder;
 import org.openhab.core.thing.link.ItemChannelLinkRegistry;
 import org.openhab.core.thing.type.ChannelTypeUID;
 import org.openhab.core.types.RefreshType;
+import org.osgi.service.cm.ConfigurationAdmin;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -28,6 +29,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.qubular.binding.glowmarkt.internal.GlowmarktConstants.*;
 import static com.qubular.glowmarkt.AggregationFunction.SUM;
@@ -64,11 +66,14 @@ class GlowmarktVirtualEntityHandlerTest {
     private ItemChannelLinkRegistry itemChannelLinkRegistry;
     @Mock
     private CronScheduler cronScheduler;
+    @Mock
+    private ConfigurationAdmin configurationAdmin;
 
     private AutoCloseable mockHandle;
+    private GlowmarktBridgeHandler bridgeHandler;
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws IOException {
         mockHandle = MockitoAnnotations.openMocks(this);
         when(bridge.getThingTypeUID()).thenReturn(THING_TYPE_BRIDGE);
         ThingUID bridgeUid = new ThingUID(THING_TYPE_BRIDGE, BRIDGE_ID);
@@ -78,20 +83,26 @@ class GlowmarktVirtualEntityHandlerTest {
         when(virtualEntity.getUID()).thenReturn(new ThingUID(THING_TYPE_VIRTUAL_ENTITY, VIRTUAL_ENTITY_ID));
         when(thingHandlerCallback.getBridge(bridgeUid)).thenReturn(bridge);
         when(virtualEntity.getProperties()).thenReturn(Map.of(PROPERTY_VIRTUAL_ENTITY_ID, VIRTUAL_ENTITY_ID));
-        Configuration configuration = mock(Configuration.class);
-        Map<String, Object> config = Map.of("username", "testuser",
-                "password", "testpassword",
-                "persistenceService", "mysql");
-        when(configuration.getProperties()).thenReturn(config);
-        doAnswer(invocation -> config.get(invocation.getArgument(0))).when(configuration).get(anyString());
-        when(bridge.getConfiguration()).thenReturn(configuration);
+        AtomicReference<Configuration> configuration = new AtomicReference<>(new Configuration(Map.of("username", "testuser",
+                                                                               "password", "testpassword",
+                                                                               "persistenceService", "mysql")));
+        doAnswer(invocation -> configuration.get()).when(bridge).getConfiguration();
         doAnswer(invocation -> ChannelBuilder.create((ChannelUID)invocation.getArgument(0))).when(thingHandlerCallback).createChannelBuilder(any(ChannelUID.class), any(ChannelTypeUID.class));
         when(persistenceServiceRegistry.get("mysql")).thenReturn(persistenceService);
+        org.osgi.service.cm.Configuration osgiConfig = mock(org.osgi.service.cm.Configuration.class);
+        doReturn(osgiConfig).when(configurationAdmin).getConfiguration(anyString());
+        Hashtable<Object, Object> osgiConfigProps = new Hashtable<>();
+        doReturn(osgiConfigProps).when(osgiConfig).getProperties();
+
     }
 
     @AfterEach
     public void tearDown() throws Exception {
         mockHandle.close();
+        if (bridgeHandler != null) {
+            bridgeHandler.dispose();
+            bridgeHandler = null;
+        }
     }
 
     private void successfullyAuthenticate() throws AuthenticationFailedException, IOException {
@@ -176,9 +187,11 @@ class GlowmarktVirtualEntityHandlerTest {
     }
 
     private ThingHandler createThingHandler() {
-        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler);
-        GlowmarktBridgeHandler bridgeHandler = (GlowmarktBridgeHandler) factory.createHandler(bridge);
+        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin);
+        bridgeHandler = (GlowmarktBridgeHandler) factory.createHandler(bridge);
         when(bridge.getHandler()).thenReturn(bridgeHandler);
+        bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
+        bridgeHandler.initialize();
         ThingHandler handler = factory.createHandler(virtualEntity);
         handler.setCallback(thingHandlerCallback);
         return handler;

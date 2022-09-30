@@ -3,7 +3,6 @@ package com.qubular.binding.glowmarkt.internal;
 import com.qubular.glowmarkt.GlowmarktService;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.core.io.net.http.HttpClientFactory;
-import org.openhab.core.persistence.PersistenceService;
 import org.openhab.core.persistence.PersistenceServiceRegistry;
 import org.openhab.core.scheduler.CronScheduler;
 import org.openhab.core.thing.Bridge;
@@ -13,6 +12,7 @@ import org.openhab.core.thing.binding.BaseThingHandlerFactory;
 import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerFactory;
 import org.openhab.core.thing.link.ItemChannelLinkRegistry;
+import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -32,24 +32,28 @@ public class GlowmarktHandlerFactory extends BaseThingHandlerFactory {
     private final PersistenceServiceRegistry persistenceServiceRegistry;
     private final ItemChannelLinkRegistry itemChannelLinkRegistry;
     private CronScheduler cronScheduler;
+    private final ConfigurationAdmin configurationAdmin;
 
     @Activate
     public GlowmarktHandlerFactory(@Reference GlowmarktService glowmarktService,
                                    @Reference HttpClientFactory httpClientFactory,
                                    @Reference PersistenceServiceRegistry persistenceServiceRegistry,
                                    @Reference ItemChannelLinkRegistry itemChannelLinkRegistry,
-                                   @Reference CronScheduler cronScheduler) {
+                                   @Reference CronScheduler cronScheduler,
+                                   @Reference ConfigurationAdmin configurationAdmin) {
         this.glowmarktService = glowmarktService;
         this.httpClientFactory = httpClientFactory;
         this.persistenceServiceRegistry = persistenceServiceRegistry;
         this.itemChannelLinkRegistry = itemChannelLinkRegistry;
         this.cronScheduler = cronScheduler;
+        this.configurationAdmin = configurationAdmin;
     }
 
     @Override
     protected @Nullable ThingHandler createHandler(Thing thing) {
         if(THING_TYPE_BRIDGE.equals(thing.getThingTypeUID())) {
-            return new GlowmarktBridgeHandler((Bridge) thing, glowmarktService, httpClientFactory, persistenceServiceRegistry, cronScheduler);
+            return new GlowmarktBridgeHandler((Bridge) thing, glowmarktService, httpClientFactory, persistenceServiceRegistry, cronScheduler,
+                                              configurationAdmin);
         }
         if (THING_TYPE_VIRTUAL_ENTITY.equals(thing.getThingTypeUID())) {
             return new GlowmarktVirtualEntityHandler(thing, glowmarktService, itemChannelLinkRegistry);

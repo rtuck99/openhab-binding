@@ -144,7 +144,7 @@ public class PersistedTokenStore implements TokenStore {
             Configuration configuration = configurationAdmin.getConfiguration(TOKEN_STORE_PID);
             if (configuration != null) {
                 Optional<String> encryptedRefreshToken = ofNullable(configuration.getProperties())
-                        .map(c -> (String) c.get(PROPERTY_REFRESH_TOKEN));
+                        .map(c -> (String) c.get(PROPERTY_SECURE_REFRESH_TOKEN));
                 if (encryptedRefreshToken.isPresent()) {
                     return Optional.of(cryptUtil.decrypt(encryptedRefreshToken.get()));
                 }

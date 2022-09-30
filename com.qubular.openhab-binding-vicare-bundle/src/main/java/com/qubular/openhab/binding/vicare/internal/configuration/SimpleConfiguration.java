@@ -2,18 +2,20 @@ package com.qubular.openhab.binding.vicare.internal.configuration;
 
 import com.qubular.vicare.VicareConfiguration;
 import org.osgi.framework.BundleContext;
+import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 
 import static java.util.Optional.ofNullable;
 
-@Component(service= VicareConfiguration.class)
+@Component(service = VicareConfiguration.class)
 public class SimpleConfiguration implements VicareConfiguration {
     private final BundleContext bundleContext;
     private Map<String, Object> configurationParameters = Collections.emptyMap();

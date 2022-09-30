@@ -2,13 +2,14 @@ package com.qubular.openhab.binding.vicare.internal;
 
 import com.qubular.vicare.VicareConfiguration;
 import com.qubular.vicare.VicareService;
-import org.openhab.core.config.discovery.DiscoveryService;
-import org.openhab.core.thing.*;
+import org.openhab.core.thing.Bridge;
+import org.openhab.core.thing.Thing;
+import org.openhab.core.thing.ThingRegistry;
+import org.openhab.core.thing.ThingTypeUID;
 import org.openhab.core.thing.binding.BaseThingHandlerFactory;
 import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerFactory;
 import org.osgi.framework.BundleContext;
-import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
@@ -17,10 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
-import java.util.Hashtable;
 import java.util.Set;
-
-import static com.qubular.openhab.binding.vicare.internal.VicareConstants.THING_TYPE_BRIDGE;
 
 @Component(service= ThingHandlerFactory.class)
 public class VicareHandlerFactory extends BaseThingHandlerFactory {
@@ -30,18 +28,15 @@ public class VicareHandlerFactory extends BaseThingHandlerFactory {
     private static final Logger logger = LoggerFactory.getLogger(VicareHandlerFactory.class);
     private final ThingRegistry thingRegistry;
     private final VicareService vicareService;
-    private final ConfigurationAdmin configurationAdmin;
     private final VicareConfiguration config;
 
     @Activate
     public VicareHandlerFactory(BundleContext bundleContext,
                                 @Reference ThingRegistry thingRegistry,
                                 @Reference VicareService vicareService,
-                                @Reference ConfigurationAdmin configurationAdmin,
                                 @Reference VicareConfiguration config) {
         this.config = config;
         logger.info("Activating Vicare Binding build {}", Instant.ofEpochMilli(bundleContext.getBundle().getLastModified()));
-        this.configurationAdmin = configurationAdmin;
         this.thingRegistry = thingRegistry;
         this.vicareService = vicareService;
     }

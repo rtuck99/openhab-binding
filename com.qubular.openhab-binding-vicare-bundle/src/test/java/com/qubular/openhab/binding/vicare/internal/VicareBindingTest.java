@@ -150,13 +150,15 @@ public class VicareBindingTest {
     }
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws IOException {
         componentContext = mock(ComponentContext.class);
         bundleContext = mock(BundleContext.class);
         configuration = new SimpleConfiguration(bundleContext);
         doReturn(bundleContext).when(componentContext).getBundleContext();
         Bundle bundle = mock(Bundle.class);
         doReturn(bundle).when(bundleContext).getBundle();
+        org.osgi.service.cm.Configuration config = mock(org.osgi.service.cm.Configuration.class);
+        doReturn(config).when(configurationAdmin).getConfiguration("com.qubular.openhab.binding.vicare.SimpleConfiguration");
     }
 
     @AfterEach
@@ -172,7 +174,8 @@ public class VicareBindingTest {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
 
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
+                                                                             configuration);
         activateHandlerFactory(vicareHandlerFactory);
 
         BridgeHandler handler = (BridgeHandler) vicareHandlerFactory.createHandler(bridge);
@@ -185,7 +188,8 @@ public class VicareBindingTest {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
 
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
+                                                                             configuration);
         activateHandlerFactory(vicareHandlerFactory);
 
         bridgeHandler = vicareHandlerFactory.createHandler(bridge);
@@ -218,7 +222,8 @@ public class VicareBindingTest {
         Bridge bridge = vicareBridge();
 
         ThingHandlerCallback thingHandlerCallback = mock(ThingHandlerCallback.class);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
+                                                                             configuration);
         bridgeHandler = vicareHandlerFactory.createHandler(bridge);
         bridgeHandler.setCallback(thingHandlerCallback);
         VicareDiscoveryService discoveryService = VicareDiscoveryService.class.getConstructor().newInstance();
@@ -238,7 +243,7 @@ public class VicareBindingTest {
         assertEquals(encodeThingUniqueId(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID), result.getProperties().get("deviceUniqueId"));
         assertEquals("deviceUniqueId", result.getRepresentationProperty());
         ArgumentCaptor<ThingStatusInfo> statusInfoArgumentCaptor = forClass(ThingStatusInfo.class);
-        verify(thingHandlerCallback).statusUpdated(same(bridge), statusInfoArgumentCaptor.capture());
+        verify(thingHandlerCallback, timeout(1000)).statusUpdated(same(bridge), statusInfoArgumentCaptor.capture());
         assertEquals(ThingStatus.ONLINE, statusInfoArgumentCaptor.getValue().getStatus());
     }
 
@@ -247,7 +252,8 @@ public class VicareBindingTest {
         simpleHeatingInstallation();
         vicareBridge();
 
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
+                                                                             configuration);
 
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
 
@@ -263,7 +269,8 @@ public class VicareBindingTest {
         bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
         when(bridge.getHandler()).thenReturn((BridgeHandler) bridgeHandler);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
+                                                                             configuration);
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
@@ -300,7 +307,8 @@ public class VicareBindingTest {
         bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
         when(bridge.getHandler()).thenReturn((BridgeHandler) bridgeHandler);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
+                                                                             configuration);
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
@@ -337,7 +345,8 @@ public class VicareBindingTest {
         bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
         when(bridge.getHandler()).thenReturn((BridgeHandler) bridgeHandler);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
+                                                                             configuration);
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = mock(ThingHandlerCallback.class);
@@ -393,7 +402,8 @@ public class VicareBindingTest {
         bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
         when(bridge.getHandler()).thenReturn((BridgeHandler) bridgeHandler);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
+                                                                             configuration);
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = mock(ThingHandlerCallback.class);
@@ -431,7 +441,8 @@ public class VicareBindingTest {
         bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
         when(bridge.getHandler()).thenReturn((BridgeHandler) bridgeHandler);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
+                                                                             configuration);
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
@@ -466,7 +477,8 @@ public class VicareBindingTest {
         bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
         when(bridge.getHandler()).thenReturn((BridgeHandler) bridgeHandler);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
+                                                                             configuration);
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
@@ -505,7 +517,8 @@ public class VicareBindingTest {
         VicareBridgeHandler bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
         when(bridge.getHandler()).thenReturn(bridgeHandler);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
+                                                                             configuration);
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
@@ -569,7 +582,8 @@ public class VicareBindingTest {
         VicareBridgeHandler bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
         when(bridge.getHandler()).thenReturn(bridgeHandler);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
+                                                                             configuration);
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
@@ -633,7 +647,8 @@ public class VicareBindingTest {
         Bridge bridge = vicareBridge();
         Thing boiler1 = heatingDeviceThing(DEVICE_1_ID);
         Thing boiler2 = heatingDeviceThing(DEVICE_2_ID);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService, configurationAdmin, configuration);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
+                                                                             configuration);
         bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
         ThingHandler boilerHandler1 = vicareHandlerFactory.createHandler(boiler1);
         ThingHandler boilerHandler2 = vicareHandlerFactory.createHandler(boiler2);

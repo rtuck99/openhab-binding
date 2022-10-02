@@ -11,6 +11,7 @@ import com.qubular.vicare.model.Gateway;
 import com.qubular.vicare.model.Installation;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.util.FormContentProvider;
+import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.util.Fields;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,7 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.http.HttpHeaders;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
@@ -142,13 +144,17 @@ public class VicareServlet extends HttpServlet {
                                     if (accessGrantResponse.refreshToken != null) {
                                         logger.debug("Got refresh token");
                                         tokenStore.storeRefreshToken(accessGrantResponse.refreshToken);
+                                        resp.sendRedirect(RedirectURLHelper.getNavigatedURL(req).toURI().resolve("setup").toString());
                                     }
                                 }
                             } catch (InterruptedException | ExecutionException | TimeoutException e) {
                                 logger.warn("Unable to fetch access token", e);
                                 resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                            } catch (IOException | URISyntaxException e) {
+                                logger.warn("Unable to process redirect", e);
+                                resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                             }
-                        },
+                            },
                         () -> resp.setStatus(HttpServletResponse.SC_NOT_FOUND)
                 );
     }

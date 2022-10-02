@@ -5,6 +5,7 @@ import com.qubular.vicare.model.*;
 import com.qubular.vicare.model.features.*;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
+import org.eclipse.jetty.http.HttpHeader;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -183,8 +184,10 @@ public class VicareServiceTest {
         Map<String, String> queryParams = URIHelper.getQueryParams(URI.create(redirectUri));
         String stateKey = queryParams.get("state");
         // pretend we authorised and call the redirect, this should call our bogus access server
-        int status = httpClient.GET(queryParams.get("redirect_uri") + "?code=abcd1234&state=" + stateKey).getStatus();
-        assertEquals(200, status);
+        ContentResponse response = httpClient.GET(
+                queryParams.get("redirect_uri") + "?code=abcd1234&state=" + stateKey);
+        assertEquals(302, response.getStatus());
+        assertEquals("http://localhost:9000/vicare/setup", response.getHeaders().get(HttpHeader.LOCATION));
         assertTrue(requested.get());
         assertArrayEquals(new String[]{"myClientId"}, parameterMap.get().get("client_id"));
         assertArrayEquals(new String[]{queryParams.get("redirect_uri")}, parameterMap.get().get("redirect_uri"));

@@ -5,6 +5,7 @@ import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.VicareConfiguration;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.Feature;
+import org.openhab.core.events.EventPublisher;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseBridgeHandler;
 import org.openhab.core.thing.binding.ThingHandlerService;

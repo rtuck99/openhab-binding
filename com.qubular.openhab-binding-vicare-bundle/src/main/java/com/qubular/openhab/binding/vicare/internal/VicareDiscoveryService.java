@@ -1,28 +1,28 @@
 package com.qubular.openhab.binding.vicare.internal;
 
+import com.qubular.openhab.binding.vicare.internal.tokenstore.TokenEvent;
 import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.Device;
 import com.qubular.vicare.model.Gateway;
 import com.qubular.vicare.model.Installation;
 import org.eclipse.jdt.annotation.Nullable;
-import org.openhab.core.config.discovery.AbstractDiscoveryService;
-import org.openhab.core.config.discovery.DiscoveryResult;
-import org.openhab.core.config.discovery.DiscoveryResultBuilder;
-import org.openhab.core.config.discovery.DiscoveryService;
+import org.openhab.core.config.discovery.*;
+import org.openhab.core.events.EventSubscriber;
 import org.openhab.core.thing.ThingStatus;
 import org.openhab.core.thing.ThingTypeUID;
 import org.openhab.core.thing.ThingUID;
 import org.openhab.core.thing.binding.BridgeHandler;
 import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerService;
-import org.osgi.service.component.annotations.Activate;
-import org.osgi.service.component.annotations.Component;
+import org.osgi.framework.FrameworkUtil;
+import org.osgi.framework.ServiceRegistration;
+import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,8 +33,8 @@ import java.util.concurrent.TimeUnit;
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.PROPERTY_DEVICE_UNIQUE_ID;
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.THING_TYPE_HEATING;
 import static com.qubular.vicare.model.Device.DEVICE_TYPE_HEATING;
-import static java.util.Collections.emptyMap;
-import static java.util.Collections.emptySet;
+import static java.util.Collections.*;
+import static org.osgi.service.event.EventConstants.EVENT_TOPIC;
 
 public class VicareDiscoveryService extends AbstractDiscoveryService
     implements ThingHandlerService {
@@ -45,6 +45,7 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
 
     private CompletableFuture<BridgeHandler> bridgeHandler = new CompletableFuture<>();
     private ScheduledFuture<?> backgroundJob;
+    private ServiceRegistration<EventHandler> eventHandlerRegistration;
 
     /** Invoked by the bridge handler factory */
     public VicareDiscoveryService() {
@@ -155,11 +156,24 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
     @Override
     public void activate() {
         ThingHandlerService.super.activate();
+        Hashtable<String, Object> properties = new Hashtable<>();
+        properties.put(EVENT_TOPIC, TokenEvent.TOPIC_NEW_ACCESS_TOKEN);
+        eventHandlerRegistration = FrameworkUtil.getBundle(getClass()).getBundleContext().registerService(
+                EventHandler.class, new TokenEventHandler(), properties);
     }
 
     @Override
     public void deactivate() {
+        eventHandlerRegistration.unregister();
         ThingHandlerService.super.deactivate();
         stopBackgroundDiscovery();
+    }
+
+    private class TokenEventHandler implements EventHandler {
+        @Override
+        public void handleEvent(org.osgi.service.event.Event event) {
+            logger.info("Received token event.");
+            VicareDiscoveryService.this.startScan();
+        }
     }
 }

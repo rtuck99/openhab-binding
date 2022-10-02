@@ -8,6 +8,8 @@ import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.event.Event;
+import org.osgi.service.event.EventAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,10 +17,12 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.Optional;
 
+import static java.util.Collections.emptyMap;
 import static java.util.Optional.empty;
 import static java.util.Optional.ofNullable;
 
@@ -32,11 +36,14 @@ public class PersistedTokenStore implements TokenStore {
 
     private final Logger logger = LoggerFactory.getLogger(PersistedTokenStore.class);
     private final ConfigurationAdmin configurationAdmin;
+    private final EventAdmin eventAdmin;
     private final CryptUtil cryptUtil;
 
     @Activate
-    public PersistedTokenStore(@Reference ConfigurationAdmin configurationAdmin) {
+    public PersistedTokenStore(@Reference ConfigurationAdmin configurationAdmin,
+                               @Reference EventAdmin eventAdmin) {
         this.configurationAdmin = configurationAdmin;
+        this.eventAdmin = eventAdmin;
         try {
             this.cryptUtil = new CryptUtil(configurationAdmin.getConfiguration(TOKEN_STORE_PID));
             migratePlainTextTokens();
@@ -74,6 +81,7 @@ public class PersistedTokenStore implements TokenStore {
                 String json = gson().toJson(token);
                 props.put(PROPERTY_SECURE_ACCESS_TOKEN, cryptUtil.encrypt(json));
                 configuration.update(props);
+                eventAdmin.postEvent(new Event(TokenEvent.TOPIC_NEW_ACCESS_TOKEN, emptyMap()));
             }
         } catch (IOException | GeneralSecurityException e) {
             logger.warn("Unable to store access token", e);

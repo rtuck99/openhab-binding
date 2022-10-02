@@ -161,6 +161,13 @@
     <description>Shows the values for slope and shift of the heating curve</description>
     <state readOnly="true"/>
   </channel-type>
+  <channel-type id="heating_circuits_operating_modes_active">
+    <item-type>String</item-type>
+    <label>Heating Circuit Active Operating Mode</label>
+    <description>Shows the current active operating mode on the device.</description>
+    <category>Heating</category>
+    <state readOnly="false"/>
+  </channel-type>
   <channel-type id="heating_circuits_operating_programs_active">
     <item-type>String</item-type>
     <label>Active Operating Program</label>

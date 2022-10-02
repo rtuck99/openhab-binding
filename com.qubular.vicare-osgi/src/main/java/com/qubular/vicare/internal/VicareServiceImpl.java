@@ -6,6 +6,7 @@ import com.qubular.vicare.internal.oauth.AccessGrantResponse;
 import com.qubular.vicare.internal.servlet.VicareServlet;
 import com.qubular.vicare.model.*;
 import com.qubular.vicare.model.features.*;
+import com.qubular.vicare.model.params.ParamDescriptor;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.util.FormContentProvider;
@@ -39,6 +40,7 @@ import java.util.stream.Collectors;
 import static com.qubular.vicare.model.Status.*;
 import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
+import static java.util.stream.StreamSupport.stream;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 
 @Component(configurationPid = "vicare.bridge")
@@ -247,7 +249,8 @@ public class VicareServiceImpl implements VicareService {
                     String valueType = value.get("type").getAsString();
                     if ("string".equals(valueType)) {
                         String textValue = value.get("value").getAsString();
-                        return new TextFeature(featureName, textValue);
+                        List<CommandDescriptor> commands = generateCommands(jsonObject.getAsJsonObject("commands"));
+                        return new TextFeature(featureName, textValue, commands);
                     } else if ("number".equals(valueType)) {
                         if (statusObject != null) {
                             String status = statusObject.get("value").getAsString();
@@ -315,6 +318,45 @@ public class VicareServiceImpl implements VicareService {
                     return new StatusSensorFeature(featureName, status, active);
                 }
             }
+            return null;
+        }
+
+        private List<CommandDescriptor> generateCommands(JsonObject commands) {
+            return commands.entrySet().stream()
+                    .map(e -> generateCommand(e.getKey(), e.getValue().getAsJsonObject()))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+        }
+
+        private CommandDescriptor generateCommand(String key, JsonObject value) {
+            String name = value.get("name").getAsString();
+            boolean executable = value.get("isExecutable").getAsBoolean();
+            URI uri = URI.create(value.get("uri").getAsString());
+            List<ParamDescriptor> params = value.get("params").getAsJsonObject().entrySet().stream()
+                    .map(e -> generateParam(e.getKey(), e.getValue().getAsJsonObject()))
+                    .collect(Collectors.toList());
+
+            if (params.contains(null)) {
+                // Don't support the command if we don't understand the parameters.
+                return null;
+            }
+            return new CommandDescriptor(name, executable, params, uri);
+        }
+
+        private ParamDescriptor generateParam(String name, JsonObject jsonObject) {
+            String type = jsonObject.get("type").getAsString();
+            JsonObject constraints = jsonObject.get("constraints").getAsJsonObject();
+            switch (type) {
+                case "string":
+                    if (constraints.has("enum")) {
+                        Set<String> enumValues = stream(constraints.getAsJsonArray("enum").spliterator(), false)
+                                .map(JsonElement::getAsString)
+                                .collect(Collectors.toSet());
+                        return new EnumParamDescriptor(jsonObject.get("required").getAsBoolean(), name, enumValues);
+                    }
+                    break;
+            }
+            logger.trace("Skipping unsupported parameter " + name + ", type " + type);
             return null;
         }
     }

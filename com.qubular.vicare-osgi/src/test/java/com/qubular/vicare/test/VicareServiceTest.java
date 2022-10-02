@@ -3,6 +3,7 @@ package com.qubular.vicare.test;
 import com.qubular.vicare.*;
 import com.qubular.vicare.model.*;
 import com.qubular.vicare.model.features.*;
+import com.qubular.vicare.model.params.ParamDescriptor;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.http.HttpHeader;
@@ -407,6 +408,31 @@ public class VicareServiceTest {
         assertEquals(0.2, dhwConsumption.get().getMonth().getValue(), 0.001);
         assertEquals("kilowattHour", dhwConsumption.get().getYear().getUnit().getName());
         assertEquals(0.9, dhwConsumption.get().getYear().getValue(), 0.001);
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_circuits_0_operating_modes_active() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse.json");
+
+        Optional<TextFeature> modeActive = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.0.operating.modes.active"))
+                .map(TextFeature.class::cast)
+                .findFirst();
+
+        assertTrue(modeActive.isPresent());
+        assertEquals("dhw", modeActive.get().getValue());
+        assertEquals(1, modeActive.get().getCommands().size());
+        assertEquals("setMode", modeActive.get().getCommands().get(0).getName());
+        assertEquals(true, modeActive.get().getCommands().get(0).isExecutable());
+        assertEquals("https://api.viessmann.com/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.modes.active/commands/setMode", modeActive.get().getCommands().get(0).getUri().toString());
+        assertEquals(1, modeActive.get().getCommands().get(0).getParams().size());
+        EnumParamDescriptor modeParam = (EnumParamDescriptor) modeActive.get().getCommands().get(0).getParams().get(0);
+        assertEquals(Set.of("standby", "heating", "dhw", "dhwAndHeating"), modeParam.getAllowedValues());
+        assertEquals(true, modeParam.isRequired());
+        assertEquals("mode", modeParam.getName());
+        assertTrue(modeParam.validate("standby"));
+        assertFalse(modeParam.validate("off"));
     }
 
     @Test

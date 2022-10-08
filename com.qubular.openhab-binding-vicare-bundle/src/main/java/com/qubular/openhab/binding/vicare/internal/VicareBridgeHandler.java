@@ -2,10 +2,13 @@ package com.qubular.openhab.binding.vicare.internal;
 
 import com.qubular.openhab.binding.vicare.internal.configuration.SimpleConfiguration;
 import com.qubular.vicare.AuthenticationException;
+import com.qubular.vicare.CommandFailureException;
 import com.qubular.vicare.VicareConfiguration;
 import com.qubular.vicare.VicareService;
+import com.qubular.vicare.model.CommandDescriptor;
 import com.qubular.vicare.model.Feature;
 import org.openhab.core.events.EventPublisher;
+import org.openhab.core.library.types.StringType;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseBridgeHandler;
 import org.openhab.core.thing.binding.ThingHandlerService;
@@ -21,7 +24,7 @@ import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import static com.qubular.openhab.binding.vicare.internal.VicareConstants.PROPERTY_FEATURE_NAME;
+import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThingUniqueId;
 
 public class VicareBridgeHandler extends BaseBridgeHandler {
@@ -109,12 +112,12 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
         ((SimpleConfiguration) config).setConfigurationParameters(configurationParameters);
     }
 
-    public Optional<Feature> handleBridgedDeviceCommand(ChannelUID channelUID, Command command) throws AuthenticationException, IOException {
+    public Optional<Feature> handleBridgedDeviceCommand(ChannelUID channelUID, Command command) throws AuthenticationException, IOException, CommandFailureException {
         logger.debug("Handling command {} for channel {} from thing {}", command, channelUID, channelUID.getThingUID());
         Thing targetThing = thingRegistry.get(channelUID.getThingUID());
+        Channel channel = targetThing.getChannel(channelUID);
         if (command instanceof RefreshType) {
             try {
-                Channel channel = targetThing.getChannel(channelUID);
                 List<Feature> features = getFeatures(targetThing);
                 String featureName = channel.getProperties().get(PROPERTY_FEATURE_NAME);
                 if (getThing().getStatus() != ThingStatus.ONLINE) {
@@ -130,9 +133,15 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "Unable to communicate with Viessmann API: " + e.getMessage());
                 throw e;
             }
-        } else {
-            return Optional.empty();
+        } else if (command instanceof StringType) {
+            CommandDescriptor commandDescriptor = getCommandDescriptor(targetThing.getChannel(channelUID)).orElse(null);
+            if (commandDescriptor != null) {
+                logger.debug("Sending command " + commandDescriptor.getUri());
+                vicareService.sendCommand(commandDescriptor.getUri(), Map.of(channel.getProperties().get(PROPERTY_PARAM_NAME),
+                                                                              ((StringType)command).toString()));
+            }
         }
+        return Optional.empty();
     }
 
     private synchronized List<Feature> getFeatures(Thing thing) throws AuthenticationException, IOException {
@@ -156,5 +165,21 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
 
     VicareService getVicareService() {
         return vicareService;
+    }
+
+    Optional<CommandDescriptor> getCommandDescriptor(Channel channel) {
+        String commandName = channel.getProperties().get(PROPERTY_COMMAND_NAME);
+        String featureName = channel.getProperties().get(PROPERTY_FEATURE_NAME);
+        Thing thing = thingRegistry.get(channel.getUID().getThingUID());
+        try {
+            return getFeatures(thing).stream()
+                    .filter(f -> f.getName().equals(featureName))
+                    .flatMap(f -> f.getCommands().stream())
+                    .filter(c -> c.getName().equals(commandName))
+                    .findFirst();
+        } catch (IOException | AuthenticationException e) {
+            logger.debug("Unable to get command descriptor", e);
+            return Optional.empty();
+        }
     }
 }

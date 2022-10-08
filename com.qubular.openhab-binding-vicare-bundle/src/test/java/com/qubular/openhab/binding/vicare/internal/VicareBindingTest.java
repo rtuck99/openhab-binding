@@ -2,6 +2,7 @@ package com.qubular.openhab.binding.vicare.internal;
 
 import com.qubular.openhab.binding.vicare.internal.configuration.SimpleConfiguration;
 import com.qubular.vicare.AuthenticationException;
+import com.qubular.vicare.CommandFailureException;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.*;
 import com.qubular.vicare.model.features.*;
@@ -24,12 +25,11 @@ import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.library.types.OnOffType;
 import org.openhab.core.library.types.StringType;
 import org.openhab.core.thing.*;
-import org.openhab.core.thing.binding.BaseThingHandlerFactory;
-import org.openhab.core.thing.binding.BridgeHandler;
-import org.openhab.core.thing.binding.ThingHandler;
-import org.openhab.core.thing.binding.ThingHandlerCallback;
-import org.openhab.core.types.RefreshType;
-import org.openhab.core.types.State;
+import org.openhab.core.thing.binding.*;
+import org.openhab.core.thing.type.ChannelType;
+import org.openhab.core.thing.type.ChannelTypeRegistry;
+import org.openhab.core.thing.type.DynamicCommandDescriptionProvider;
+import org.openhab.core.types.*;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.cm.ConfigurationAdmin;
@@ -38,6 +38,7 @@ import org.osgi.service.component.ComponentContext;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URI;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -62,6 +63,8 @@ public class VicareBindingTest {
     public static final String GATEWAY_SERIAL = "SERIAL_1234";
     public static final String DEVICE_1_ID = "0";
     public static final String DEVICE_2_ID = "1";
+    public static final URI SET_MODE_URI = URI.create(
+            "https://api.viessmann.com/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.modes.active/commands/setMode");
     @Mock
     private VicareService vicareService;
     private SimpleConfiguration configuration;
@@ -69,11 +72,13 @@ public class VicareBindingTest {
     private ThingRegistry thingRegistry;
     @Mock
     private ConfigurationAdmin configurationAdmin;
+
+    private ChannelTypeRegistry channelTypeRegistry;
+
     private ComponentContext componentContext;
     private BundleContext bundleContext;
 
     private ThingHandler bridgeHandler;
-
 
     private void simpleHeatingInstallation() throws AuthenticationException, IOException {
         Installation installation = mock(Installation.class);
@@ -108,9 +113,15 @@ public class VicareBindingTest {
                 LocalDate.parse("2022-12-26"));
         Feature heatingDhw = new StatusSensorFeature("heating.dhw", Status.ON, true);
         Feature heatingDhwTemperatureHotWaterStorage = new NumericSensorFeature("heating.dhw.sensors.temperature.hotWaterStorage", new DimensionalValue(new Unit("celsius"), 54.3), new Status("connected"), null);
+        Feature operatingModesActive = new TextFeature("heating.circuits.0.operating.modes.active", "dhw",
+                                                     List.of(new CommandDescriptor("setMode", true,
+                                                                                   List.of(new EnumParamDescriptor(true, "mode",
+                                                                                                   Set.of("standby", "heating", "dhw", "dhwAndHeating"))),
+                                                                                   SET_MODE_URI)));
         when(vicareService.getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID)).thenReturn(
                 List.of(temperatureSensor, statisticsFeature, textFeature, statusFeature, normalProgramFeature,
-                        consumptionFeature, burnerFeature, curveFeature, holidayFeature, heatingDhw, heatingDhwTemperatureHotWaterStorage));
+                        consumptionFeature, burnerFeature, curveFeature, holidayFeature, heatingDhw,
+                        heatingDhwTemperatureHotWaterStorage, operatingModesActive));
     }
 
     private void oneHeatingInstallationTwoBoilers() throws AuthenticationException, IOException {
@@ -159,6 +170,7 @@ public class VicareBindingTest {
         doReturn(bundle).when(bundleContext).getBundle();
         org.osgi.service.cm.Configuration config = mock(org.osgi.service.cm.Configuration.class);
         doReturn(config).when(configurationAdmin).getConfiguration("com.qubular.openhab.binding.vicare.SimpleConfiguration");
+        channelTypeRegistry = new ChannelTypeRegistry();
     }
 
     @AfterEach
@@ -290,13 +302,13 @@ public class VicareBindingTest {
         assertEquals("heating.dhw.sensors.temperature.hotWaterStorage", dhwHotWaterStorageTempChannel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
-        verify(callback).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
         assertEquals(27.3, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
 
         handler.handleCommand(dhwHotWaterStorageTempChannel.getUID(), RefreshType.REFRESH);
-        verify(callback).stateUpdated(eq(dhwHotWaterStorageTempChannel.getUID()), stateCaptor.capture());
+        verify(callback, timeout(1000)).stateUpdated(eq(dhwHotWaterStorageTempChannel.getUID()), stateCaptor.capture());
         assertEquals(54.3, ((DecimalType) stateCaptor.getValue()).doubleValue(), 0.01);
     }
 
@@ -328,13 +340,13 @@ public class VicareBindingTest {
         assertEquals("heating.circuits.0.operating.programs.normal", activeChannel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
-        verify(callback).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
         assertEquals(21, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
 
         handler.handleCommand(activeChannel.getUID(), RefreshType.REFRESH);
-        verify(callback).stateUpdated(eq(activeChannel.getUID()), stateCaptor.capture());
+        verify(callback, timeout(1000)).stateUpdated(eq(activeChannel.getUID()), stateCaptor.capture());
         assertEquals(OnOffType.ON, stateCaptor.getValue());
     }
 
@@ -389,7 +401,7 @@ public class VicareBindingTest {
                     assertEquals(statisticName.get(c.getChannelTypeUID().getId()), c.getProperties().get(PROPERTY_PROP_NAME));
                     handler.handleCommand(c.getUID(), RefreshType.REFRESH);
                     ArgumentCaptor<State> stateCaptor = forClass(State.class);
-                    verify(callback).stateUpdated(eq(c.getUID()), stateCaptor.capture());
+                    verify(callback, timeout(1000)).stateUpdated(eq(c.getUID()), stateCaptor.capture());
                     assertEquals(expectedValues.get(c.getChannelTypeUID().getId()), ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
         });
     }
@@ -428,9 +440,9 @@ public class VicareBindingTest {
         assertEquals("heating.burners.0.statistics", channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
-        verify(callback).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
         assertEquals(5.0, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
     }
 
@@ -447,13 +459,72 @@ public class VicareBindingTest {
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
         handler.initialize();
-//        Thread.sleep(1000);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
 
-        assertEquals("7723181102527121", thingCaptor.getValue().getProperties().get("device.serial"));
+        Channel channel = findChannel(thingCaptor, "device_serial");
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), eq(StringType.valueOf("7723181102527121")));
+    }
+
+    @Test
+    public void supportsWritableEnumProperty() throws AuthenticationException, IOException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException, CommandFailureException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
+        bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
+        when(bridge.getHandler()).thenReturn((BridgeHandler) bridgeHandler);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
+                                                                             configuration);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+
+        Channel enumChannel = findChannel(thingCaptor, "heating_circuits_0_operating_modes_active");
+        assertEquals("heating_circuits_operating_modes_active", enumChannel.getChannelTypeUID().getId());
+        assertEquals("heating.circuits.0.operating.modes.active", enumChannel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        Optional<Class<? extends ThingHandlerService>> descriptionProviderClass = handler.getServices().stream().filter(
+                DynamicCommandDescriptionProvider.class::isAssignableFrom).findAny();
+        assertTrue(descriptionProviderClass.isPresent());
+        ThingHandlerService thingHandlerService = descriptionProviderClass.get().getConstructor().newInstance();
+        thingHandlerService.setThingHandler(handler);
+        thingHandlerService.activate();
+        DynamicCommandDescriptionProvider descriptionProvider = (DynamicCommandDescriptionProvider) thingHandlerService;
+        CommandDescription commandDescription = descriptionProvider.getCommandDescription(enumChannel,
+                                                                                          CommandDescriptionBuilder.create().build(),
+                                                                                          Locale.getDefault());
+
+
+        assertEquals(4, commandDescription.getCommandOptions().size());
+        Set<String> options = commandDescription.getCommandOptions().stream().map(
+                CommandOption::getCommand).collect(
+                Collectors.toSet());
+        assertEquals(Set.of("standby", "heating", "dhw", "dhwAndHeating"), options);
+
+
+        handler.handleCommand(enumChannel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(enumChannel.getUID()), stateCaptor.capture());
+
+        assertEquals(new StringType("dhw"), stateCaptor.getValue());
+
+        handler.handleCommand(enumChannel.getUID(), new StringType("heating"));
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        inOrder.verify(vicareService, timeout(1000)).sendCommand(eq(SET_MODE_URI), eq(Map.of("mode", "heating")));
+
     }
 
     private ThingHandlerCallback simpleHandlerCallback(Bridge bridge, ThingHandler handler) {
@@ -499,14 +570,14 @@ public class VicareBindingTest {
         assertEquals("heating.circuits.0.heating.curve", shiftChannel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(slopeChannel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
-        verify(callback).stateUpdated(eq(slopeChannel.getUID()), stateCaptor.capture());
+        verify(callback, timeout(1000)).stateUpdated(eq(slopeChannel.getUID()), stateCaptor.capture());
         assertEquals(1.6, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
 
         handler.handleCommand(shiftChannel.getUID(), RefreshType.REFRESH);
         inOrder.verify(vicareService, never()).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
-        verify(callback).stateUpdated(eq(shiftChannel.getUID()), stateCaptor.capture());
+        verify(callback, timeout(1000)).stateUpdated(eq(shiftChannel.getUID()), stateCaptor.capture());
         assertEquals(-4.0, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
     }
 
@@ -548,21 +619,21 @@ public class VicareBindingTest {
         assertEquals("heating.dhw", heatingDhwStatusChannel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
-        verify(callback).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
         assertEquals(StringType.valueOf("on"), stateCaptor.getValue());
 
         handler.handleCommand(burnerChannel.getUID(), RefreshType.REFRESH);
-        verify(callback).stateUpdated(eq(burnerChannel.getUID()), stateCaptor.capture());
+        verify(callback, timeout(1000)).stateUpdated(eq(burnerChannel.getUID()), stateCaptor.capture());
         assertEquals(OnOffType.ON, stateCaptor.getValue());
 
         handler.handleCommand(heatingDhwActiveChannel.getUID(), RefreshType.REFRESH);
-        verify(callback).stateUpdated(eq(heatingDhwActiveChannel.getUID()), stateCaptor.capture());
+        verify(callback, timeout(1000)).stateUpdated(eq(heatingDhwActiveChannel.getUID()), stateCaptor.capture());
         assertEquals(OnOffType.ON, stateCaptor.getValue());
 
         handler.handleCommand(heatingDhwStatusChannel.getUID(), RefreshType.REFRESH);
-        verify(callback).stateUpdated(eq(heatingDhwStatusChannel.getUID()), stateCaptor.capture());
+        verify(callback, timeout(1000)).stateUpdated(eq(heatingDhwStatusChannel.getUID()), stateCaptor.capture());
         assertEquals(StringType.valueOf("on"), stateCaptor.getValue());
         inOrder.verify(vicareService, never()).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
     }
@@ -611,19 +682,19 @@ public class VicareBindingTest {
         assertEquals("heating.circuits.0.operating.programs.holiday", endChannel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
-        verify(callback).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
         assertEquals(OnOffType.ON, stateCaptor.getValue());
 
         handler.handleCommand(startChannel.getUID(), RefreshType.REFRESH);
         inOrder.verify(vicareService, never()).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
-        verify(callback).stateUpdated(eq(startChannel.getUID()), stateCaptor.capture());
+        verify(callback, timeout(1000)).stateUpdated(eq(startChannel.getUID()), stateCaptor.capture());
         assertEquals(ZonedDateTime.parse("2022-12-23T00:00:00Z"), ((DateTimeType)stateCaptor.getValue()).getZonedDateTime());
 
         handler.handleCommand(endChannel.getUID(), RefreshType.REFRESH);
         inOrder.verify(vicareService, never()).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
-        verify(callback).stateUpdated(eq(endChannel.getUID()), stateCaptor.capture());
+        verify(callback, timeout(1000)).stateUpdated(eq(endChannel.getUID()), stateCaptor.capture());
         assertEquals(ZonedDateTime.parse("2022-12-26T23:59:59.999999999Z"), ((DateTimeType)stateCaptor.getValue()).getZonedDateTime());
     }
 
@@ -650,6 +721,7 @@ public class VicareBindingTest {
         VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
                                                                              configuration);
         bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
+        when(bridge.getHandler()).thenReturn((BridgeHandler) bridgeHandler);
         ThingHandler boilerHandler1 = vicareHandlerFactory.createHandler(boiler1);
         ThingHandler boilerHandler2 = vicareHandlerFactory.createHandler(boiler2);
         ThingHandlerCallback thingHandlerCallback1 = simpleHandlerCallback(bridge, boilerHandler1);
@@ -664,10 +736,18 @@ public class VicareBindingTest {
         verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_2_ID);
 
         verify(thingHandlerCallback1, timeout(1000)).thingUpdated(any(Thing.class));
-        assertEquals("1111111111111111", boilerHandler1.getThing().getProperties().get("device.serial"));
+        ChannelUID channel1UID = new ChannelUID(boiler1.getUID(), "device_serial");
+        boilerHandler1.handleCommand(channel1UID, RefreshType.REFRESH);
+        ArgumentCaptor<State> stateCaptor = ArgumentCaptor.forClass(State.class);
+        verify(thingHandlerCallback1, timeout(1000)).stateUpdated(eq(channel1UID), stateCaptor.capture());
+        assertEquals(StringType.valueOf("1111111111111111"), stateCaptor.getValue());
 
         verify(thingHandlerCallback2, timeout(1000)).thingUpdated(any(Thing.class));
-        assertEquals("2222222222222222", boilerHandler2.getThing().getProperties().get("device.serial"));
+        ChannelUID channel2UID = new ChannelUID(boiler2.getUID(), "device_serial");
+        boilerHandler2.handleCommand(channel2UID, RefreshType.REFRESH);
+        ArgumentCaptor<State> stateCaptor2 = ArgumentCaptor.forClass(State.class);
+        verify(thingHandlerCallback2, timeout(1000)).stateUpdated(eq(channel2UID), stateCaptor2.capture());
+        assertEquals(StringType.valueOf("2222222222222222"), stateCaptor2.getValue());
     }
 
 

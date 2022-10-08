@@ -11,4 +11,8 @@ public class VicareConstants {
     public static final String PROPERTY_FEATURE_NAME = "featureName";
 
     public static final String PROPERTY_PROP_NAME = "propertyName";
+
+    public static final String PROPERTY_COMMAND_NAME = "commandName";
+
+    public static final String PROPERTY_PARAM_NAME = "paramName";
 }

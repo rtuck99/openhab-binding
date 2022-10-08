@@ -9,7 +9,9 @@ import com.qubular.vicare.model.features.*;
 import com.qubular.vicare.model.params.ParamDescriptor;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
+import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.util.FormContentProvider;
+import org.eclipse.jetty.client.util.StringContentProvider;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.util.Fields;
@@ -24,7 +26,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -85,6 +86,22 @@ public class VicareServiceImpl implements VicareService {
 
     private static class FeatureResponse {
         public List<Feature> data;
+    }
+
+    private static class CommandResponse {
+        public CommandResponseData data;
+    }
+
+    private static class CommandResponseData {
+        public boolean success;
+        public String message;
+        public String reason;
+    }
+
+    private static class HttpErrorResponse {
+        public int statusCode;
+        public String message;
+        public String errorType;
     }
 
     @Override
@@ -179,6 +196,48 @@ public class VicareServiceImpl implements VicareService {
                 }
             } else {
                 return extractFeatures(responseContent);
+            }
+
+        } catch (InterruptedException | TimeoutException | ExecutionException e) {
+            logger.warn("Unable to request features from IoT API", e);
+            throw new IOException("Unable to request features from IoT API", e);
+        }
+    }
+
+    @Override
+    public void sendCommand(URI uri, Map<String, Object> params) throws AuthenticationException, IOException, CommandFailureException {
+        TokenStore.AccessToken accessToken = getValidAccessToken()
+                .orElseThrow(()-> new AuthenticationException("No access token for Viessmann API"));
+
+        try {
+            Request request = httpClientProvider.getHttpClient()
+                    .newRequest(uri)
+                    .header(HttpHeader.AUTHORIZATION, "Bearer " + accessToken.token)
+                    .header(HttpHeader.CONTENT_TYPE, "application/json")
+                    .accept("application/json")
+                    .method(HttpMethod.POST);
+            JsonObject body = new JsonObject();
+            params.forEach((name, value) -> {
+                if (value instanceof String) {
+                    body.addProperty(name, (String) value);
+                }
+            });
+            ContentResponse contentResponse = request.content(new StringContentProvider(apiGson().toJson(body))).send();
+            if (contentResponse.getStatus() == SC_OK) {
+                CommandResponse commandResponse = apiGson().fromJson(contentResponse.getContentAsString(), CommandResponse.class);
+                if (!commandResponse.data.success) {
+                    throw new CommandFailureException(commandResponse.data.message, commandResponse.data.reason);
+                }
+            } else {
+                try {
+                    HttpErrorResponse errorResponse = apiGson().fromJson(contentResponse.getContentAsString(), HttpErrorResponse.class);
+                    String msg = String.format("Failed to send command, server returned %d, %s - %s", contentResponse.getStatus(), errorResponse.errorType, errorResponse.message);
+                    logger.warn(msg);
+                    throw new IOException(msg);
+                } catch (Exception e) {
+                    // never mind
+                }
+                throw new IOException("Unable to request features from IoT API, server returned " + contentResponse.getStatus());
             }
 
         } catch (InterruptedException | TimeoutException | ExecutionException e) {
@@ -351,7 +410,7 @@ public class VicareServiceImpl implements VicareService {
                     if (constraints.has("enum")) {
                         Set<String> enumValues = stream(constraints.getAsJsonArray("enum").spliterator(), false)
                                 .map(JsonElement::getAsString)
-                                .collect(Collectors.toSet());
+                                .collect(Collectors.toCollection(LinkedHashSet::new));
                         return new EnumParamDescriptor(jsonObject.get("required").getAsBoolean(), name, enumValues);
                     }
                     break;

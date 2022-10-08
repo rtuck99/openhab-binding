@@ -28,6 +28,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -412,7 +413,7 @@ public class VicareServiceTest {
 
     @Test
     @DisabledIf("realConnection")
-    public void supports_heating_circuits_0_operating_modes_active() throws ServletException, AuthenticationException, NamespaceException, IOException {
+    public void supports_heating_circuits_0_operating_modes_active() throws ServletException, AuthenticationException, NamespaceException, IOException, CommandFailureException, ExecutionException, InterruptedException, TimeoutException {
         List<Feature> features = getFeatures("deviceFeaturesResponse.json");
 
         Optional<TextFeature> modeActive = features.stream()
@@ -425,7 +426,7 @@ public class VicareServiceTest {
         assertEquals(1, modeActive.get().getCommands().size());
         assertEquals("setMode", modeActive.get().getCommands().get(0).getName());
         assertEquals(true, modeActive.get().getCommands().get(0).isExecutable());
-        assertEquals("https://api.viessmann.com/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.modes.active/commands/setMode", modeActive.get().getCommands().get(0).getUri().toString());
+        assertEquals("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.modes.active/commands/setMode", modeActive.get().getCommands().get(0).getUri().toString());
         assertEquals(1, modeActive.get().getCommands().get(0).getParams().size());
         EnumParamDescriptor modeParam = (EnumParamDescriptor) modeActive.get().getCommands().get(0).getParams().get(0);
         assertEquals(Set.of("standby", "heating", "dhw", "dhwAndHeating"), modeParam.getAllowedValues());
@@ -433,6 +434,32 @@ public class VicareServiceTest {
         assertEquals("mode", modeParam.getName());
         assertTrue(modeParam.validate("standby"));
         assertFalse(modeParam.validate("off"));
+
+        CompletableFuture<String> requestContent = new CompletableFuture<>();
+
+        iotServlet = new HttpServlet() {
+            @Override
+            protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+                try {
+                    assertEquals("application/json", req.getHeader(HttpHeader.CONTENT_TYPE.asString()));
+                    assertEquals("application/json", req.getHeader(HttpHeader.ACCEPT.asString()));
+                } catch (AssertionFailedError e) {
+                    requestContent.completeExceptionally(e);
+                }
+                requestContent.complete(new String(req.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+                String jsonResponse = "{\"data\":{\"success\":true,\"reason\":\"COMMAND_EXECUTION_SUCCESS\"}}";
+                resp.setContentType("application/json");
+                resp.setStatus(200);
+                try (ServletOutputStream outputStream = resp.getOutputStream()) {
+                    outputStream.print(jsonResponse);
+                }
+            }
+        };
+        httpService.registerServlet("/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.modes.active/commands/setMode", iotServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+
+        vicareService.sendCommand(URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.modes.active/commands/setMode"),
+                                  Map.of("mode", "dhwAndHeating"));
+        assertEquals("{\"mode\":\"dhwAndHeating\"}", requestContent.get(1, TimeUnit.SECONDS));
     }
 
     @Test

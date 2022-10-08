@@ -1,17 +1,21 @@
 package com.qubular.openhab.binding.vicare.internal;
 
 import com.qubular.vicare.AuthenticationException;
+import com.qubular.vicare.CommandFailureException;
 import com.qubular.vicare.VicareService;
+import com.qubular.vicare.model.CommandDescriptor;
 import com.qubular.vicare.model.DimensionalValue;
 import com.qubular.vicare.model.Feature;
 import com.qubular.vicare.model.Status;
 import com.qubular.vicare.model.features.*;
+import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.core.library.types.DateTimeType;
 import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.library.types.OnOffType;
 import org.openhab.core.library.types.StringType;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseThingHandler;
+import org.openhab.core.thing.binding.ThingHandlerService;
 import org.openhab.core.thing.binding.builder.ChannelBuilder;
 import org.openhab.core.thing.binding.builder.ThingBuilder;
 import org.openhab.core.thing.type.ChannelTypeUID;
@@ -34,8 +38,8 @@ import java.util.stream.Collectors;
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThingUniqueId;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.escapeUIDSegment;
-import static com.qubular.vicare.model.Status.OFF;
-import static com.qubular.vicare.model.Status.ON;
+import static java.lang.String.format;
+import static java.util.Collections.singleton;
 
 public class VicareDeviceThingHandler extends BaseThingHandler {
     private static final Logger logger = LoggerFactory.getLogger(VicareDeviceThingHandler.class);
@@ -48,7 +52,8 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
             "currentYear", ConsumptionFeature::getYear
     );
 
-    public VicareDeviceThingHandler(Thing thing, VicareService vicareService) {
+    public VicareDeviceThingHandler(Thing thing,
+                                    VicareService vicareService) {
         super(thing);
         logger.info("Creating handler for {}", thing.getUID());
         this.vicareService = vicareService;
@@ -139,8 +144,20 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
                         @Override
                         public void visit(TextFeature f) {
-                            String name = f.getName();
-                            newPropValues.put(name, f.getValue());
+                            String id = escapeUIDSegment(f.getName());
+                            ChannelUID channelUID = new ChannelUID(thing.getUID(), id);
+                            Map<String, String> props = new HashMap<>();
+                            props.put(PROPERTY_FEATURE_NAME, f.getName());
+                            if (f.getCommands().size() == 1 &&
+                                f.getCommands().get(0).getParams().size() == 1) {
+                                CommandDescriptor command = feature.getCommands().get(0);
+                                props.put(PROPERTY_COMMAND_NAME, command.getName());
+                                props.put(PROPERTY_PARAM_NAME, command.getParams().get(0).getName());
+                            }
+                            channels.add(ChannelBuilder.create(channelUID)
+                                                 .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id)))
+                                                 .withProperties(props)
+                                                 .build());
                         }
 
                         @Override
@@ -181,7 +198,6 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                                     .build());
                         }
                     });
-
                 }
                 if (!channels.isEmpty() || !newPropValues.isEmpty()) {
                     ThingBuilder thingBuilder = editThing();
@@ -227,6 +243,14 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
+        CompletableFuture.runAsync(() -> syncHandleCommand(channelUID, command))
+                .exceptionally(t -> {
+                    logger.warn(format("Unexpected exception handling command %s for channel %s", command, channelUID), t);
+                    return null;
+                });
+    }
+
+    public void syncHandleCommand(ChannelUID channelUID, Command command) {
         try {
             Optional<Feature> feature = ((VicareBridgeHandler) getBridge().getHandler()).handleBridgedDeviceCommand(channelUID, command);
             feature.ifPresent(f -> {
@@ -283,7 +307,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
                     @Override
                     public void visit(TextFeature f) {
-
+                        updateState(channelUID, new StringType(f.getValue()));
                     }
 
                     @Override
@@ -333,6 +357,17 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Unable to authenticate with Viessmann API: " + e.getMessage());
         } catch (IOException e) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Unable to communicate with Viessmann API: " + e.getMessage());
+        } catch (CommandFailureException e) {
+            logger.warn("Unable to perform command {} for channel {} {}: {}", command, channelUID, e.getReason(), e.getMessage());
         }
+    }
+
+    @Override
+    public Collection<Class<? extends ThingHandlerService>> getServices() {
+        return singleton(DeviceDynamicCommandDescriptionProvider.class);
+    }
+
+    protected @Nullable VicareBridgeHandler getBridgeHandler() {
+        return (VicareBridgeHandler) getBridge().getHandler();
     }
 }

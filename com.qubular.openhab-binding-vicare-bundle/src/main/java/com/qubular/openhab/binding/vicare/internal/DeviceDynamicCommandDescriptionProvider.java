@@ -32,20 +32,21 @@ public class DeviceDynamicCommandDescriptionProvider implements DynamicCommandDe
 
     @Override
     public @Nullable CommandDescription getCommandDescription(Channel channel, @Nullable CommandDescription originalCommandDescription, @Nullable Locale locale) {
-        CommandDescriptor commandDescriptor = getCommandDescriptor(channel).orElse(null);
-        if (commandDescriptor != null &&
-        commandDescriptor.getParams().size() == 1 &&
-        commandDescriptor.getParams().get(0) instanceof EnumParamDescriptor) {
-            EnumParamDescriptor enumDescriptor = (EnumParamDescriptor) commandDescriptor.getParams().get(0);
-            List<CommandOption> options = enumDescriptor.getAllowedValues().stream()
-                    .map(value -> new CommandOption(value, value))
-                    .collect(Collectors.toList());
-            return CommandDescriptionBuilder.create()
-                    .withCommandOptions(options)
-                    .build();
-        } else {
-            return originalCommandDescription;
+        if (VicareConstants.BINDING_ID.equals(channel.getUID().getBindingId())) {
+            CommandDescriptor commandDescriptor = getCommandDescriptor(channel).orElse(null);
+            if (commandDescriptor != null &&
+            commandDescriptor.getParams().size() == 1 &&
+            commandDescriptor.getParams().get(0) instanceof EnumParamDescriptor) {
+                EnumParamDescriptor enumDescriptor = (EnumParamDescriptor) commandDescriptor.getParams().get(0);
+                List<CommandOption> options = enumDescriptor.getAllowedValues().stream()
+                        .map(value -> new CommandOption(value, value))
+                        .collect(Collectors.toList());
+                return CommandDescriptionBuilder.create()
+                        .withCommandOptions(options)
+                        .build();
+            }
         }
+        return originalCommandDescription;
     }
 
     private Optional<CommandDescriptor> getCommandDescriptor(Channel channel) {

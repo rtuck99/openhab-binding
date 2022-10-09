@@ -13,9 +13,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.mockito.stubbing.Stubber;
 import org.openhab.core.config.core.Configuration;
 import org.openhab.core.config.discovery.AbstractDiscoveryService;
 import org.openhab.core.config.discovery.DiscoveryListener;
@@ -118,10 +120,12 @@ public class VicareBindingTest {
                                                                                    List.of(new EnumParamDescriptor(true, "mode",
                                                                                                    Set.of("standby", "heating", "dhw", "dhwAndHeating"))),
                                                                                    SET_MODE_URI)));
-        when(vicareService.getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID)).thenReturn(
+        doReturn(
                 List.of(temperatureSensor, statisticsFeature, textFeature, statusFeature, normalProgramFeature,
                         consumptionFeature, burnerFeature, curveFeature, holidayFeature, heatingDhw,
-                        heatingDhwTemperatureHotWaterStorage, operatingModesActive));
+                        heatingDhwTemperatureHotWaterStorage, operatingModesActive))
+                .when(vicareService)
+                .getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
     }
 
     private void oneHeatingInstallationTwoBoilers() throws AuthenticationException, IOException {
@@ -228,6 +232,32 @@ public class VicareBindingTest {
         assertEquals(encodeThingUniqueId(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID), result.getProperties().get("deviceUniqueId"));
         assertEquals("deviceUniqueId", result.getRepresentationProperty());
     }
+
+    @Test
+    public void discoveryServiceNotCancelledOnUnhandledException() throws AuthenticationException, IOException, InvocationTargetException, NoSuchMethodException, IllegalAccessException, InstantiationException, InterruptedException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
+                                                                             configuration);
+        activateHandlerFactory(vicareHandlerFactory);
+
+        bridgeHandler = vicareHandlerFactory.createHandler(bridge);
+        doThrow(new RuntimeException("Test exception")).when(vicareService).getInstallations();
+
+        DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
+        InOrder inOrder1 = inOrder(vicareService, discoveryListener);
+        VicareDiscoveryService discoveryService = VicareDiscoveryService.class.getConstructor().newInstance();
+        discoveryService.setThingHandler(bridgeHandler);
+        discoveryService.addDiscoveryListener(discoveryListener);
+
+        inOrder1.verify(vicareService, timeout(1000).times(1)).getInstallations();
+
+        Thread.sleep(1000);
+
+        assertTrue(discoveryService.isBackgroundDiscoveryRunning());
+    }
+
     @Test
     public void startsBackgroundScan() throws AuthenticationException, IOException, InvocationTargetException, NoSuchMethodException, IllegalAccessException, InstantiationException {
         simpleHeatingInstallation();
@@ -272,6 +302,27 @@ public class VicareBindingTest {
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
 
         assertNotNull(handler);
+    }
+
+    @Test
+    public void initializeDeviceHandlerNotCancelledOnUnhandledException() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
+        bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
+        when(bridge.getHandler()).thenReturn((BridgeHandler) bridgeHandler);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
+                                                                             configuration);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        simpleHandlerCallback(bridge, handler);
+        doThrow(new RuntimeException("Unexpected exception")).when(vicareService).getFeatures(anyLong(), anyString(), anyString());
+
+        bridgeHandler.initialize();
+        handler.initialize();
+        verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+
+        assertTrue(((VicareBridgeHandler)bridgeHandler).isFeatureScanRunning());
     }
 
     @Test

@@ -107,13 +107,18 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
                 }
                 getBridgeHandler().updateStatus(ThingStatus.ONLINE);
             } catch (AuthenticationException e) {
+                logger.warn("Authentication problem scanning Viessmann API:" + e.getMessage());
                 if (scanListener != null) {
-                    logger.warn("Authentication problem scanning Viessmann API:" + e.getMessage());
                     scanListener.onErrorOccurred(e);
                 }
             } catch (IOException e) {
+                logger.warn("IO problem scanning Viessmann API:" + e.getMessage());
                 if (scanListener != null) {
-                    logger.warn("IO problem scanning Viessmann API:" + e.getMessage());
+                    scanListener.onErrorOccurred(e);
+                }
+            } catch (RuntimeException e) {
+                logger.warn("Unexpected error occurred scanning Viessmann API", e);
+                if (scanListener != null) {
                     scanListener.onErrorOccurred(e);
                 }
             } finally {
@@ -175,5 +180,9 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
             logger.info("Received token event.");
             VicareDiscoveryService.this.startScan();
         }
+    }
+
+    boolean isBackgroundDiscoveryRunning() {
+        return !(backgroundJob.isDone() || backgroundJob.isCancelled());
     }
 }

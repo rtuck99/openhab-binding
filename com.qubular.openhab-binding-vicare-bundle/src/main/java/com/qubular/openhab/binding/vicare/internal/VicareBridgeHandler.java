@@ -48,7 +48,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
 
     private static final int REQUEST_INTERVAL_SECS = 90;
 
-    private ScheduledFuture<?> featurePollingJob;
+    private volatile ScheduledFuture<?> featurePollingJob;
 
     /**
      * @param thingRegistry
@@ -70,10 +70,12 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
     public void initialize() {
         updateStatus(ThingStatus.UNKNOWN);
         featurePollingJob = scheduler.scheduleAtFixedRate(featurePoller(), POLLING_STARTUP_DELAY_SECS, getPollingInterval(), TimeUnit.SECONDS);
+        logger.debug("VicareBridgeHandler initialised");
     }
 
     @Override
     public void dispose() {
+        logger.debug("VicareBridgeHandler disposing");
         if (featurePollingJob != null) {
             featurePollingJob.cancel(false);
         }
@@ -181,5 +183,9 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
             logger.debug("Unable to get command descriptor", e);
             return Optional.empty();
         }
+    }
+
+    boolean isFeatureScanRunning() {
+        return !(featurePollingJob.isCancelled() || featurePollingJob.isDone());
     }
 }

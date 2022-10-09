@@ -15,6 +15,7 @@ basic configuration, however it should support other Viessmann devices.
 Supported Features
 ------------------
 
+* Read and write of active heating circuit operating mode.
 * Temperature sensors
 * Temperature setpoints (read-only)
 * Burner status
@@ -48,6 +49,14 @@ and they will appear in your Inbox.
 
 Changelog
 ---------
+
+#### 3.3.3
+
+* Stored tokens are now encrypted
+* Support for read and write of heating.circuits.N.operating.modes.active
+* Channels are now sorted
+* Fix #5 The binding should automatically discover devices after OAuth access token is granted the first time.
+* Fix #7 If binding throws unhandled exception, things are no longer updated
 
 #### 3.3.2 
 Polling interval is now configurable.

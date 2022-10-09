@@ -39,4 +39,10 @@ that it can find. Every 24 hours it will download any new data it doesn't alread
 Changelog
 ---------
 
-* 3.3.1 This is the initial release.
+#### 3.3.3
+
+Stored credentials are now encrypted for better security
+
+#### 3.3.1
+
+This is the initial release.

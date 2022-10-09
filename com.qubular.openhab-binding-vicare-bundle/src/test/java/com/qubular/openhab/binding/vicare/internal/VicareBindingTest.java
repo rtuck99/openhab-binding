@@ -218,7 +218,7 @@ public class VicareBindingTest {
 
         inOrder1.verify(vicareService, timeout(1000).times(1)).getInstallations();
         ArgumentCaptor<DiscoveryResult> resultArgumentCaptor = forClass(DiscoveryResult.class);
-        inOrder1.verify(discoveryListener, calls(1)).thingDiscovered(same(discoveryService), any(DiscoveryResult.class));
+        inOrder1.verify(discoveryListener, timeout(1000).times(1)).thingDiscovered(same(discoveryService), any(DiscoveryResult.class));
 
         InOrder inOrder2 = inOrder(vicareService, discoveryListener);
         Thread.sleep(1000);

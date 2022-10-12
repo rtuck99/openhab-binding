@@ -183,7 +183,7 @@ public class VicareServiceImpl implements VicareService {
                 .resolve(String.format("equipment/installations/%s/gateways/%s/devices/%s/features", installationId, gatewaySerial, deviceId));
 
         try {
-            String responseContent = maybeInjectFeatureResponse();
+            String responseContent = maybeInjectFeatureResponse(installationId, gatewaySerial);
             if (responseContent == null) {
                 ContentResponse contentResponse = httpClientProvider.getHttpClient()
                         .newRequest(endpoint)
@@ -290,8 +290,10 @@ public class VicareServiceImpl implements VicareService {
      * inject the feature response from a file in order to aid debugging.
      * @return the injected or null.
      */
-    private String maybeInjectFeatureResponse() {
-        if (config.isResponseInjectionEnabled()) {
+    private String maybeInjectFeatureResponse(long installationId, String gatewaySerial) {
+        if (config.isResponseInjectionEnabled() &&
+            Objects.equals(config.getDebugInjectedInstallationId(), installationId) &&
+            Objects.equals(config.getDebugInjectedGatewaySerial(), gatewaySerial)) {
             try (var fis = new FileInputStream(config.getResponseInjectionFile())) {
                 return new String(fis.readAllBytes(), StandardCharsets.UTF_8);
             } catch (IOException e) {

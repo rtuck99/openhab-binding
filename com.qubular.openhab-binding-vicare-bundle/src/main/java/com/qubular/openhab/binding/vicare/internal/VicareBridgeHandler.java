@@ -1,5 +1,6 @@
 package com.qubular.openhab.binding.vicare.internal;
 
+import com.qubular.openhab.binding.vicare.VicareServiceProvider;
 import com.qubular.openhab.binding.vicare.internal.configuration.SimpleConfiguration;
 import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.CommandFailureException;
@@ -8,6 +9,7 @@ import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.CommandDescriptor;
 import com.qubular.vicare.model.Feature;
 import org.openhab.core.library.types.DecimalType;
+import org.openhab.core.library.types.QuantityType;
 import org.openhab.core.library.types.StringType;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseBridgeHandler;
@@ -36,6 +38,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
 
     private final VicareService vicareService;
     private final Map<String, CachedResponse> cachedResponses = new HashMap<>();
+    private String bindingVersion;
 
     private static class CachedResponse {
         final List<Feature> response;
@@ -56,19 +59,19 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
      * @param bridge
      * @see BaseThingHandler
      */
-    public VicareBridgeHandler(VicareService vicareService,
-                               ThingRegistry thingRegistry,
-                               Bridge bridge,
-                               VicareConfiguration config) {
+    public VicareBridgeHandler(VicareServiceProvider vicareServiceProvider,
+                               Bridge bridge) {
         super(bridge);
-        this.vicareService = vicareService;
-        this.thingRegistry = thingRegistry;
-        this.config = config;
-        ((SimpleConfiguration)config).setConfigurationParameters(getConfig().getProperties());
+        this.vicareService = vicareServiceProvider.getVicareService();
+        this.thingRegistry = vicareServiceProvider.getThingRegistry();
+        this.config = vicareServiceProvider.getVicareConfiguration();
+        this.bindingVersion = vicareServiceProvider.getBindingVersion();
+        ((SimpleConfiguration)this.config).setConfigurationParameters(getConfig().getProperties());
     }
 
     @Override
     public void initialize() {
+        updateProperty(VicareConstants.PROPERTY_BINDING_VERSION, bindingVersion);
         updateStatus(ThingStatus.UNKNOWN);
         featurePollingJob = scheduler.scheduleAtFixedRate(featurePoller(), POLLING_STARTUP_DELAY_SECS, getPollingInterval(), TimeUnit.SECONDS);
         logger.debug("VicareBridgeHandler initialised");
@@ -140,6 +143,10 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
             sendCommand(channelUID, targetThing, channel, () -> ((StringType) command).toString());
         } else if (command instanceof DecimalType) {
             sendCommand(channelUID, targetThing, channel, () -> ((DecimalType) command).doubleValue());
+        } else if (command instanceof QuantityType) {
+            sendCommand(channelUID, targetThing, channel, () -> ((QuantityType<?>) command).doubleValue());
+        } else {
+            logger.trace("Ignored unsupported command type {}", command);
         }
         return Optional.empty();
     }

@@ -10,6 +10,7 @@ import org.osgi.service.component.annotations.Reference;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.Map;
 
@@ -66,7 +67,9 @@ public class SimpleConfiguration implements VicareConfiguration {
 
     @Override
     public Long getDebugInjectedInstallationId() {
-        return (Long) configurationParameters.get("injectedInstallationId");
+        return ofNullable((BigDecimal) configurationParameters.get("injectedInstallationId"))
+                .map(BigDecimal::longValue)
+                .orElse(null);
     }
 
     @Override

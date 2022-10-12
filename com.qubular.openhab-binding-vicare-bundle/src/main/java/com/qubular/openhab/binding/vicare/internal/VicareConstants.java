@@ -15,4 +15,5 @@ public class VicareConstants {
     public static final String PROPERTY_COMMAND_NAME = "commandName";
 
     public static final String PROPERTY_PARAM_NAME = "paramName";
+    public static final String PROPERTY_BINDING_VERSION = "bindingVersion";
 }

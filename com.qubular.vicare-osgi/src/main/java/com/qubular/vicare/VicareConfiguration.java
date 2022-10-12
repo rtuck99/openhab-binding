@@ -29,4 +29,12 @@ public interface VicareConfiguration {
     default boolean isResponseInjectionEnabled() {
         return getResponseInjectionFile() != null;
     }
+
+    default Long getDebugInjectedInstallationId() {
+        return null;
+    }
+
+    default String getDebugInjectedGatewaySerial() {
+        return null;
+    }
 }

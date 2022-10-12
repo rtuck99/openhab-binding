@@ -63,4 +63,14 @@ public class SimpleConfiguration implements VicareConfiguration {
     public boolean isResponseInjectionEnabled() {
         return (Boolean) ofNullable(configurationParameters.get("responseInjection")).orElse(false);
     }
+
+    @Override
+    public Long getDebugInjectedInstallationId() {
+        return (Long) configurationParameters.get("injectedInstallationId");
+    }
+
+    @Override
+    public String getDebugInjectedGatewaySerial() {
+        return (String) configurationParameters.get("injectedGatewaySerial");
+    }
 }

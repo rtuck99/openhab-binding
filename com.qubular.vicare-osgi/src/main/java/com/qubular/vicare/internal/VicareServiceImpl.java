@@ -122,6 +122,7 @@ public class VicareServiceImpl implements VicareService {
                     .send();
             if (iotApiResponse.getStatus() == SC_OK) {
                 InstallationsResponse installations = apiGson().fromJson(iotApiResponse.getContentAsString(), InstallationsResponse.class);
+                maybeInjectInstallations(installations);
                 return installations.data;
             } else {
                 throw new IOException("Unable to fetch installations, server returned " + iotApiResponse.getStatus());
@@ -182,7 +183,7 @@ public class VicareServiceImpl implements VicareService {
                 .resolve(String.format("equipment/installations/%s/gateways/%s/devices/%s/features", installationId, gatewaySerial, deviceId));
 
         try {
-            String responseContent = maybeInjectResponse();
+            String responseContent = maybeInjectFeatureResponse();
             if (responseContent == null) {
                 ContentResponse contentResponse = httpClientProvider.getHttpClient()
                         .newRequest(endpoint)
@@ -258,10 +259,38 @@ public class VicareServiceImpl implements VicareService {
     }
 
     /**
+     * Inject a debug installation if feature response injection is enabled, as per debug configuration.
+     * @param installations
+     */
+    private void maybeInjectInstallations(InstallationsResponse installations) {
+        if (config.isResponseInjectionEnabled() &&
+            config.getDebugInjectedInstallationId() != null &&
+            config.getDebugInjectedGatewaySerial() != null) {
+            installations.data = new ArrayList<>(installations.data);
+            installations.data.add(new Installation(config.getDebugInjectedInstallationId(),
+                                                    "Injected heating installation",
+                                                    List.of(new Gateway(config.getDebugInjectedGatewaySerial(),
+                                                                        "1.0",
+                                                                        0,
+                                                                        Instant.ofEpochMilli(0),
+                                                                        "WorksProperly",
+                                                                        "Injected Gateway",
+                                                                        config.getDebugInjectedInstallationId(),
+                                                                        List.of(new Device(config.getDebugInjectedGatewaySerial(),
+                                                                                           "0",
+                                                                                           "12345678",
+                                                                                           "Injected Heating Device",
+                                                                                           "Online",
+                                                                                           "heating")))),
+                                                    "WorksProperly"));
+        }
+    }
+
+    /**
      * inject the feature response from a file in order to aid debugging.
      * @return the injected or null.
      */
-    private String maybeInjectResponse() {
+    private String maybeInjectFeatureResponse() {
         if (config.isResponseInjectionEnabled()) {
             try (var fis = new FileInputStream(config.getResponseInjectionFile())) {
                 return new String(fis.readAllBytes(), StandardCharsets.UTF_8);

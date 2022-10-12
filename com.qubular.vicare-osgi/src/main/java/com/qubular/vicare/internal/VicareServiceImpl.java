@@ -6,7 +6,9 @@ import com.qubular.vicare.internal.oauth.AccessGrantResponse;
 import com.qubular.vicare.internal.servlet.VicareServlet;
 import com.qubular.vicare.model.*;
 import com.qubular.vicare.model.features.*;
-import com.qubular.vicare.model.params.ParamDescriptor;
+import com.qubular.vicare.model.params.EnumParamDescriptor;
+import com.qubular.vicare.model.ParamDescriptor;
+import com.qubular.vicare.model.params.NumericParamDescriptor;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
@@ -220,6 +222,8 @@ public class VicareServiceImpl implements VicareService {
             params.forEach((name, value) -> {
                 if (value instanceof String) {
                     body.addProperty(name, (String) value);
+                } else if (value instanceof Number) {
+                    body.addProperty(name, (Number) value);
                 }
             });
             ContentResponse contentResponse = request.content(new StringContentProvider(apiGson().toJson(body))).send();
@@ -300,6 +304,7 @@ public class VicareServiceImpl implements VicareService {
 
             String featureName = jsonObject.get("feature").getAsString();
             JsonObject properties = jsonObject.getAsJsonObject("properties");
+            JsonObject commands = jsonObject.getAsJsonObject("commands");
             if (properties != null) {
                 JsonObject value = properties.getAsJsonObject("value");
                 JsonObject statusObject = properties.getAsJsonObject("status");
@@ -308,8 +313,8 @@ public class VicareServiceImpl implements VicareService {
                     String valueType = value.get("type").getAsString();
                     if ("string".equals(valueType)) {
                         String textValue = value.get("value").getAsString();
-                        List<CommandDescriptor> commands = generateCommands(jsonObject.getAsJsonObject("commands"));
-                        return new TextFeature(featureName, textValue, commands);
+                        List<CommandDescriptor> commandDescriptors = generateCommands(commands);
+                        return new TextFeature(featureName, textValue, commandDescriptors);
                     } else if ("number".equals(valueType)) {
                         if (statusObject != null) {
                             String status = statusObject.get("value").getAsString();
@@ -323,15 +328,7 @@ public class VicareServiceImpl implements VicareService {
                         }
                     }
                 } else if (featureName.endsWith(".statistics")) {
-                    Map<String, DimensionalValue> stats = properties.entrySet().stream()
-                            .filter(e -> e.getValue().isJsonObject())
-                            .filter(e -> "number".equals(e.getValue().getAsJsonObject().get("type").getAsString()))
-                            .collect(Collectors.toMap(Map.Entry::getKey,
-                                    e -> {
-                                        JsonObject prop = e.getValue().getAsJsonObject();
-                                        return dimensionalValueFromUnitValue(prop);
-                                    }));
-                    return new StatisticsFeature(featureName, stats);
+                    return createMultiValueFeature(featureName, properties, commands);
                 } else if (featureName.contains(".consumption.summary")) {
                     Map<String, DimensionalValue> stats = properties.entrySet().stream()
                             .filter(e -> e.getValue().isJsonObject())
@@ -375,19 +372,33 @@ public class VicareServiceImpl implements VicareService {
                             .map(JsonElement::getAsBoolean)
                             .orElse(null);
                     return new StatusSensorFeature(featureName, status, active);
+                } else {
+                    return createMultiValueFeature(featureName, properties, commands);
                 }
             }
             return null;
         }
 
-        private List<CommandDescriptor> generateCommands(JsonObject commands) {
+        private static MultiValueFeature createMultiValueFeature(String featureName, JsonObject properties, JsonObject commands) {
+            Map<String, DimensionalValue> stats = properties.entrySet().stream()
+                    .filter(e -> e.getValue().isJsonObject())
+                    .filter(e -> "number".equals(e.getValue().getAsJsonObject().get("type").getAsString()))
+                    .collect(Collectors.toMap(Map.Entry::getKey,
+                            e -> {
+                                JsonObject prop = e.getValue().getAsJsonObject();
+                                return dimensionalValueFromUnitValue(prop);
+                            }));
+            return stats.isEmpty() ? null : new MultiValueFeature(featureName, generateCommands(commands), stats);
+        }
+
+        private static List<CommandDescriptor> generateCommands(JsonObject commands) {
             return commands.entrySet().stream()
                     .map(e -> generateCommand(e.getKey(), e.getValue().getAsJsonObject()))
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
         }
 
-        private CommandDescriptor generateCommand(String key, JsonObject value) {
+        private static CommandDescriptor generateCommand(String key, JsonObject value) {
             String name = value.get("name").getAsString();
             boolean executable = value.get("isExecutable").getAsBoolean();
             URI uri = URI.create(value.get("uri").getAsString());
@@ -402,7 +413,7 @@ public class VicareServiceImpl implements VicareService {
             return new CommandDescriptor(name, executable, params, uri);
         }
 
-        private ParamDescriptor generateParam(String name, JsonObject jsonObject) {
+        private static ParamDescriptor generateParam(String name, JsonObject jsonObject) {
             String type = jsonObject.get("type").getAsString();
             JsonObject constraints = jsonObject.get("constraints").getAsJsonObject();
             switch (type) {
@@ -414,6 +425,12 @@ public class VicareServiceImpl implements VicareService {
                         return new EnumParamDescriptor(jsonObject.get("required").getAsBoolean(), name, enumValues);
                     }
                     break;
+                case "number":
+                    return new NumericParamDescriptor(jsonObject.get("required").getAsBoolean(),
+                                                      name,
+                                                      ofNullable(constraints.get("min")).map(JsonElement::getAsDouble).orElse(null),
+                                                      ofNullable(constraints.get("max")).map(JsonElement::getAsDouble).orElse(null),
+                                                      ofNullable(constraints.get("stepping")).map(JsonElement::getAsDouble).orElse(null));
             }
             logger.trace("Skipping unsupported parameter " + name + ", type " + type);
             return null;

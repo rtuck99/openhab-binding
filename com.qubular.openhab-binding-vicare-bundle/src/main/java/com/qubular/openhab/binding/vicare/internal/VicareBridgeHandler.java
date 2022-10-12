@@ -7,7 +7,7 @@ import com.qubular.vicare.VicareConfiguration;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.CommandDescriptor;
 import com.qubular.vicare.model.Feature;
-import org.openhab.core.events.EventPublisher;
+import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.library.types.StringType;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseBridgeHandler;
@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThingUniqueId;
@@ -136,14 +137,21 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
                 throw e;
             }
         } else if (command instanceof StringType) {
-            CommandDescriptor commandDescriptor = getCommandDescriptor(targetThing.getChannel(channelUID)).orElse(null);
-            if (commandDescriptor != null) {
-                logger.debug("Sending command " + commandDescriptor.getUri());
-                vicareService.sendCommand(commandDescriptor.getUri(), Map.of(channel.getProperties().get(PROPERTY_PARAM_NAME),
-                                                                              ((StringType)command).toString()));
-            }
+            sendCommand(channelUID, targetThing, channel, () -> ((StringType) command).toString());
+        } else if (command instanceof DecimalType) {
+            sendCommand(channelUID, targetThing, channel, () -> ((DecimalType) command).doubleValue());
         }
         return Optional.empty();
+    }
+
+    private void sendCommand(ChannelUID channelUID, Thing targetThing, Channel channel, Supplier<Object> valueSupplier) throws AuthenticationException, IOException, CommandFailureException {
+        CommandDescriptor commandDescriptor = getCommandDescriptor(targetThing.getChannel(channelUID)).orElse(null);
+        if (commandDescriptor != null) {
+            Object value = valueSupplier.get();
+            logger.debug("Sending command {} ({})", commandDescriptor.getUri(), value);
+            vicareService.sendCommand(commandDescriptor.getUri(), Map.of(channel.getProperties().get(PROPERTY_PARAM_NAME),
+                                                                         value));
+        }
     }
 
     private synchronized List<Feature> getFeatures(Thing thing) throws AuthenticationException, IOException {

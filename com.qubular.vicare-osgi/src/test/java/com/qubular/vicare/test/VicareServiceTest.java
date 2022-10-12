@@ -3,7 +3,8 @@ package com.qubular.vicare.test;
 import com.qubular.vicare.*;
 import com.qubular.vicare.model.*;
 import com.qubular.vicare.model.features.*;
-import com.qubular.vicare.model.params.ParamDescriptor;
+import com.qubular.vicare.model.params.EnumParamDescriptor;
+import com.qubular.vicare.model.params.NumericParamDescriptor;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.http.HttpHeader;
@@ -28,7 +29,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -37,8 +37,10 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static com.qubular.vicare.model.Status.OFF;
 import static java.util.Optional.ofNullable;
@@ -374,21 +376,90 @@ public class VicareServiceTest {
         assertTrue(pumpStatus.isPresent());
         assertEquals("off", pumpStatus.get().getStatus().getName());
     }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_circuits_n_temperature_levels() throws ServletException, NamespaceException, AuthenticationException, IOException, ExecutionException, InterruptedException, TimeoutException, CommandFailureException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse3.json");
+
+        Optional<MultiValueFeature> temperatureLevels = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.0.temperature.levels"))
+                .map(MultiValueFeature.class::cast)
+                .findFirst();
+        assertTrue(temperatureLevels.isPresent());
+        assertEquals(20, temperatureLevels.get().getValues().get("min").getValue(), 1e-6);
+        assertEquals("celsius", temperatureLevels.get().getValues().get("min").getUnit().getName());
+        assertEquals(45, temperatureLevels.get().getValues().get("max").getValue(), 1e-6);
+        assertEquals("celsius", temperatureLevels.get().getValues().get("max").getUnit().getName());
+
+        assertEquals(3, temperatureLevels.get().getCommands().size());
+        Map<String, CommandDescriptor> commands = temperatureLevels.get().getCommands().stream()
+                .collect(Collectors.toMap(CommandDescriptor::getName, Function.identity()));
+        assertEquals(URI.create("http://localhost:9000/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.temperature.levels/commands/setMin"), commands.get("setMin").getUri());
+        assertEquals(false, commands.get("setMin").isExecutable());
+        assertEquals(1, commands.get("setMin").getParams().size());
+        assertEquals("temperature", commands.get("setMin").getParams().get(0).getName());
+        assertEquals(true, commands.get("setMin").getParams().get(0).isRequired());
+        assertEquals(20, ((NumericParamDescriptor)commands.get("setMin").getParams().get(0)).getMin(), 1e-6);
+        assertEquals(20, ((NumericParamDescriptor)commands.get("setMin").getParams().get(0)).getMax(), 1e-6);
+        assertEquals(true, commands.get("setMax").isExecutable());
+        assertEquals(1, commands.get("setMax").getParams().size());
+        assertEquals(21, ((NumericParamDescriptor)commands.get("setMax").getParams().get(0)).getMin(), 1e-6);
+        assertEquals(80, ((NumericParamDescriptor)commands.get("setMax").getParams().get(0)).getMax(), 1e-6);
+        assertEquals("temperature", commands.get("setMax").getParams().get(0).getName());
+        assertEquals(true, commands.get("setMax").getParams().get(0).isRequired());
+        assertEquals(true, commands.get("setLevels").isExecutable());
+        assertEquals(2, commands.get("setLevels").getParams().size());
+        assertEquals("minTemperature", commands.get("setLevels").getParams().get(0).getName());
+        assertEquals(true, commands.get("setLevels").getParams().get(0).isRequired());
+        assertEquals(20, ((NumericParamDescriptor)commands.get("setLevels").getParams().get(0)).getMin(), 1e-6);
+        assertEquals(20, ((NumericParamDescriptor)commands.get("setLevels").getParams().get(0)).getMax(), 1e-6);
+        assertEquals("maxTemperature", commands.get("setLevels").getParams().get(1).getName());
+        assertEquals(true, commands.get("setLevels").getParams().get(1).isRequired());
+        assertEquals(21, ((NumericParamDescriptor)commands.get("setLevels").getParams().get(1)).getMin(), 1e-6);
+        assertEquals(80, ((NumericParamDescriptor)commands.get("setLevels").getParams().get(1)).getMax(), 1e-6);
+
+        CompletableFuture<String> requestContent = new CompletableFuture<>();
+
+        iotServlet = new HttpServlet() {
+            @Override
+            protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+                try {
+                    assertEquals("application/json", req.getHeader(HttpHeader.CONTENT_TYPE.asString()));
+                    assertEquals("application/json", req.getHeader(HttpHeader.ACCEPT.asString()));
+                } catch (AssertionFailedError e) {
+                    requestContent.completeExceptionally(e);
+                }
+                requestContent.complete(new String(req.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+                String jsonResponse = "{\"data\":{\"success\":true,\"reason\":\"COMMAND_EXECUTION_SUCCESS\"}}";
+                resp.setContentType("application/json");
+                resp.setStatus(200);
+                try (ServletOutputStream outputStream = resp.getOutputStream()) {
+                    outputStream.print(jsonResponse);
+                }
+            }
+        };
+        httpService.registerServlet("/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.temperature.levels/commands/setMax", iotServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+
+        vicareService.sendCommand(URI.create("http://localhost:9000/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.temperature.levels/commands/setMax"),
+                                  Map.of("temperature", 46));
+        assertEquals("{\"temperature\":46}", requestContent.get(1, TimeUnit.SECONDS));
+    }
+
     @Test
     @DisabledIf("realConnection")
     public void supports_heating_burners_n_statistics() throws ServletException, NamespaceException, AuthenticationException, IOException {
         List<Feature> features = getFeatures("deviceFeaturesResponse.json");
 
-        Optional<StatisticsFeature> burnerStats = features.stream()
+        Optional<MultiValueFeature> burnerStats = features.stream()
                 .filter(f -> f.getName().equals("heating.burners.0.statistics"))
-                .map(StatisticsFeature.class::cast)
+                .map(MultiValueFeature.class::cast)
                 .findFirst();
         assertTrue(burnerStats.isPresent());
-        assertEquals("hour", burnerStats.get().getStatistics().get("hours").getUnit().getName());
-        assertEquals(5, burnerStats.get().getStatistics().get("hours").getValue());
-        assertEquals("", burnerStats.get().getStatistics().get("starts").getUnit().getName());
-        assertEquals(312, burnerStats.get().getStatistics().get("starts").getValue());
-
+        assertEquals("hour", burnerStats.get().getValues().get("hours").getUnit().getName());
+        assertEquals(5, burnerStats.get().getValues().get("hours").getValue());
+        assertEquals("", burnerStats.get().getValues().get("starts").getUnit().getName());
+        assertEquals(312, burnerStats.get().getValues().get("starts").getValue());
     }
 
     @Test

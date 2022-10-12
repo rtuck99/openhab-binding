@@ -1,6 +1,6 @@
-package com.qubular.vicare.model;
+package com.qubular.vicare.model.params;
 
-import com.qubular.vicare.model.params.ParamDescriptor;
+import com.qubular.vicare.model.ParamDescriptor;
 
 import java.util.Set;
 

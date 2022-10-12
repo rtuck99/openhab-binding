@@ -115,13 +115,22 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                         }
 
                         @Override
-                        public void visit(StatisticsFeature f) {
-                            f.getStatistics().forEach((name, value) -> {
+                        public void visit(MultiValueFeature f) {
+                            f.getValues().forEach((name, value) -> {
+                                Map<String, String> props = new HashMap<>();
+                                props.put(PROPERTY_FEATURE_NAME, feature.getName());
+                                props.put(PROPERTY_PROP_NAME, name);
+                                Optional<CommandDescriptor> setter = f.getCommands().stream().filter(
+                                        cd -> cd.getName().equalsIgnoreCase("set" + name)).findFirst();
+                                if (setter.isPresent()) {
+                                    CommandDescriptor command = setter.get();
+                                    props.put(PROPERTY_COMMAND_NAME, command.getName());
+                                    props.put(PROPERTY_PARAM_NAME, command.getParams().get(0).getName());
+                                }
                                 String id = escapeUIDSegment(f.getName() + "_" + name);
                                 channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), id))
                                         .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id)))
-                                        .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
-                                                PROPERTY_PROP_NAME, name))
+                                        .withProperties(props)
                                         .build());
                             });
                         }
@@ -281,10 +290,10 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                     }
 
                     @Override
-                    public void visit(StatisticsFeature f) {
+                    public void visit(MultiValueFeature f) {
                         Channel channel = getThing().getChannel(channelUID);
                         String statisticName = channel.getProperties().get(PROPERTY_PROP_NAME);
-                        double value = f.getStatistics().get(statisticName).getValue();
+                        double value = f.getValues().get(statisticName).getValue();
                         updateState(channelUID, new DecimalType(value));
                     }
 

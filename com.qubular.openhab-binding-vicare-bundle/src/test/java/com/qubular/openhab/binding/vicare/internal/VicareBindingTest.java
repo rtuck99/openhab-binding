@@ -6,6 +6,8 @@ import com.qubular.vicare.CommandFailureException;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.*;
 import com.qubular.vicare.model.features.*;
+import com.qubular.vicare.model.params.EnumParamDescriptor;
+import com.qubular.vicare.model.params.NumericParamDescriptor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,11 +15,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.mockito.stubbing.Stubber;
 import org.openhab.core.config.core.Configuration;
 import org.openhab.core.config.discovery.AbstractDiscoveryService;
 import org.openhab.core.config.discovery.DiscoveryListener;
@@ -28,7 +28,6 @@ import org.openhab.core.library.types.OnOffType;
 import org.openhab.core.library.types.StringType;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.*;
-import org.openhab.core.thing.type.ChannelType;
 import org.openhab.core.thing.type.ChannelTypeRegistry;
 import org.openhab.core.thing.type.DynamicCommandDescriptionProvider;
 import org.openhab.core.types.*;
@@ -67,6 +66,11 @@ public class VicareBindingTest {
     public static final String DEVICE_2_ID = "1";
     public static final URI SET_MODE_URI = URI.create(
             "https://api.viessmann.com/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.modes.active/commands/setMode");
+
+    public static final URI SET_LEVEL_MIN_URI = URI.create("https://api.viessmann.com/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.temperature.levels/commands/setMin");
+    public static final URI SET_LEVEL_MAX_URI = URI.create("https://api.viessmann.com/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.temperature.levels/commands/setMax");
+    public static final URI SET_LEVEL_LEVEL_URI = URI.create("https://api.viessmann.com/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.temperature.levels/commands/setLevels");
+
     @Mock
     private VicareService vicareService;
     private SimpleConfiguration configuration;
@@ -96,7 +100,9 @@ public class VicareBindingTest {
         doReturn(installations).when(vicareService).getInstallations();
 
         Feature temperatureSensor = new NumericSensorFeature("heating.dhw.sensors.temperature.outlet", new DimensionalValue(new Unit("celsius"), 27.3), new Status("connected"), null);
-        Feature statisticsFeature = new StatisticsFeature("heating.burners.0.statistics", Map.of("starts", new DimensionalValue(new Unit("starts"), 5.0)));
+        Feature statisticsFeature = new MultiValueFeature("heating.burners.0.statistics",
+                                                          Map.of("starts", new DimensionalValue(new Unit("starts"), 5.0))
+        );
         Feature textFeature = new TextFeature("device.serial", "7723181102527121");
         Feature statusFeature = new StatusSensorFeature("heating.circuits.0.circulation.pump", new Status("on"), null);
         Feature normalProgramFeature = new NumericSensorFeature("heating.circuits.0.operating.programs.normal", new DimensionalValue(new Unit("celcius"), 21), Status.NA, true);
@@ -118,12 +124,19 @@ public class VicareBindingTest {
         Feature operatingModesActive = new TextFeature("heating.circuits.0.operating.modes.active", "dhw",
                                                      List.of(new CommandDescriptor("setMode", true,
                                                                                    List.of(new EnumParamDescriptor(true, "mode",
-                                                                                                   Set.of("standby", "heating", "dhw", "dhwAndHeating"))),
+                                                                                                                   Set.of("standby", "heating", "dhw", "dhwAndHeating"))),
                                                                                    SET_MODE_URI)));
+        Feature heatingCircuitTemperatureLevels = new MultiValueFeature("heating.circuits.0.temperature.levels",
+                                                                        List.of(new CommandDescriptor("setMin", false, List.of(new NumericParamDescriptor(true, "temperature", 20.0, 20.0, 1.0)), SET_LEVEL_MIN_URI),
+                                                                                new CommandDescriptor("setMax", true, List.of(new NumericParamDescriptor(true, "temperature", 21.0, 80.0, 1.0)), SET_LEVEL_MAX_URI),
+                                                                                new CommandDescriptor("setLevels", true, List.of(new NumericParamDescriptor(true, "min", 20.0, 20.0, 1.0),
+                                                                                                                                 new NumericParamDescriptor(true, "max", 21.0, 80.0, 1.0)), SET_LEVEL_LEVEL_URI)),
+                                                                        Map.of("min", new DimensionalValue(Unit.CELSIUS, 20.0),
+                                                                               "max", new DimensionalValue(Unit.CELSIUS, 45.0)));
         doReturn(
                 List.of(temperatureSensor, statisticsFeature, textFeature, statusFeature, normalProgramFeature,
                         consumptionFeature, burnerFeature, curveFeature, holidayFeature, heatingDhw,
-                        heatingDhwTemperatureHotWaterStorage, operatingModesActive))
+                        heatingDhwTemperatureHotWaterStorage, operatingModesActive, heatingCircuitTemperatureLevels))
                 .when(vicareService)
                 .getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
     }
@@ -636,9 +649,7 @@ public class VicareBindingTest {
     public void initializeDeviceHandlerCreatesStatusSensor() throws AuthenticationException, IOException, InterruptedException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
-        VicareBridgeHandler bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
-        bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
-        when(bridge.getHandler()).thenReturn(bridgeHandler);
+        createBridgeHandler(bridge);
         VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
                                                                              configuration);
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
@@ -689,6 +700,50 @@ public class VicareBindingTest {
         inOrder.verify(vicareService, never()).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
     }
 
+    private void createBridgeHandler(Bridge bridge) {
+        VicareBridgeHandler bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
+        bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
+        when(bridge.getHandler()).thenReturn(bridgeHandler);
+    }
+
+    @Test
+    public void supportsHeatingCircuitTemperatureLevels() throws AuthenticationException, IOException, CommandFailureException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
+                                                                             configuration);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+
+        Channel minChannel = findChannel(thingCaptor, "heating_circuits_0_temperature_levels_min");
+        assertNotNull(minChannel);
+        assertEquals("heating_circuits_temperature_levels_min", minChannel.getChannelTypeUID().getId());
+        assertEquals("heating.circuits.0.temperature.levels", minChannel.getProperties().get(PROPERTY_FEATURE_NAME));
+        Channel maxChannel = findChannel(thingCaptor, "heating_circuits_0_temperature_levels_max");
+        assertNotNull(maxChannel);
+        assertEquals("heating_circuits_temperature_levels_max", maxChannel.getChannelTypeUID().getId());
+        assertEquals("heating.circuits.0.temperature.levels", maxChannel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(minChannel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(minChannel.getUID()), stateCaptor.capture());
+        assertEquals(DecimalType.valueOf("20"), stateCaptor.getValue());
+        handler.handleCommand(maxChannel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(maxChannel.getUID()), stateCaptor.capture());
+        assertEquals(DecimalType.valueOf("45"), stateCaptor.getValue());
+
+        handler.handleCommand(maxChannel.getUID(), DecimalType.valueOf("46"));
+        inOrder.verify(vicareService, timeout(1000)).sendCommand(SET_LEVEL_MAX_URI, Map.of("temperature", 46.0));
+    }
+
     private static Channel findChannel(ArgumentCaptor<Thing> thingCaptor, String channelId) {
         return thingCaptor.getAllValues().stream()
                 .flatMap(t -> t.getChannels().stream())
@@ -701,9 +756,7 @@ public class VicareBindingTest {
     public void initializeDeviceHandlerCreatesDatePeriod() throws AuthenticationException, IOException, InterruptedException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
-        VicareBridgeHandler bridgeHandler = new VicareBridgeHandler(vicareService, thingRegistry, bridge, configuration);
-        bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
-        when(bridge.getHandler()).thenReturn(bridgeHandler);
+        createBridgeHandler(bridge);
         VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext, thingRegistry, vicareService,
                                                                              configuration);
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);

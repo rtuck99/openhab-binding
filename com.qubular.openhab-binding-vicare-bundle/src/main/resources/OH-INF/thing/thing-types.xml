@@ -244,6 +244,20 @@
     <category>Heating</category>
     <state readOnly="true" pattern="%d °C"/>
   </channel-type>
+  <channel-type id="heating_circuits_temperature_levels_min">
+    <item-type>Number:Temperature</item-type>
+    <label>Heating Circuit Minimum Temperature Level</label>
+    <description>Shows the lower limit of the supply temperature</description>
+    <category>Heating</category>
+    <state pattern="%d °C"/>
+  </channel-type>
+  <channel-type id="heating_circuits_temperature_levels_max">
+    <item-type>Number:Temperature</item-type>
+    <label>Heating Circuit Maximum Temperature Level</label>
+    <description>Shows the upper limit of the supply temperature</description>
+    <category>Heating</category>
+    <state pattern="%d °C"/>
+  </channel-type>
   <channel-type id="heating_gas_consumption_summary_dhw_currentDay">
     <item-type>Number:Volume</item-type>
     <label>DHW Gas Consumption Current Day</label>

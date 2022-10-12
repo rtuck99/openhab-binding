@@ -3,6 +3,8 @@ package com.qubular.vicare.model;
 import java.util.Objects;
 
 public class Unit {
+    public static final Unit CELSIUS = new Unit("celsius");
+
     private final String name;
 
     public Unit(String name) {

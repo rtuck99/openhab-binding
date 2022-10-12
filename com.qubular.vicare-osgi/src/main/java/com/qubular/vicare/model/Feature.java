@@ -9,7 +9,7 @@ public abstract class Feature {
     public interface Visitor {
         void visit(ConsumptionFeature f);
         void visit(NumericSensorFeature f);
-        void visit(StatisticsFeature f);
+        void visit(MultiValueFeature f);
         void visit(StatusSensorFeature f);
         void visit(TextFeature f);
         void visit(CurveFeature f);

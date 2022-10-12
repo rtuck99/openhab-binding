@@ -1,10 +1,13 @@
-package com.qubular.vicare.model.params;
+package com.qubular.vicare.model;
 
-import com.qubular.vicare.model.EnumParamDescriptor;
+import com.qubular.vicare.model.params.EnumParamDescriptor;
+import com.qubular.vicare.model.params.NumericParamDescriptor;
 
 public abstract class ParamDescriptor<T> {
     public interface Visitor{
         void visit(EnumParamDescriptor d);
+
+        void visit(NumericParamDescriptor d);
     }
 
     private final boolean required;

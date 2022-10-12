@@ -1,7 +1,5 @@
 package com.qubular.vicare.model;
 
-import com.qubular.vicare.model.params.ParamDescriptor;
-
 import java.net.URI;
 import java.util.List;
 

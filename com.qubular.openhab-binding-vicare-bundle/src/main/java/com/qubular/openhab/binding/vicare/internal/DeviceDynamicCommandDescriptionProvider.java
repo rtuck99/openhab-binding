@@ -1,7 +1,7 @@
 package com.qubular.openhab.binding.vicare.internal;
 
 import com.qubular.vicare.model.CommandDescriptor;
-import com.qubular.vicare.model.EnumParamDescriptor;
+import com.qubular.vicare.model.params.EnumParamDescriptor;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.core.thing.Channel;
 import org.openhab.core.thing.binding.ThingHandler;

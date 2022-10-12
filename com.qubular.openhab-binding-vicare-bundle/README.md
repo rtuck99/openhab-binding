@@ -18,6 +18,7 @@ Supported Features
 * Read and write of active heating circuit operating mode.
 * Temperature sensors
 * Temperature setpoints (read-only)
+* Supply temperature max/min limit (read/write)
 * Burner status
 * Burner modulation
 * Burner statistics (hours and starts)
@@ -49,6 +50,10 @@ and they will appear in your Inbox.
 
 Changelog
 ---------
+
+#### 3.3.4
+
+* Add read/write support for heating.circuits.N.temperature.levels
 
 #### 3.3.3
 

@@ -209,6 +209,7 @@ public class VicareServiceImpl implements VicareService {
 
     @Override
     public void sendCommand(URI uri, Map<String, Object> params) throws AuthenticationException, IOException, CommandFailureException {
+        logger.debug("Sending command {}, params {}", uri, params);
         TokenStore.AccessToken accessToken = getValidAccessToken()
                 .orElseThrow(()-> new AuthenticationException("No access token for Viessmann API"));
 
@@ -350,12 +351,12 @@ public class VicareServiceImpl implements VicareService {
                         if (statusObject != null) {
                             String status = statusObject.get("value").getAsString();
                             return new NumericSensorFeature(featureName,
-                                    dimensionalValueFromUnitValue(value),
-                                    new Status(status), null);
+                                                            "value", dimensionalValueFromUnitValue(value),
+                                                            new Status(status), null);
                         } else {
                             return new NumericSensorFeature(featureName,
-                                    dimensionalValueFromUnitValue(value),
-                                    NA, null);
+                                                            "value", dimensionalValueFromUnitValue(value),
+                                                            NA, null);
                         }
                     }
                 } else if (featureName.endsWith(".statistics")) {
@@ -381,7 +382,9 @@ public class VicareServiceImpl implements VicareService {
                     if (temperature != null) {
                         boolean activeStatus = activeObject.get("value").getAsBoolean();
                         DimensionalValue temperatureValue = dimensionalValueFromUnitValue(temperature);
-                        return new NumericSensorFeature(featureName, temperatureValue, NA, activeStatus);
+                        List<CommandDescriptor> commandDescriptors = generateCommands(commands);
+                        return new NumericSensorFeature(featureName, "temperature", commandDescriptors, temperatureValue, NA, activeStatus
+                        );
                     } else if (startObject != null && endObject != null) {
                         boolean activeStatus = activeObject.get("value").getAsBoolean();
                         return new DatePeriodFeature(featureName, activeStatus ? ON : OFF, dateFromYYYYMMDD(startObject), dateFromYYYYMMDD(endObject));

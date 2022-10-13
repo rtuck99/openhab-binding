@@ -93,9 +93,12 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                         @Override
                         public void visit(NumericSensorFeature f) {
                             String id = escapeUIDSegment(f.getName());
+                            Map<String, String> props = new HashMap<>();
+                            props.put(PROPERTY_FEATURE_NAME, feature.getName());
+                            maybeAddPropertiesForSetter(f, f.getPropertyName(), props);
                             channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), id))
                                     .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id)))
-                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName()))
+                                    .withProperties(props)
                                     .build());
                             if (f.getStatus() != null && !Status.NA.equals(f.getStatus())) {
                                 String statusId = id + "_status";
@@ -120,19 +123,23 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                                 Map<String, String> props = new HashMap<>();
                                 props.put(PROPERTY_FEATURE_NAME, feature.getName());
                                 props.put(PROPERTY_PROP_NAME, name);
-                                Optional<CommandDescriptor> setter = f.getCommands().stream().filter(
-                                        cd -> cd.getName().equalsIgnoreCase("set" + name)).findFirst();
-                                if (setter.isPresent()) {
-                                    CommandDescriptor command = setter.get();
-                                    props.put(PROPERTY_COMMAND_NAME, command.getName());
-                                    props.put(PROPERTY_PARAM_NAME, command.getParams().get(0).getName());
-                                }
+                                maybeAddPropertiesForSetter(f, name, props);
                                 String id = escapeUIDSegment(f.getName() + "_" + name);
                                 channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), id))
                                         .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id)))
                                         .withProperties(props)
                                         .build());
                             });
+                        }
+
+                        private void maybeAddPropertiesForSetter(Feature f, String name, Map<String, String> props) {
+                            Optional<CommandDescriptor> setter = f.getCommands().stream().filter(
+                                    cd -> cd.getName().equalsIgnoreCase("set" + name)).findFirst();
+                            if (setter.isPresent()) {
+                                CommandDescriptor command = setter.get();
+                                props.put(PROPERTY_COMMAND_NAME, command.getName());
+                                props.put(PROPERTY_PARAM_NAME, command.getParams().get(0).getName());
+                            }
                         }
 
                         @Override

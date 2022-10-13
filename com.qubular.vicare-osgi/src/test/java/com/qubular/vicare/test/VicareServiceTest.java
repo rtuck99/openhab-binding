@@ -535,7 +535,7 @@ public class VicareServiceTest {
 
     @Test
     @DisabledIf("realConnection")
-    public void supports_heating_circuits_0_operating_programs_normal() throws ServletException, NamespaceException, AuthenticationException, IOException {
+    public void supports_heating_circuits_0_operating_programs_normal() throws ServletException, NamespaceException, AuthenticationException, IOException, CommandFailureException, ExecutionException, InterruptedException, TimeoutException {
         List<Feature> features = getFeatures("deviceFeaturesResponse.json");
 
         Optional<NumericSensorFeature> normalMode = features.stream()
@@ -546,6 +546,40 @@ public class VicareServiceTest {
         assertEquals(false, normalMode.get().isActive());
         assertEquals(20, normalMode.get().getValue().getValue(), 0.001);
         assertEquals("celsius", normalMode.get().getValue().getUnit().getName());
+        assertEquals(1, normalMode.get().getCommands().size());
+        assertEquals(URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normal/commands/setTemperature"), normalMode.get().getCommands().get(0).getUri());
+        assertEquals("setTemperature", normalMode.get().getCommands().get(0).getName());
+        assertEquals(1, normalMode.get().getCommands().get(0).getParams().size());
+        assertEquals("targetTemperature", normalMode.get().getCommands().get(0).getParams().get(0).getName());
+        assertEquals(true, normalMode.get().getCommands().get(0).getParams().get(0).isRequired());
+        assertEquals(3, ((NumericParamDescriptor) normalMode.get().getCommands().get(0).getParams().get(0)).getMin());
+        assertEquals(37, ((NumericParamDescriptor) normalMode.get().getCommands().get(0).getParams().get(0)).getMax());
+        assertEquals(1, ((NumericParamDescriptor) normalMode.get().getCommands().get(0).getParams().get(0)).getStepping());
+
+        CompletableFuture<String> requestContent = new CompletableFuture<>();
+        iotServlet = new HttpServlet() {
+            @Override
+            protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+                try {
+                    assertEquals("application/json", req.getHeader(HttpHeader.CONTENT_TYPE.asString()));
+                    assertEquals("application/json", req.getHeader(HttpHeader.ACCEPT.asString()));
+                } catch (AssertionFailedError e) {
+                    requestContent.completeExceptionally(e);
+                }
+                requestContent.complete(new String(req.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+                String jsonResponse = "{\"data\":{\"success\":true,\"reason\":\"COMMAND_EXECUTION_SUCCESS\"}}";
+                resp.setContentType("application/json");
+                resp.setStatus(200);
+                try (ServletOutputStream outputStream = resp.getOutputStream()) {
+                    outputStream.print(jsonResponse);
+                }
+            }
+        };
+        httpService.registerServlet("/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normal/commands/setTemperature", iotServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+
+        vicareService.sendCommand(URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normal/commands/setTemperature"),
+                                  Map.of("targetTemperature", 23.0));
+        assertEquals("{\"targetTemperature\":23.0}", requestContent.get(1, TimeUnit.SECONDS));
     }
 
     @Test

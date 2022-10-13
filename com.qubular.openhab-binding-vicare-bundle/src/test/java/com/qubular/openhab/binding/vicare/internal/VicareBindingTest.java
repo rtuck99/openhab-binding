@@ -99,13 +99,18 @@ public class VicareBindingTest {
         List<Installation> installations = List.of(installation);
         doReturn(installations).when(vicareService).getInstallations();
 
-        Feature temperatureSensor = new NumericSensorFeature("heating.dhw.sensors.temperature.outlet", new DimensionalValue(new Unit("celsius"), 27.3), new Status("connected"), null);
+        Feature temperatureSensor = new NumericSensorFeature("heating.dhw.sensors.temperature.outlet", "value",
+                                                             new DimensionalValue(new Unit("celsius"), 27.3), new Status("connected"), null
+        );
         Feature statisticsFeature = new MultiValueFeature("heating.burners.0.statistics",
                                                           Map.of("starts", new DimensionalValue(new Unit("starts"), 5.0))
         );
         Feature textFeature = new TextFeature("device.serial", "7723181102527121");
         Feature statusFeature = new StatusSensorFeature("heating.circuits.0.circulation.pump", new Status("on"), null);
-        Feature normalProgramFeature = new NumericSensorFeature("heating.circuits.0.operating.programs.normal", new DimensionalValue(new Unit("celcius"), 21), Status.NA, true);
+        Feature normalProgramFeature = new NumericSensorFeature("heating.circuits.0.operating.programs.normal",
+                                                                "temperature",
+                                                                new DimensionalValue(new Unit("celcius"), 21), Status.NA, true
+        );
         Feature consumptionFeature = new ConsumptionFeature("heating.gas.consumption.summary.dhw",
                 new DimensionalValue(new Unit("cubicMeter"), 0.2),
                 new DimensionalValue(new Unit("cubicMeter"), 2.1),
@@ -120,7 +125,10 @@ public class VicareBindingTest {
                 LocalDate.parse("2022-12-23"),
                 LocalDate.parse("2022-12-26"));
         Feature heatingDhw = new StatusSensorFeature("heating.dhw", Status.ON, true);
-        Feature heatingDhwTemperatureHotWaterStorage = new NumericSensorFeature("heating.dhw.sensors.temperature.hotWaterStorage", new DimensionalValue(new Unit("celsius"), 54.3), new Status("connected"), null);
+        Feature heatingDhwTemperatureHotWaterStorage = new NumericSensorFeature("heating.dhw.sensors.temperature.hotWaterStorage",
+                                                                                "value",
+                                                                                new DimensionalValue(new Unit("celsius"), 54.3), new Status("connected"), null
+        );
         Feature operatingModesActive = new TextFeature("heating.circuits.0.operating.modes.active", "dhw",
                                                      List.of(new CommandDescriptor("setMode", true,
                                                                                    List.of(new EnumParamDescriptor(true, "mode",

@@ -55,6 +55,7 @@ Changelog
 
 * Add read/write support for heating.circuits.N.temperature.levels
 * Add write support for operating program temperature setpoints
+* Fix #16 Cannot start binding from new install - token store not initialized
 
 #### 3.3.3
 

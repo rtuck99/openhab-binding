@@ -54,7 +54,7 @@ public class PersistedTokenStore implements TokenStore {
 
     private void migratePlainTextTokens() throws IOException, GeneralSecurityException {
         Configuration configuration = configurationAdmin.getConfiguration(TOKEN_STORE_PID);
-        Dictionary<String, Object> properties = configuration.getProperties();
+        Dictionary<String, Object> properties = ofNullable(configuration.getProperties()).orElseGet(Hashtable::new);
         String accessToken = (String) properties.get(PROPERTY_ACCESS_TOKEN);
         String refreshToken = (String) properties.get(PROPERTY_REFRESH_TOKEN);
         if (accessToken != null || refreshToken != null) {

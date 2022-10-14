@@ -23,7 +23,7 @@ class CryptUtilTest {
     @Mock
     private Configuration configuration;
 
-    private Hashtable<String, Object> props = new Hashtable<>();
+    private Hashtable<String, Object> props = null;
 
     @BeforeEach
     public void setup() throws IOException {

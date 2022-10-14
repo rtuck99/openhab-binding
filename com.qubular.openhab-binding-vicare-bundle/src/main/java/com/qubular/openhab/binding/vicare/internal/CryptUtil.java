@@ -17,6 +17,10 @@ import java.security.SecureRandom;
 import java.security.spec.KeySpec;
 import java.util.Base64;
 import java.util.Dictionary;
+import java.util.Hashtable;
+import java.util.Optional;
+
+import static java.util.Optional.ofNullable;
 
 public class CryptUtil {
     private static final String PW = "40964545-bd87-44db-8459-2003208b1e6a";
@@ -59,7 +63,7 @@ public class CryptUtil {
     }
 
     private byte[] initializeSalt() {
-        Dictionary<String, Object> props = configuration.getProperties();
+        Dictionary<String, Object> props = ofNullable(configuration.getProperties()).orElseGet(Hashtable::new);
         byte[] salt = (byte[]) props.get(CONFIG_SALT);
         if (salt == null) {
             salt = sixteenRandomBytes();

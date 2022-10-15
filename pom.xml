@@ -4,7 +4,7 @@
 
   <groupId>com.qubular</groupId>
   <artifactId>com.qubular.openhab-binding</artifactId>
-  <version>3.3.4-SNAPSHOT</version>
+  <version>3.3.4</version>
   <licenses>
     <license>
       <name>Eclipse Public License 2.0</name>
@@ -40,7 +40,7 @@
   <scm>
     <connection>scm:git:ssh://git@github.com/rtuck99/openhab-binding.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/rtuck99/openhab-binding.git</developerConnection>
-    <tag>com.qubular.openhab-binding-3.3.0</tag>
+    <tag>com.qubular.openhab-binding-3.3.4</tag>
     <url>https://github.com/rtuck99/openhab-binding</url>
   </scm>
   <repositories>

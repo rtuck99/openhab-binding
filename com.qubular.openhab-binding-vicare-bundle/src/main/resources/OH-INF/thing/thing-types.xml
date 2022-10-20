@@ -27,6 +27,13 @@
   </thing-type>
 
   <!-- The following channel types are defined in the Data Point definitions as per Viessmann API documentation -->
+  <channel-type id="device_serial">
+    <item-type>String</item-type>
+    <label>Device Serial Number</label>
+    <description>Serial number of the connected device</description>
+    <category>Text</category>
+    <state readOnly="true"/>
+  </channel-type>
   <channel-type id="heating_boiler_sensors_temperature_commonSupply">
     <item-type>Number:Temperature</item-type>
     <label>Common Supply Temperature</label>
@@ -35,12 +42,13 @@
     <state pattern="%.1f °C" readOnly="true"/>
   </channel-type>
 
-<!--  <channel-type id="heating_boiler_serial">-->
-<!--    <label>Boiler Serial Number</label>-->
-<!--    <description>=Shows the serial number of the boiler</description>-->
-<!--    <category>Text</category>-->
-<!--    <state readOnly="true"/>-->
-<!--  </channel-type>-->
+  <channel-type id="heating_boiler_serial">
+    <item-type>String</item-type>
+    <label>Boiler Serial Number</label>
+    <description>=Shows the serial number of the boiler</description>
+    <category>Text</category>
+    <state readOnly="true"/>
+  </channel-type>
   <channel-type id="heating_boiler_temperature">
     <item-type>Number:Temperature</item-type>
     <label>Boiler Target Temperature</label>

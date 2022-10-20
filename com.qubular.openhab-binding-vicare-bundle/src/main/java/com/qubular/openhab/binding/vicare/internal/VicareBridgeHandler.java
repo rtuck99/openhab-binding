@@ -105,8 +105,10 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
         return () -> {
             for (Thing thing : getThing().getThings()) {
                 VicareDeviceThingHandler handler = (VicareDeviceThingHandler) thing.getHandler();
-                for (Channel channel : thing.getChannels()) {
-                    handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+                if (handler != null) {
+                    for (Channel channel : thing.getChannels()) {
+                        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+                    }
                 }
             }
         };

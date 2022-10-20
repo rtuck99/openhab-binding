@@ -51,6 +51,11 @@ and they will appear in your Inbox.
 Changelog
 ---------
 
+#### 3.3.5
+
+* Fix #17 Text features missing from boiler channels
+* Additional device properties available on Thing 
+
 #### 3.3.4
 
 * Add read/write support for heating.circuits.N.temperature.levels

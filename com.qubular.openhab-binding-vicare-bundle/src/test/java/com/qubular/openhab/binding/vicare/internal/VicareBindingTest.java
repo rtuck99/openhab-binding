@@ -93,6 +93,10 @@ public class VicareBindingTest {
         Device device = mock(Device.class);
         doReturn(DEVICE_1_ID).when(device).getId();
         doReturn(DEVICE_TYPE_HEATING).when(device).getDeviceType();
+        doReturn("1234567890123245").when(device).getBoilerSerial();
+        doReturn(GATEWAY_SERIAL).when(device).getGatewaySerial();
+        doReturn("E3_Vitodens_100_0421").when(device).getModelId();
+        doReturn("Online").when(device).getStatus();
         doReturn(List.of(device)).when(gateway).getDevices();
         doReturn(List.of(gateway)).when(installation).getGateways();
         doReturn(INSTALLATION_ID).when(installation).getId();
@@ -200,6 +204,7 @@ public class VicareBindingTest {
         when(vicareServiceProvider.getVicareService()).thenReturn(vicareService);
         when(vicareServiceProvider.getBindingVersion()).thenReturn("3.3.0");
         when(vicareServiceProvider.getThingRegistry()).thenReturn(thingRegistry);
+        when(vicareServiceProvider.getBundleContext()).thenReturn(bundleContext);
     }
 
     @AfterEach
@@ -256,6 +261,10 @@ public class VicareBindingTest {
         assertEquals(THING_UID_BRIDGE, result.getBridgeUID());
         assertEquals(encodeThingUniqueId(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID), result.getProperties().get("deviceUniqueId"));
         assertEquals("deviceUniqueId", result.getRepresentationProperty());
+        assertEquals("1234567890123245", result.getProperties().get(PROPERTY_BOILER_SERIAL));
+        assertEquals(GATEWAY_SERIAL, result.getProperties().get(PROPERTY_GATEWAY_SERIAL));
+        assertEquals("E3_Vitodens_100_0421", result.getProperties().get(PROPERTY_MODEL_ID));
+        assertEquals(DEVICE_TYPE_HEATING, result.getProperties().get(PROPERTY_DEVICE_TYPE));
     }
 
     @Test
@@ -523,7 +532,7 @@ public class VicareBindingTest {
     }
 
     @Test
-    public void initializeDeviceHandlerCreatesTextProperty() throws AuthenticationException, IOException, InterruptedException {
+    public void initializeDeviceHandlerCreatesTextChannel() throws AuthenticationException, IOException, InterruptedException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
         bridgeHandler = new VicareBridgeHandler(vicareServiceProvider, bridge);

@@ -48,7 +48,7 @@ public class VicareHandlerFactory extends BaseThingHandlerFactory {
         if (VicareConstants.THING_TYPE_BRIDGE.equals(thing.getThingTypeUID())) {
             return new VicareBridgeHandler(vicareServiceProvider, (Bridge) thing);
         } else if (VicareConstants.THING_TYPE_HEATING.equals(thing.getThingTypeUID())) {
-            return new VicareDeviceThingHandler(thing, vicareService);
+            return new VicareDeviceThingHandler(vicareServiceProvider, thing, vicareService);
         }
         return null;
     }

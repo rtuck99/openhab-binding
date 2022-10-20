@@ -15,8 +15,12 @@ import org.openhab.core.thing.ThingUID;
 import org.openhab.core.thing.binding.BridgeHandler;
 import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerService;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
+import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
+import org.osgi.service.event.Event;
+import org.osgi.service.event.EventAdmin;
 import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,8 +34,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import static com.qubular.openhab.binding.vicare.internal.VicareConstants.PROPERTY_DEVICE_UNIQUE_ID;
-import static com.qubular.openhab.binding.vicare.internal.VicareConstants.THING_TYPE_HEATING;
+import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
 import static com.qubular.vicare.model.Device.DEVICE_TYPE_HEATING;
 import static java.util.Collections.*;
 import static org.osgi.service.event.EventConstants.EVENT_TOPIC;
@@ -46,6 +49,7 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
     private CompletableFuture<BridgeHandler> bridgeHandler = new CompletableFuture<>();
     private ScheduledFuture<?> backgroundJob;
     private ServiceRegistration<EventHandler> eventHandlerRegistration;
+    private EventAdmin eventAdmin;
 
     /** Invoked by the bridge handler factory */
     public VicareDiscoveryService() {
@@ -139,12 +143,20 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
         ThingUID thingUid = new ThingUID(THING_TYPE_HEATING,
                 bridgeId,
                 thingId);
+        Map<String, Object> props = Map.of(PROPERTY_DEVICE_UNIQUE_ID, uniqueId,
+                PROPERTY_BOILER_SERIAL, device.getBoilerSerial(),
+                PROPERTY_GATEWAY_SERIAL, device.getGatewaySerial(),
+                PROPERTY_MODEL_ID, device.getModelId(),
+                PROPERTY_DEVICE_TYPE, device.getDeviceType());
         DiscoveryResult result = DiscoveryResultBuilder.create(thingUid)
                 .withBridge(bridgeId)
-                .withProperty(PROPERTY_DEVICE_UNIQUE_ID, uniqueId)
+                .withProperties(props)
                 .withRepresentationProperty(PROPERTY_DEVICE_UNIQUE_ID)
                 .build();
         logger.info("Discovered {}", uniqueId);
+        if (eventAdmin != null) {
+            eventAdmin.postEvent(new Event(DeviceDiscoveryEvent.generateTopic(thingUid), props));
+        }
         this.thingDiscovered(result);
     }
 
@@ -163,8 +175,9 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
         ThingHandlerService.super.activate();
         Hashtable<String, Object> properties = new Hashtable<>();
         properties.put(EVENT_TOPIC, TokenEvent.TOPIC_NEW_ACCESS_TOKEN);
-        eventHandlerRegistration = FrameworkUtil.getBundle(getClass()).getBundleContext().registerService(
-                EventHandler.class, new TokenEventHandler(), properties);
+        BundleContext bundleContext = FrameworkUtil.getBundle(getClass()).getBundleContext();
+        eventHandlerRegistration = bundleContext.registerService(EventHandler.class, new TokenEventHandler(), properties);
+        eventAdmin = bundleContext.getService(bundleContext.getServiceReference(EventAdmin.class));
     }
 
     @Override

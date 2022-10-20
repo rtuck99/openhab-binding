@@ -1,5 +1,6 @@
 package com.qubular.openhab.binding.vicare.internal;
 
+import com.qubular.openhab.binding.vicare.VicareServiceProvider;
 import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.CommandFailureException;
 import com.qubular.vicare.VicareService;
@@ -22,6 +23,9 @@ import org.openhab.core.thing.type.ChannelTypeUID;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.State;
 import org.openhab.core.types.UnDefType;
+import org.osgi.framework.ServiceRegistration;
+import org.osgi.service.event.Event;
+import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,15 +39,27 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static com.qubular.openhab.binding.vicare.internal.DeviceDiscoveryEvent.generateTopic;
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThingUniqueId;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.escapeUIDSegment;
 import static java.lang.String.format;
 import static java.util.Collections.singleton;
+import static org.osgi.service.event.EventConstants.EVENT_TOPIC;
 
 public class VicareDeviceThingHandler extends BaseThingHandler {
+    private static final Set<String> DEVICE_PROPERTIES = Set.of(
+            PROPERTY_DEVICE_TYPE,
+            PROPERTY_GATEWAY_SERIAL,
+            PROPERTY_DEVICE_UNIQUE_ID,
+            PROPERTY_MODEL_ID,
+            PROPERTY_BOILER_SERIAL
+    );
+
     private static final Logger logger = LoggerFactory.getLogger(VicareDeviceThingHandler.class);
     private final VicareService vicareService;
+    private final VicareServiceProvider vicareServiceProvider;
+    private ServiceRegistration<EventHandler> discoveryListenerRegistration;
 
     private static final Map<String, Function<ConsumptionFeature, DimensionalValue>> consumptionAccessorMap = Map.of(
             "currentDay", ConsumptionFeature::getToday,
@@ -52,11 +68,22 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
             "currentYear", ConsumptionFeature::getYear
     );
 
-    public VicareDeviceThingHandler(Thing thing,
+    public VicareDeviceThingHandler(VicareServiceProvider vicareServiceProvider,
+                                    Thing thing,
                                     VicareService vicareService) {
         super(thing);
+        this.vicareServiceProvider = vicareServiceProvider;
         logger.info("Creating handler for {}", thing.getUID());
         this.vicareService = vicareService;
+    }
+
+    @Override
+    public void dispose() {
+        if (discoveryListenerRegistration != null) {
+            discoveryListenerRegistration.unregister();
+            discoveryListenerRegistration = null;
+        }
+        super.dispose();
     }
 
     /**
@@ -66,6 +93,10 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
     public void initialize() {
         String deviceUniqueId = getDeviceUniqueId(thing);
         VicareUtil.IGD igd = decodeThingUniqueId(deviceUniqueId);
+        Hashtable<String, Object> subscriptionProps = new Hashtable<>();
+        subscriptionProps.put(EVENT_TOPIC, generateTopic(thing.getUID()));
+        discoveryListenerRegistration = vicareServiceProvider.getBundleContext().registerService(
+                EventHandler.class, new DiscoveryEventHandler(), subscriptionProps);
         CompletableFuture.runAsync(() -> {
             try {
                 List<Feature> features = vicareService.getFeatures(igd.installationId, igd.gatewaySerial, igd.deviceId);
@@ -385,5 +416,27 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
     protected @Nullable VicareBridgeHandler getBridgeHandler() {
         return (VicareBridgeHandler) getBridge().getHandler();
+    }
+
+    private class DiscoveryEventHandler implements EventHandler {
+        @Override
+        public void handleEvent(Event event) {
+            Map<String, String> oldProps = editProperties();
+
+            Set<String> propsToWipe = new HashSet<>(oldProps.keySet());
+            propsToWipe.removeAll(DEVICE_PROPERTIES);
+            propsToWipe.forEach(key -> oldProps.put(key, null));
+
+            Arrays.stream(event.getPropertyNames()).forEach(name -> {
+                if (!EVENT_TOPIC.equals(name)) {
+                    Object value = event.getProperty(name);
+                    if (value instanceof String) {
+                        oldProps.put(name, (String) value);
+                    }
+                }
+            });
+
+            updateProperties(oldProps);
+        }
     }
 }

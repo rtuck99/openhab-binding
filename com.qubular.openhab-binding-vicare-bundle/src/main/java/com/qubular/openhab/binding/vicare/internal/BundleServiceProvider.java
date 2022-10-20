@@ -8,6 +8,7 @@ import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.event.EventAdmin;
 
 @Component(service = VicareServiceProvider.class)
 public class BundleServiceProvider implements VicareServiceProvider {
@@ -43,5 +44,10 @@ public class BundleServiceProvider implements VicareServiceProvider {
     @Override
     public String getBindingVersion() {
         return bundleContext.getBundle().getVersion().toString();
+    }
+
+    @Override
+    public BundleContext getBundleContext() {
+        return bundleContext;
     }
 }

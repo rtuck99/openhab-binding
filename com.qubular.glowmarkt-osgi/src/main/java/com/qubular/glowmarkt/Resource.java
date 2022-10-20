@@ -44,6 +44,10 @@ public class Resource {
         return active;
     }
 
+    public boolean isConsumption() {
+        return classifier != null && classifier.endsWith(".consumption");
+    }
+
     public static class Builder {
         private String resourceId;
         private String classifier;

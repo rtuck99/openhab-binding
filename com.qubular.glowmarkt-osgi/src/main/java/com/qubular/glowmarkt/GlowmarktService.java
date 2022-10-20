@@ -38,6 +38,8 @@ public interface GlowmarktService {
                                        AggregationPeriod period,
                                        AggregationFunction aggregationFunction) throws IOException, AuthenticationFailedException;
 
+    TariffResponse getResourceTariff(GlowmarktSession session, GlowmarktSettings settings, String resourceId) throws IOException, AuthenticationFailedException;
+
     void catchup(GlowmarktSession session,
                  GlowmarktSettings settings,
                  String resourceId);

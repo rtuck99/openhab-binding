@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -38,6 +39,7 @@ public class GlowmarktServiceImpl implements GlowmarktService {
     public static final String QUERY_PARAM_OFFSET = "offset";
     public static final String QUERY_PARAM_FUNCTION = "function";
     public static final DateTimeFormatter YYYYMMDDTHHMMSS = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+    public static final DateTimeFormatter YYYYMMDD_HHMMSS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private static class AuthRequest {
         String username;
@@ -78,7 +80,24 @@ public class GlowmarktServiceImpl implements GlowmarktService {
         gson = new GsonBuilder()
                 .registerTypeAdapter(Instant.class,
                         (JsonDeserializer<Instant>) (jsonElement, type, jsonDeserializationContext) -> Instant.ofEpochSecond(jsonElement.getAsLong()))
+                .registerTypeAdapter(LocalDateTime.class,
+                                     (JsonDeserializer<LocalDateTime>) (jsonElement, type, jsonDeserializationContext) -> LocalDateTime.parse(jsonElement.getAsString(), YYYYMMDD_HHMMSS))
+                .registerTypeAdapter(TariffPlanDetail.class,
+                                     (JsonDeserializer<TariffPlanDetail>) GlowmarktServiceImpl::deserializeTariffPlanDetail )
                 .create();
+    }
+
+    private static TariffPlanDetail deserializeTariffPlanDetail(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) {
+        JsonObject jsonObject = (JsonObject) jsonElement;
+        if (jsonObject.has("standing")) {
+            return new StandingChargeTariffPlanDetail(jsonObject.get("standing").getAsBigDecimal());
+        } else if (jsonObject.has("rate")) {
+            Integer tier = jsonObject.has("tier") ? jsonObject.get("tier").getAsInt() : null;
+            return new PerUnitTariffPlanDetail(tier,
+                                               jsonObject.get("rate").getAsBigDecimal());
+        } else {
+            throw new JsonParseException("Unrecognized TariffPlanDetail" + jsonObject.toString());
+        }
     }
 
 
@@ -91,6 +110,7 @@ public class GlowmarktServiceImpl implements GlowmarktService {
         try {
             ContentResponse response = settings.getHttpClient()
                     .POST(authUri)
+                    .accept("application/json")
                     .content(new StringContentProvider("application/json", json, StandardCharsets.UTF_8))
                     .header(HEADER_APPLICATION_ID, settings.getApplicationId())
                     .send();
@@ -115,6 +135,7 @@ public class GlowmarktServiceImpl implements GlowmarktService {
         try {
             ContentResponse response = settings.getHttpClient()
                     .newRequest(virtualEntityUri)
+                    .accept("application/json")
                     .header(HEADER_APPLICATION_ID, settings.getApplicationId())
                     .header(HEADER_TOKEN, session.getToken())
                     .method(HttpMethod.GET)
@@ -139,6 +160,7 @@ public class GlowmarktServiceImpl implements GlowmarktService {
         try {
             ContentResponse response = settings.getHttpClient()
                     .newRequest(virtualEntityUri)
+                    .accept("application/json")
                     .header(HEADER_APPLICATION_ID, settings.getApplicationId())
                     .header(HEADER_TOKEN, session.getToken())
                     .method(HttpMethod.GET)
@@ -164,6 +186,7 @@ public class GlowmarktServiceImpl implements GlowmarktService {
                     .newRequest(readingsUri)
                     .header(HEADER_APPLICATION_ID, settings.getApplicationId())
                     .header(HEADER_TOKEN, session.getToken())
+                    .accept("application/json")
                     .param(QUERY_PARAM_FROM, LocalDateTime.ofInstant(from, ZoneOffset.UTC).format(YYYYMMDDTHHMMSS))
                     .param(QUERY_PARAM_TO, LocalDateTime.ofInstant(to, ZoneOffset.UTC).format(YYYYMMDDTHHMMSS))
                     .param(QUERY_PARAM_PERIOD, period.name())
@@ -182,6 +205,30 @@ public class GlowmarktServiceImpl implements GlowmarktService {
             }
         } catch (ExecutionException | InterruptedException | TimeoutException e) {
             throw exceptionForHttpClientException(e, "Unable to fetch reading data");
+        }
+    }
+
+    @Override
+    public TariffResponse getResourceTariff(GlowmarktSession session, GlowmarktSettings settings, String resourceId) throws IOException, AuthenticationFailedException {
+        validateToken(session);
+        URI tariffUri = settings.getApiEndpoint().resolve(format("resource/%s/tariff", URLEncoder.encode(resourceId, StandardCharsets.UTF_8)));
+        logger.trace("Sending tariff request to {}", tariffUri);
+        try {
+            ContentResponse response = settings.getHttpClient()
+                    .newRequest(tariffUri)
+                    .header(HEADER_APPLICATION_ID, settings.getApplicationId())
+                    .header(HEADER_TOKEN, session.getToken())
+                    .accept("application/json")
+                    .method(HttpMethod.GET)
+                    .send();
+            if (response.getStatus() == 200) {
+                TariffResponse tariffResponse = gson.fromJson(response.getContentAsString(), TariffResponse.class);
+                return tariffResponse;
+            } else {
+                throw exceptionForHttpResponseError(response, "Unable to fetch tariff data");
+            }
+        } catch (ExecutionException | InterruptedException | TimeoutException e) {
+            throw exceptionForHttpClientException(e, "Unable to fetch tariff data");
         }
     }
 

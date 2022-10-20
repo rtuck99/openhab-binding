@@ -21,6 +21,7 @@ import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerCallback;
 import org.openhab.core.thing.binding.builder.ChannelBuilder;
 import org.openhab.core.thing.link.ItemChannelLinkRegistry;
+import org.openhab.core.thing.type.ChannelTypeRegistry;
 import org.openhab.core.types.RefreshType;
 import org.osgi.service.cm.ConfigurationAdmin;
 
@@ -60,6 +61,8 @@ class GlowmarktBridgeHandlerTest {
     private CronScheduler cronScheduler;
     @Mock
     private ConfigurationAdmin configurationAdmin;
+    @Mock
+    private GlowmarktServiceProvider serviceProvider;
 
     private AutoCloseable mockHandle;
     private ThingHandler bridgeHandler;
@@ -76,6 +79,8 @@ class GlowmarktBridgeHandlerTest {
         org.osgi.service.cm.Configuration osgiConfig = mock(org.osgi.service.cm.Configuration.class);
         doReturn(osgiConfig).when(configurationAdmin).getConfiguration(anyString());
         doReturn(new Hashtable<>()).when(osgiConfig).getProperties();
+        when(serviceProvider.getChannelTypeRegistry()).thenReturn(new ChannelTypeRegistry());
+        when(serviceProvider.getItemChannelLinkRegistry()).thenReturn(itemChannelLinkRegistry);
     }
 
     @AfterEach
@@ -102,7 +107,9 @@ class GlowmarktBridgeHandlerTest {
 
     @Test
     public void hasDiscoveryService() {
-        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin).createHandler(bridge);
+        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, serviceProvider, httpClientFactory,
+                                                           persistenceServiceRegistry,
+                                                           cronScheduler, configurationAdmin).createHandler(bridge);
         assertTrue(handler.getServices().stream().anyMatch(DiscoveryService.class::isAssignableFrom));
     }
 
@@ -112,7 +119,9 @@ class GlowmarktBridgeHandlerTest {
         gasAndElectricityMeter();
 
         DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
-        bridgeHandler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin).createHandler(bridge);
+        bridgeHandler = new GlowmarktHandlerFactory(glowmarktService, serviceProvider, httpClientFactory, persistenceServiceRegistry,
+                                                    cronScheduler,
+                                                    configurationAdmin).createHandler(bridge);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
         bridgeHandler.initialize();
         GlowmarktDiscoveryService discoveryService = new GlowmarktDiscoveryService();
@@ -140,7 +149,9 @@ class GlowmarktBridgeHandlerTest {
                 .thenThrow(new IOException("test exception"));
 
         DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
-        bridgeHandler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin).createHandler(bridge);
+        bridgeHandler = new GlowmarktHandlerFactory(glowmarktService, serviceProvider, httpClientFactory, persistenceServiceRegistry,
+                                                    cronScheduler,
+                                                    configurationAdmin).createHandler(bridge);
         ThingHandlerCallback thingHandlerCallback = mock(ThingHandlerCallback.class);
         bridgeHandler.setCallback(thingHandlerCallback);
         bridgeHandler.initialize();
@@ -164,7 +175,9 @@ class GlowmarktBridgeHandlerTest {
                 .thenThrow(new AuthenticationFailedException("test exception"));
 
         DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
-        bridgeHandler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin).createHandler(bridge);
+        bridgeHandler = new GlowmarktHandlerFactory(glowmarktService, serviceProvider, httpClientFactory, persistenceServiceRegistry,
+                                                    cronScheduler,
+                                                    configurationAdmin).createHandler(bridge);
         ThingHandlerCallback thingHandlerCallback = mock(ThingHandlerCallback.class);
         InOrder inOrder = inOrder(thingHandlerCallback);
         bridgeHandler.setCallback(thingHandlerCallback);
@@ -183,7 +196,9 @@ class GlowmarktBridgeHandlerTest {
 
     @Test
     public void initialiseUpdatesStatus() {
-        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin).createHandler(bridge);
+        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, serviceProvider, httpClientFactory,
+                                                           persistenceServiceRegistry,
+                                                           cronScheduler, configurationAdmin).createHandler(bridge);
         ThingHandlerCallback thingHandlerCallback = mock(ThingHandlerCallback.class);
         handler.setCallback(thingHandlerCallback);
         handler.initialize();
@@ -199,7 +214,9 @@ class GlowmarktBridgeHandlerTest {
         gasAndElectricityMeter();
         ThingHandler childHandler = childVirtualEntityThingHandler();
 
-        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin).createHandler(bridge);
+        ThingHandler handler = new GlowmarktHandlerFactory(glowmarktService, serviceProvider, httpClientFactory,
+                                                           persistenceServiceRegistry,
+                                                           cronScheduler, configurationAdmin).createHandler(bridge);
         ThingHandlerCallback thingHandlerCallback = mock(ThingHandlerCallback.class);
         handler.setCallback(thingHandlerCallback);
         handler.initialize();

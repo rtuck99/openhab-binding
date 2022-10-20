@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import static com.qubular.binding.glowmarkt.internal.GlowmarktConstants.PROPERTY_BINDING_VERSION;
 import static java.util.Optional.ofNullable;
 
 public class GlowmarktBridgeHandler extends BaseBridgeHandler {
@@ -45,6 +46,7 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlowmarktBridgeHandler.class);
 
+    private final GlowmarktServiceProvider serviceProvider;
     private final GlowmarktService glowmarktService;
     private final HttpClientFactory httpClientFactory;
     private final PersistenceServiceRegistry persistenceServiceRegistry;
@@ -55,13 +57,14 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
 
     private CryptUtil cryptUtil;
 
-    public GlowmarktBridgeHandler(Bridge bridge,
+    public GlowmarktBridgeHandler(GlowmarktServiceProvider serviceProvider, Bridge bridge,
                                   GlowmarktService glowmarktService,
                                   HttpClientFactory httpClientFactory,
                                   PersistenceServiceRegistry persistenceServiceRegistry,
                                   CronScheduler cronScheduler,
                                   @Reference ConfigurationAdmin configurationAdmin) {
         super(bridge);
+        this.serviceProvider = serviceProvider;
         this.glowmarktService = glowmarktService;
         this.httpClientFactory = httpClientFactory;
         this.persistenceServiceRegistry = persistenceServiceRegistry;
@@ -75,9 +78,10 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
 
     @Override
     public void initialize() {
-        logger.trace("Initializing GlowmarktBridgeHandler");
+        logger.info("Initializing GlowmarktBridgeHandler");
         migratePassword();
         updateStatus(ThingStatus.UNKNOWN);
+        updateProperty(PROPERTY_BINDING_VERSION, serviceProvider.getBindingVersion());
         oneTimeUpdateJob = scheduler.schedule(resourceUpdateJob(),5, TimeUnit.SECONDS);
         cronUpdateJob = cronScheduler.schedule(() -> resourceUpdateJob().run(), getCronSchedule());
     }

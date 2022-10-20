@@ -41,4 +41,16 @@
     <description>Cost of electricity used in pounds</description>
     <state pattern="£%.2f" readOnly="true"/>
   </channel-type>
+  <channel-type id="tariff_standing_charge">
+    <item-type>Number</item-type>
+    <label>${resourceName} Tariff Standing Charge</label>
+    <description>The standing charge</description>
+    <state readOnly="true" pattern="%.1f"/>
+  </channel-type>
+  <channel-type id="tariff_per_unit_rate">
+    <item-type>Number</item-type>
+    <label>${resourceName} Tariff Per Unit Charge ${tier}</label>
+    <description>The unit charge for this pricing tier</description>
+    <state readOnly="true" pattern="%.2f"/>
+  </channel-type>
 </thing:thing-descriptions>

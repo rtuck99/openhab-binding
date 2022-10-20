@@ -8,6 +8,7 @@ import org.openhab.core.persistence.HistoricItem;
 import org.openhab.core.persistence.ModifiablePersistenceService;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseThingHandler;
+import org.openhab.core.thing.binding.ThingHandlerService;
 import org.openhab.core.thing.link.ItemChannelLinkRegistry;
 import org.openhab.core.thing.type.ChannelTypeUID;
 import org.openhab.core.types.Command;
@@ -17,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.TemporalAmount;
@@ -33,17 +35,20 @@ public class GlowmarktVirtualEntityHandler extends BaseThingHandler {
     private static final Logger logger = LoggerFactory.getLogger(GlowmarktVirtualEntityHandler.class);
     private final GlowmarktService glowmarktService;
     private final ItemChannelLinkRegistry itemChannelLinkRegistry;
+    private final GlowmarktServiceProvider serviceProvider;
+    private TariffChannelTypeProvider tariffChannelTypeProvider;
 
-    public GlowmarktVirtualEntityHandler(Thing thing, GlowmarktService glowmarktService, ItemChannelLinkRegistry itemChannelLinkRegistry) {
+    public GlowmarktVirtualEntityHandler(GlowmarktServiceProvider serviceProvider, Thing thing, GlowmarktService glowmarktService) {
         super(thing);
         this.glowmarktService = glowmarktService;
-        this.itemChannelLinkRegistry = itemChannelLinkRegistry;
+        this.itemChannelLinkRegistry = serviceProvider.getItemChannelLinkRegistry();
+        this.serviceProvider = serviceProvider;
     }
-
 
     @Override
     public void initialize() {
         CompletableFuture.runAsync(() -> {
+            logger.info("Initializing virtual entity {}", getThing().getUID());
             GlowmarktBridgeHandler bridgeHandler = (GlowmarktBridgeHandler) getBridge().getHandler();
             String virtualEntityId = getThing().getProperties().get(PROPERTY_VIRTUAL_ENTITY_ID);
             try {
@@ -58,6 +63,57 @@ public class GlowmarktVirtualEntityHandler extends BaseThingHandler {
                                     GlowmarktConstants.PROPERTY_RESOURCE_ID, resource.getResourceId()))
                             .build();
                     channels.add(channel);
+
+                    if (resource.isConsumption()) {
+                    TariffResponse tariffResponse = glowmarktService.getResourceTariff(glowmarktSession,
+                                                                                         getBridgeHandler().getGlowmarktSettings(),
+                                                                                         resource.getResourceId());
+                    List<TariffData> resourceTariff = tariffResponse.getData();
+                    var now = LocalDateTime.now();
+                    Optional<TariffData> currentTariff = getEffectiveTariff(resourceTariff, now);
+                    currentTariff.ifPresent(td -> td.getStructure().forEach(
+                            ts -> {
+                                ts.getPlanDetails().forEach(pd -> {
+                                    if (pd instanceof StandingChargeTariffPlanDetail) {
+                                        String channelId = TariffChannelTypeProvider.channelId(TariffChannelTypeProvider.PREFIX_TARIFF_STANDING_CHARGE, resource, ts, pd);
+                                        ChannelTypeUID planChannelType = new ChannelTypeUID(BINDING_ID, channelId);
+                                        if (tariffChannelTypeProvider != null) {
+                                            tariffChannelTypeProvider.createChannelType(planChannelType, Locale.getDefault(), resource.getName(), null);
+                                        }
+                                        Channel planChannel = getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), channelId),
+                                                                                                 planChannelType)
+                                                .withProperties(Map.of(PROPERTY_RESOURCE_ID, resource.getResourceId(),
+                                                                       PROPERTY_RESOURCE_NAME, tariffResponse.getName(),
+                                                                       PROPERTY_STRUCTURE_ID, ts.getId(),
+                                                                       PROPERTY_PLAN_DETAIL_ID, pd.getId()))
+                                                .withType(planChannelType)
+                                                .build();
+                                        channels.add(planChannel);
+                                    } else if (pd instanceof PerUnitTariffPlanDetail) {
+                                        String channelId = TariffChannelTypeProvider.channelId(TariffChannelTypeProvider.PREFIX_TARIFF_PER_UNIT_RATE, resource, ts, pd);
+                                        Map<String, String> propMap = new HashMap<>();
+                                        propMap.put(PROPERTY_RESOURCE_ID, resource.getResourceId());
+                                        propMap.put(PROPERTY_RESOURCE_NAME, tariffResponse.getName());
+                                        propMap.put(PROPERTY_STRUCTURE_ID, ts.getId());
+                                        propMap.put(PROPERTY_PLAN_DETAIL_ID, pd.getId());
+                                        PerUnitTariffPlanDetail perUnitTariffPlanDetail = (PerUnitTariffPlanDetail) pd;
+                                        if (perUnitTariffPlanDetail.getTier() != null) {
+                                            propMap.put(PROPERTY_TIER, perUnitTariffPlanDetail.getTier().toString());
+                                        }
+                                        ChannelTypeUID planChannelType = new ChannelTypeUID(BINDING_ID, channelId);
+                                        if (tariffChannelTypeProvider != null) {
+                                            tariffChannelTypeProvider.createChannelType(planChannelType, Locale.getDefault(), resource.getName(), perUnitTariffPlanDetail.getTier());
+                                        }
+                                        Channel planChannel = getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), channelId),
+                                                                                                 planChannelType)
+                                                .withProperties(propMap)
+                                                .withType(planChannelType)
+                                                .build();
+                                        channels.add(planChannel);
+                                    }
+                                });
+                            }));
+                    }
                 }
                 if (!channels.isEmpty()) {
                     updateThing(editThing().withChannels(channels).build());
@@ -65,17 +121,24 @@ public class GlowmarktVirtualEntityHandler extends BaseThingHandler {
                 updateStatus(ThingStatus.ONLINE);
             } catch (AuthenticationFailedException e) {
                 String msg = "Unable to authenticate with Glowmarkt API: " + e.getMessage();
-                updateStatus(ThingStatus.UNINITIALIZED, ThingStatusDetail.CONFIGURATION_ERROR, msg);
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, msg);
                 logger.debug(msg, e);
             } catch (IOException e) {
                 String msg = "Unable to fetch resources from Glowmarkt API: " + e.getMessage();
-                updateStatus(ThingStatus.UNINITIALIZED, ThingStatusDetail.COMMUNICATION_ERROR, msg);
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
                 logger.debug(msg, e);
             }
         }).exceptionally(e -> {
             logger.error("Unexpected error initializing " + getThing().getUID(), e);
             return null;
         });
+    }
+
+    private static Optional<TariffData> getEffectiveTariff(List<TariffData> resourceTariff, LocalDateTime now) {
+        return resourceTariff.stream()
+                .sorted(Comparator.comparing(TariffData::getFrom).reversed())
+                .filter(td -> td.getFrom().isBefore(now))
+                .findFirst();
     }
 
     private String channelType(Resource resource) {
@@ -93,8 +156,27 @@ public class GlowmarktVirtualEntityHandler extends BaseThingHandler {
             String resourceId = channel.getProperties().get(PROPERTY_RESOURCE_ID);
             Set<Item> linkedItems = itemChannelLinkRegistry.getLinkedItems(channelUID);
             try {
-                for (var item : linkedItems) {
-                    fetchHistoricData(resourceId, item);
+                if (TariffChannelTypeProvider.isManagedChannelType(channel.getChannelTypeUID())) {
+                    TariffResponse resourceTariff = glowmarktService.getResourceTariff(
+                            getBridgeHandler().getGlowmarktSession(),
+                            getBridgeHandler().getGlowmarktSettings(),
+                            resourceId);
+                    String structureId = channel.getProperties().get(PROPERTY_STRUCTURE_ID);
+                    String planDetailId = channel.getProperties().get(PROPERTY_PLAN_DETAIL_ID);
+                    LocalDateTime now = LocalDateTime.now();
+                    Optional<TariffData> effectiveTariff = getEffectiveTariff(resourceTariff.getData(), now);
+                    effectiveTariff.get().getStructure().stream()
+                            .filter(ts -> ts.getId().equals(structureId))
+                            .flatMap(ts -> ts.getPlanDetails().stream())
+                            .filter(pd -> pd.getId().equals(planDetailId))
+                            .findFirst()
+                            .ifPresent(tpd -> {
+                                updateState(channelUID, new DecimalType((Number) tpd.getAmount()));
+                            });
+                } else {
+                    for (var item : linkedItems) {
+                        fetchHistoricData(resourceId, item);
+                    }
                 }
                 updateStatus(ThingStatus.ONLINE);
             } catch (AuthenticationFailedException e) {
@@ -107,6 +189,19 @@ public class GlowmarktVirtualEntityHandler extends BaseThingHandler {
                 logger.debug(msg, e);
             }
         }
+    }
+
+    @Override
+    public Collection<Class<? extends ThingHandlerService>> getServices() {
+        return List.of(TariffChannelTypeProvider.class);
+    }
+
+    GlowmarktServiceProvider getServiceProvider() {
+        return serviceProvider;
+    }
+
+    void setTariffChannelTypeProvider(TariffChannelTypeProvider provider) {
+        this.tariffChannelTypeProvider = provider;
     }
 
     private void fetchHistoricData(String resourceId, Item item) throws AuthenticationFailedException, IOException {

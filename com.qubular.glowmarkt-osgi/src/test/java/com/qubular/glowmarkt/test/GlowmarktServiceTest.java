@@ -20,6 +20,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -412,5 +413,51 @@ public class GlowmarktServiceTest {
         CompletableFuture.allOf(result, serviceCall).get(3, TimeUnit.SECONDS);
         assertEquals(200, result.get());
         assertEquals(Instant.parse("2021-02-12T10:05:02Z"), serviceCall.get());
+    }
+
+    @Test
+    public void getResourceTariffFetchesTariffData() throws ServletException, NamespaceException, AuthenticationFailedException, IOException, ExecutionException, InterruptedException, TimeoutException {
+        CompletableFuture<Integer> result = tariffEndpoint();
+        GlowmarktSession session = new GlowmarktSession(Instant.now().plus(1, ChronoUnit.DAYS),
+                                                        "testToken");
+        TariffResponse tariffResponse = glowmarktService.getResourceTariff(session, glowmarktLocalTestServer(),
+                                                                         "b2e6fa7a-ac81-41a1-825a-22d9038c671b");
+        List<TariffData> tariffData = tariffResponse.getData();
+        assertEquals(200, result.completeOnTimeout(0, 1, TimeUnit.SECONDS).get());
+        assertEquals("electricity consumption", tariffResponse.getName());
+        TariffStructure tariffStructure = tariffData.get(0).getStructure().get(0);
+        assertEquals(1, tariffData.size());
+        assertEquals(LocalDateTime.parse("2022-10-02T00:00:00"), tariffData.get(0).getFrom());
+        assertEquals(1, tariffData.get(0).getStructure().size());
+        assertEquals("1", tariffStructure.getWeekName());
+        assertEquals("DCC", tariffStructure.getSource());
+        assertEquals(2, tariffStructure.getPlanDetails().size());
+        assertEquals(new BigDecimal("44.4"), ((StandingChargeTariffPlanDetail) tariffStructure.getPlanDetails().get(0)).getStanding());
+        assertEquals(1, ((PerUnitTariffPlanDetail) tariffStructure.getPlanDetails().get(1)).getTier());
+        assertEquals(new BigDecimal("34.22"),
+                     ((PerUnitTariffPlanDetail) tariffStructure.getPlanDetails().get(1)).getRate());
+    }
+
+    private CompletableFuture<Integer> tariffEndpoint() throws ServletException, NamespaceException {
+        CompletableFuture<Integer> result = new CompletableFuture<>();
+        registerServlet("/resource/b2e6fa7a-ac81-41a1-825a-22d9038c671b/tariff", new HttpServlet() {
+            @Override
+            protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+                try {
+                    assertEquals("testToken", req.getHeader("token"));
+                    assertEquals(DEFAULT_APPLICATION_ID, req.getHeader("applicationId"));
+                    resp.setStatus(200);
+                    try (var os = resp.getOutputStream();
+                         var is = getClass().getResourceAsStream("tariffResponse.json")) {
+                        os.write(is.readAllBytes());
+                    }
+                    result.complete(200);
+                } catch (AssertionFailedError e) {
+                    resp.setStatus(401);
+                    result.completeExceptionally(e);
+                }
+            }
+        });
+        return result;
     }
 }

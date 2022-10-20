@@ -19,12 +19,15 @@ import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerCallback;
 import org.openhab.core.thing.binding.builder.ChannelBuilder;
 import org.openhab.core.thing.link.ItemChannelLinkRegistry;
+import org.openhab.core.thing.type.ChannelTypeRegistry;
 import org.openhab.core.thing.type.ChannelTypeUID;
 import org.openhab.core.types.RefreshType;
 import org.osgi.service.cm.ConfigurationAdmin;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
@@ -68,6 +71,8 @@ class GlowmarktVirtualEntityHandlerTest {
     private CronScheduler cronScheduler;
     @Mock
     private ConfigurationAdmin configurationAdmin;
+    @Mock
+    private GlowmarktServiceProvider serviceProvider;
 
     private AutoCloseable mockHandle;
     private GlowmarktBridgeHandler bridgeHandler;
@@ -93,6 +98,9 @@ class GlowmarktVirtualEntityHandlerTest {
         doReturn(osgiConfig).when(configurationAdmin).getConfiguration(anyString());
         Hashtable<Object, Object> osgiConfigProps = new Hashtable<>();
         doReturn(osgiConfigProps).when(osgiConfig).getProperties();
+        when(serviceProvider.getItemChannelLinkRegistry()).thenReturn(itemChannelLinkRegistry);
+        ChannelTypeRegistry channelTypeRegistry = new ChannelTypeRegistry();
+        when(serviceProvider.getChannelTypeRegistry()).thenReturn(channelTypeRegistry);
 
     }
 
@@ -153,7 +161,26 @@ class GlowmarktVirtualEntityHandlerTest {
                                 .build()
                                 ))
                         .build());
-
+        when(glowmarktService.getResourceTariff(any(GlowmarktSession.class),
+                                                any(GlowmarktSettings.class),
+                                                eq(GAS_CONSUMPTION_RESOURCE_ID)))
+                .thenReturn(new TariffResponse.Builder().withData(emptyList()).build());
+        when(glowmarktService.getResourceTariff(any(GlowmarktSession.class),
+                                                any(GlowmarktSettings.class),
+                                                eq(ELECTRICITY_CONSUMPTION_RESOURCE_ID)))
+                .thenReturn(new TariffResponse.Builder().withData(List.of(new TariffData.Builder()
+                                            .withFrom(LocalDateTime.parse("2022-10-18T22:19:00"))
+                                            .withStructure(List.of(new TariffStructure.Builder()
+                                                                           .withSource("DCC")
+                                                                           .withWeekName("1")
+                                                                           .withPlanDetail(List.of(
+                                                                                   new StandingChargeTariffPlanDetail(new BigDecimal("44.4")),
+                                                                                   new PerUnitTariffPlanDetail(1, new BigDecimal("34.22"))
+                                                                           ))
+                                                                           .build()))
+                                            .build()))
+                                    .withName("electricity consumption")
+                                    .build());
     }
 
     @Test
@@ -171,7 +198,7 @@ class GlowmarktVirtualEntityHandlerTest {
         ArgumentCaptor<Thing> thingArgumentCaptor = ArgumentCaptor.forClass(Thing.class);
         verify(thingHandlerCallback).thingUpdated(thingArgumentCaptor.capture());
         List<Channel> channels = thingArgumentCaptor.getValue().getChannels();
-        assertEquals(4, channels.size());
+        assertEquals(6, channels.size());
         assertEquals("gas_consumption", channels.get(0).getChannelTypeUID().getId());
         assertEquals("gas.consumption", channels.get(0).getProperties().get("classifier"));
         assertEquals(GAS_CONSUMPTION_RESOURCE_ID, channels.get(0).getProperties().get("resourceId"));
@@ -184,10 +211,20 @@ class GlowmarktVirtualEntityHandlerTest {
         assertEquals("electricity_consumption", channels.get(3).getChannelTypeUID().getId());
         assertEquals("electricity.consumption", channels.get(3).getProperties().get("classifier"));
         assertEquals(ELECTRICITY_CONSUMPTION_RESOURCE_ID, channels.get(3).getProperties().get("resourceId"));
+        assertEquals("tariff_standing_charge_" + ELECTRICITY_CONSUMPTION_RESOURCE_ID + "_week_1_standing_charge", channels.get(4).getChannelTypeUID().getId());
+        assertEquals("electricity consumption", channels.get(4).getProperties().get(PROPERTY_RESOURCE_NAME));
+        assertEquals(ELECTRICITY_CONSUMPTION_RESOURCE_ID, channels.get(4).getProperties().get("resourceId"));
+        assertEquals("tariff_per_unit_rate_" + ELECTRICITY_CONSUMPTION_RESOURCE_ID + "_week_1_rate_1", channels.get(5).getChannelTypeUID().getId());
+        assertEquals("electricity consumption", channels.get(5).getProperties().get(PROPERTY_RESOURCE_NAME));
+        assertEquals("1", channels.get(5).getProperties().get(PROPERTY_TIER));
+        assertEquals(ELECTRICITY_CONSUMPTION_RESOURCE_ID, channels.get(5).getProperties().get("resourceId"));
     }
 
     private ThingHandler createThingHandler() {
-        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, httpClientFactory, persistenceServiceRegistry, itemChannelLinkRegistry, cronScheduler, configurationAdmin);
+        GlowmarktHandlerFactory factory = new GlowmarktHandlerFactory(glowmarktService, serviceProvider, httpClientFactory,
+                                                                      persistenceServiceRegistry,
+                                                                      cronScheduler,
+                                                                      configurationAdmin);
         bridgeHandler = (GlowmarktBridgeHandler) factory.createHandler(bridge);
         when(bridge.getHandler()).thenReturn(bridgeHandler);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
@@ -208,7 +245,7 @@ class GlowmarktVirtualEntityHandlerTest {
 
         ArgumentCaptor<ThingStatusInfo> statusCaptor = ArgumentCaptor.forClass(ThingStatusInfo.class);
         verify(thingHandlerCallback, timeout(3000)).statusUpdated(any(Thing.class), statusCaptor.capture());
-        assertEquals(ThingStatus.UNINITIALIZED, statusCaptor.getValue().getStatus());
+        assertEquals(ThingStatus.OFFLINE, statusCaptor.getValue().getStatus());
     }
 
     @Test
@@ -222,7 +259,7 @@ class GlowmarktVirtualEntityHandlerTest {
 
         ArgumentCaptor<ThingStatusInfo> statusCaptor = ArgumentCaptor.forClass(ThingStatusInfo.class);
         verify(thingHandlerCallback, timeout(3000)).statusUpdated(any(Thing.class), statusCaptor.capture());
-        assertEquals(ThingStatus.UNINITIALIZED, statusCaptor.getValue().getStatus());
+        assertEquals(ThingStatus.OFFLINE, statusCaptor.getValue().getStatus());
     }
 
     @Test
@@ -236,23 +273,34 @@ class GlowmarktVirtualEntityHandlerTest {
         verify(thingHandlerCallback, timeout(3000)).statusUpdated(any(Thing.class), any(ThingStatusInfo.class));
 
         Item item = mock(Item.class);
-        when(itemChannelLinkRegistry.getLinkedItems(new ChannelUID(new ThingUID(THING_TYPE_VIRTUAL_ENTITY, VIRTUAL_ENTITY_ID), "gas_consumption")))
+        when(itemChannelLinkRegistry.getLinkedItems(
+                new ChannelUID(new ThingUID(THING_TYPE_VIRTUAL_ENTITY, VIRTUAL_ENTITY_ID), "gas_consumption")))
                 .thenReturn(Set.of(item));
-        when(glowmarktService.getFirstTime(any(GlowmarktSession.class), any(GlowmarktSettings.class), eq(GAS_CONSUMPTION_RESOURCE_ID)))
+        when(glowmarktService.getFirstTime(any(GlowmarktSession.class), any(GlowmarktSettings.class),
+                                           eq(GAS_CONSUMPTION_RESOURCE_ID)))
                 .thenReturn(parse("2022-01-01T00:00:00Z"));
-        when(glowmarktService.getLastTime(any(GlowmarktSession.class), any(GlowmarktSettings.class), eq(GAS_CONSUMPTION_RESOURCE_ID)))
+        when(glowmarktService.getLastTime(any(GlowmarktSession.class), any(GlowmarktSettings.class),
+                                          eq(GAS_CONSUMPTION_RESOURCE_ID)))
                 .thenReturn(parse("2022-02-01T00:00:00Z"));
-        when(glowmarktService.getResourceReadings(any(GlowmarktSession.class), any(GlowmarktSettings.class), eq(GAS_CONSUMPTION_RESOURCE_ID), eq(parse("2022-01-01T00:00:00Z")), eq(parse("2022-01-11T00:00:00Z")), eq(PT30M), eq(SUM)))
+        when(glowmarktService.getResourceReadings(any(GlowmarktSession.class), any(GlowmarktSettings.class),
+                                                  eq(GAS_CONSUMPTION_RESOURCE_ID), eq(parse("2022-01-01T00:00:00Z")),
+                                                  eq(parse("2022-01-11T00:00:00Z")), eq(PT30M), eq(SUM)))
                 .thenReturn(List.of(new ResourceData(1.0, parse("2022-01-01T00:00:00Z")),
-                        new ResourceData(1.1, parse("2022-01-01T00:30:00Z"))));
-        when(glowmarktService.getResourceReadings(any(GlowmarktSession.class), any(GlowmarktSettings.class), eq(GAS_CONSUMPTION_RESOURCE_ID), eq(parse("2022-01-11T00:00:00Z")), eq(parse("2022-01-21T00:00:00Z")), eq(PT30M), eq(SUM)))
+                                    new ResourceData(1.1, parse("2022-01-01T00:30:00Z"))));
+        when(glowmarktService.getResourceReadings(any(GlowmarktSession.class), any(GlowmarktSettings.class),
+                                                  eq(GAS_CONSUMPTION_RESOURCE_ID), eq(parse("2022-01-11T00:00:00Z")),
+                                                  eq(parse("2022-01-21T00:00:00Z")), eq(PT30M), eq(SUM)))
                 .thenReturn(List.of(new ResourceData(0.9, parse("2022-01-11T00:00:00Z")),
-                        new ResourceData(1.12, parse("2022-01-11T00:30:00Z"))));
-        when(glowmarktService.getResourceReadings(any(GlowmarktSession.class), any(GlowmarktSettings.class), eq(GAS_CONSUMPTION_RESOURCE_ID), eq(parse("2022-01-21T00:00:00Z")), eq(parse("2022-01-31T00:00:00Z")), eq(PT30M), eq(SUM)))
+                                    new ResourceData(1.12, parse("2022-01-11T00:30:00Z"))));
+        when(glowmarktService.getResourceReadings(any(GlowmarktSession.class), any(GlowmarktSettings.class),
+                                                  eq(GAS_CONSUMPTION_RESOURCE_ID), eq(parse("2022-01-21T00:00:00Z")),
+                                                  eq(parse("2022-01-31T00:00:00Z")), eq(PT30M), eq(SUM)))
                 .thenReturn(emptyList());
-        when(glowmarktService.getResourceReadings(any(GlowmarktSession.class), any(GlowmarktSettings.class), eq(GAS_CONSUMPTION_RESOURCE_ID), eq(parse("2022-01-31T00:00:00Z")), eq(parse("2022-02-01T00:00:00Z")), eq(PT30M), eq(SUM)))
+        when(glowmarktService.getResourceReadings(any(GlowmarktSession.class), any(GlowmarktSettings.class),
+                                                  eq(GAS_CONSUMPTION_RESOURCE_ID), eq(parse("2022-01-31T00:00:00Z")),
+                                                  eq(parse("2022-02-01T00:00:00Z")), eq(PT30M), eq(SUM)))
                 .thenReturn(List.of(new ResourceData(1.4, parse("2022-01-31T00:00:00Z")),
-                        new ResourceData(20.3, parse("2022-01-31T00:30:00Z"))));
+                                    new ResourceData(20.3, parse("2022-01-31T00:30:00Z"))));
 
         ThingUID virtualEntityUID = virtualEntity.getUID();
         thingHandler.handleCommand(new ChannelUID(virtualEntityUID, "gas_consumption"), RefreshType.REFRESH);
@@ -263,12 +311,45 @@ class GlowmarktVirtualEntityHandlerTest {
         verifyReadingForTimes("2022-01-21T00:00:00Z", "2022-01-31T00:00:00Z");
         verifyReadingForTimes("2022-01-31T00:00:00Z", "2022-02-01T00:00:00Z");
 
-        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-01T00:00:00Z"), ZoneId.systemDefault())), eq(new DecimalType("1.0")));
-        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-01T00:30:00Z"), ZoneId.systemDefault())), eq(new DecimalType("1.1")));
-        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-11T00:00:00Z"), ZoneId.systemDefault())), eq(new DecimalType("0.9")));
-        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-11T00:30:00Z"), ZoneId.systemDefault())), eq(new DecimalType("1.12")));
-        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-31T00:00:00Z"), ZoneId.systemDefault())), eq(new DecimalType("1.4")));
-        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-31T00:30:00Z"), ZoneId.systemDefault())), eq(new DecimalType("20.3")));
+        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-01T00:00:00Z"),
+                                                                                ZoneId.systemDefault())),
+                                         eq(new DecimalType("1.0")));
+        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-01T00:30:00Z"),
+                                                                                ZoneId.systemDefault())),
+                                         eq(new DecimalType("1.1")));
+        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-11T00:00:00Z"),
+                                                                                ZoneId.systemDefault())),
+                                         eq(new DecimalType("0.9")));
+        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-11T00:30:00Z"),
+                                                                                ZoneId.systemDefault())),
+                                         eq(new DecimalType("1.12")));
+        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-31T00:00:00Z"),
+                                                                                ZoneId.systemDefault())),
+                                         eq(new DecimalType("1.4")));
+        verify(persistenceService).store(same(item), eq(ZonedDateTime.ofInstant(parse("2022-01-31T00:30:00Z"),
+                                                                                ZoneId.systemDefault())),
+                                         eq(new DecimalType("20.3")));
+    }
+
+    @Test
+    public void refreshCommandFetchesRates() throws AuthenticationFailedException, IOException {
+        successfullyAuthenticate();
+        gasAndElectricityDccMeter();
+
+        ThingHandler thingHandler = createThingHandler();
+        thingHandler.initialize();
+        verify(thingHandlerCallback, timeout(3000)).statusUpdated(any(Thing.class), any(ThingStatusInfo.class));
+
+        ThingUID virtualEntityUID = virtualEntity.getUID();
+        ChannelUID standingChargeChannelId = new ChannelUID(virtualEntityUID, "tariff_standing_charge_" + ELECTRICITY_CONSUMPTION_RESOURCE_ID + "_week_1_standing_charge");
+        thingHandler.handleCommand(standingChargeChannelId, RefreshType.REFRESH);
+
+        verify(thingHandlerCallback, timeout(1000)).stateUpdated(standingChargeChannelId, DecimalType.valueOf("44.4"));
+
+
+        ChannelUID perUnitRateChannelId = new ChannelUID(virtualEntityUID, "tariff_per_unit_rate_" + ELECTRICITY_CONSUMPTION_RESOURCE_ID + "_week_1_rate_1");
+        thingHandler.handleCommand(perUnitRateChannelId, RefreshType.REFRESH);
+        verify(thingHandlerCallback, timeout(1000)).stateUpdated(perUnitRateChannelId, DecimalType.valueOf("34.22"));
     }
 
     private void verifyReadingForTimes(String from, String to) throws IOException, AuthenticationFailedException {

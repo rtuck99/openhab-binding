@@ -33,18 +33,20 @@ public class GlowmarktHandlerFactory extends BaseThingHandlerFactory {
     private final ItemChannelLinkRegistry itemChannelLinkRegistry;
     private CronScheduler cronScheduler;
     private final ConfigurationAdmin configurationAdmin;
+    private final GlowmarktServiceProvider glowmarktServiceProvider;
 
     @Activate
     public GlowmarktHandlerFactory(@Reference GlowmarktService glowmarktService,
+                                   @Reference GlowmarktServiceProvider serviceProvider,
                                    @Reference HttpClientFactory httpClientFactory,
                                    @Reference PersistenceServiceRegistry persistenceServiceRegistry,
-                                   @Reference ItemChannelLinkRegistry itemChannelLinkRegistry,
                                    @Reference CronScheduler cronScheduler,
                                    @Reference ConfigurationAdmin configurationAdmin) {
+        this.glowmarktServiceProvider = serviceProvider;
         this.glowmarktService = glowmarktService;
         this.httpClientFactory = httpClientFactory;
         this.persistenceServiceRegistry = persistenceServiceRegistry;
-        this.itemChannelLinkRegistry = itemChannelLinkRegistry;
+        this.itemChannelLinkRegistry = serviceProvider.getItemChannelLinkRegistry();
         this.cronScheduler = cronScheduler;
         this.configurationAdmin = configurationAdmin;
     }
@@ -52,11 +54,12 @@ public class GlowmarktHandlerFactory extends BaseThingHandlerFactory {
     @Override
     protected @Nullable ThingHandler createHandler(Thing thing) {
         if(THING_TYPE_BRIDGE.equals(thing.getThingTypeUID())) {
-            return new GlowmarktBridgeHandler((Bridge) thing, glowmarktService, httpClientFactory, persistenceServiceRegistry, cronScheduler,
-                                              configurationAdmin);
+            return new GlowmarktBridgeHandler(glowmarktServiceProvider, (Bridge) thing, glowmarktService, httpClientFactory,
+                                                persistenceServiceRegistry,
+                                                cronScheduler, configurationAdmin);
         }
         if (THING_TYPE_VIRTUAL_ENTITY.equals(thing.getThingTypeUID())) {
-            return new GlowmarktVirtualEntityHandler(thing, glowmarktService, itemChannelLinkRegistry);
+            return new GlowmarktVirtualEntityHandler(glowmarktServiceProvider, thing, glowmarktService);
         }
         return null;
     }

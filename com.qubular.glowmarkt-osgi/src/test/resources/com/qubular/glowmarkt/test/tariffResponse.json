@@ -1,0 +1,53 @@
+{
+  "status": "OK",
+  "name": "electricity consumption",
+  "resourceTypeId": "e3a5db34-6e0c-4221-9653-8d33e27511ba",
+  "resourceId": "b2e6fa7a-ac81-41a1-825a-22d9038c671b",
+  "data": [
+    {
+      "structure": [
+        {
+          "weekName": "1",
+          "source": "DCC",
+          "planDetail": [
+            {
+              "standing": "44.4"
+            },
+            {
+              "tier": 1,
+              "rate": "34.22"
+            }
+          ]
+        }
+      ],
+      "commodity": "ELEC",
+      "from": "2022-10-02 00:00:00",
+      "cid": "PWER",
+      "type": "flatrate",
+      "id": 565407,
+      "name": "fromDCC",
+      "utility": "HILD",
+      "plan": [
+        {
+          "weekName": "1",
+          "source": "DCC",
+          "planDetail": [
+            {
+              "standing": "44.4"
+            },
+            {
+              "rate": "34.22",
+              "tier": 1
+            }
+          ],
+          "note": "This is a legacy structure and is due to be deprecated after transition."
+        }
+      ],
+      "currentRates": {
+        "standingCharge": "44.4",
+        "rate": "34.22"
+      }
+    }
+  ],
+  "classifier": "electricity.consumption"
+}

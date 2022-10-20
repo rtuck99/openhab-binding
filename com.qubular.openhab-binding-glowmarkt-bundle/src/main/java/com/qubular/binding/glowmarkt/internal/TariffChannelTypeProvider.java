@@ -4,11 +4,13 @@ import com.qubular.glowmarkt.Resource;
 import com.qubular.glowmarkt.TariffPlanDetail;
 import com.qubular.glowmarkt.TariffStructure;
 import org.eclipse.jdt.annotation.Nullable;
-import org.openhab.core.thing.Channel;
 import org.openhab.core.thing.ChannelUID;
 import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerService;
-import org.openhab.core.thing.type.*;
+import org.openhab.core.thing.type.ChannelType;
+import org.openhab.core.thing.type.ChannelTypeBuilder;
+import org.openhab.core.thing.type.ChannelTypeProvider;
+import org.openhab.core.thing.type.ChannelTypeUID;
 
 import java.util.Collection;
 import java.util.Locale;
@@ -16,8 +18,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static com.qubular.binding.glowmarkt.internal.GlowmarktConstants.*;
-import static java.util.Comparator.comparing;
+import static com.qubular.binding.glowmarkt.internal.GlowmarktConstants.BINDING_ID;
 
 public class TariffChannelTypeProvider implements ChannelTypeProvider, ThingHandlerService {
     private static final ChannelTypeUID TARIFF_STANDING_CHARGE = new ChannelTypeUID(BINDING_ID, "tariff_standing_charge");

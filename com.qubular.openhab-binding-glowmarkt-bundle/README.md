@@ -32,12 +32,20 @@ Supported Channels
 * Gas Cost
 * Electricity Consumption
 * Electricity Cost
+* Gas Standing Charge
+* Gas Per Unit Rate
+* Electricity Standing Charge
+* Electricity Per Unit Rate
 
 The downloaded data is at 30-minute interval resolution, and it will download all the data 
 that it can find. Every 24 hours it will download any new data it doesn't already have.
 
 Changelog
 ---------
+
+#### 3.3.5
+
+Add support for reporting current tariff standing charge and per-unit rates.
 
 #### 3.3.3
 

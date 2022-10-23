@@ -16,6 +16,7 @@ import org.eclipse.jetty.client.util.FormContentProvider;
 import org.eclipse.jetty.client.util.StringContentProvider;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
+import org.eclipse.jetty.http.HttpStatus;
 import org.eclipse.jetty.util.Fields;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -49,6 +50,7 @@ import static javax.servlet.http.HttpServletResponse.SC_OK;
 @Component(configurationPid = "vicare.bridge")
 public class VicareServiceImpl implements VicareService {
     private static final Logger logger = LoggerFactory.getLogger(VicareServiceImpl.class);
+    public static final int RATE_LIMIT_EXCEEDED = 429;
     private final HttpService httpService;
     private final HttpClientProvider httpClientProvider;
     private final TokenStore tokenStore;
@@ -104,10 +106,16 @@ public class VicareServiceImpl implements VicareService {
         public int statusCode;
         public String message;
         public String errorType;
+        public ExtendedPayload extendedPayload;
+    }
+
+    private static class ExtendedPayload {
+        public long limitReset;
     }
 
     @Override
     public List<Installation> getInstallations() throws AuthenticationException, IOException {
+        logger.trace("Fetching installations.");
         TokenStore.AccessToken accessToken = getValidAccessToken()
                 .orElseThrow(()-> new AuthenticationException("No access token for Viessmann API"));
 
@@ -148,6 +156,7 @@ public class VicareServiceImpl implements VicareService {
             if (refreshToken == null) {
                 throw new AuthenticationException("Unable to authenticate: No valid access token and no refresh token.");
             } else {
+                logger.trace("Refreshing access token.");
                 Fields fields = new Fields();
                 fields.put("grant_type", "refresh_token");
                 fields.put("client_id", config.getClientId());
@@ -176,6 +185,7 @@ public class VicareServiceImpl implements VicareService {
 
     @Override
     public List<Feature> getFeatures(long installationId, String gatewaySerial, String deviceId) throws AuthenticationException, IOException {
+        logger.trace("Fetching features for {}/{}", gatewaySerial, deviceId);
         TokenStore.AccessToken accessToken = getValidAccessToken()
                 .orElseThrow(()-> new AuthenticationException("No access token for Viessmann API"));
 
@@ -195,6 +205,23 @@ public class VicareServiceImpl implements VicareService {
                 if (contentResponse.getStatus() == SC_OK) {
                     return extractFeatures(responseContent);
                 } else {
+                    String msg = "";
+                    try {
+                        HttpErrorResponse errorResponse = apiGson().fromJson(responseContent, HttpErrorResponse.class);
+                        if (errorResponse != null) {
+                            msg = String.format("Unable to request features from IoT API, server returned %s, %s: %s",
+                                                contentResponse.getStatus(),
+                                                errorResponse.message,
+                                                errorResponse.errorType);
+                            if (contentResponse.getStatus() == RATE_LIMIT_EXCEEDED && errorResponse.extendedPayload != null) {
+                                logger.warn("Rate limit expires at %s", Instant.ofEpochMilli(errorResponse.extendedPayload.limitReset));
+                            }
+                            logger.warn(msg);
+                            throw new IOException(msg);
+                        }
+                    } catch (JsonSyntaxException e) {
+                        // never mind
+                    }
                     throw new IOException("Unable to request features from IoT API, server returned " + contentResponse.getStatus());
                 }
             } else {
@@ -209,7 +236,7 @@ public class VicareServiceImpl implements VicareService {
 
     @Override
     public void sendCommand(URI uri, Map<String, Object> params) throws AuthenticationException, IOException, CommandFailureException {
-        logger.debug("Sending command {}, params {}", uri, params);
+        logger.trace("Sending command {}, params {}", uri, params);
         TokenStore.AccessToken accessToken = getValidAccessToken()
                 .orElseThrow(()-> new AuthenticationException("No access token for Viessmann API"));
 

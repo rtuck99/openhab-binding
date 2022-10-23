@@ -354,6 +354,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
                     @Override
                     public void visit(TextFeature f) {
+                        logger.info("Update {} with {}", channelUID, f.getValue());
                         updateState(channelUID, new StringType(f.getValue()));
                     }
 

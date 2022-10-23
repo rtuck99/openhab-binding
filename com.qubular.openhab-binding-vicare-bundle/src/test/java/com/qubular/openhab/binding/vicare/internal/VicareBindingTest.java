@@ -11,6 +11,7 @@ import com.qubular.vicare.model.params.EnumParamDescriptor;
 import com.qubular.vicare.model.params.NumericParamDescriptor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -855,10 +856,10 @@ public class VicareBindingTest {
         boilerHandler2.setCallback(thingHandlerCallback2);
 
         boilerHandler1.initialize();
-        verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        verify(thingHandlerCallback1, timeout(1000)).statusUpdated(any(Thing.class), argThat(tsi -> tsi.getStatus() == ThingStatus.ONLINE));
 
         boilerHandler2.initialize();
-        verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_2_ID);
+        verify(thingHandlerCallback2, timeout(1000)).statusUpdated(any(Thing.class), argThat(tsi -> tsi.getStatus() == ThingStatus.ONLINE));
 
         verify(thingHandlerCallback1, timeout(1000)).thingUpdated(any(Thing.class));
         ChannelUID channel1UID = new ChannelUID(boiler1.getUID(), "device_serial");

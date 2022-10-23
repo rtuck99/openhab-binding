@@ -23,12 +23,12 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.function.Supplier;
 
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThingUniqueId;
+import static java.util.Optional.empty;
 
 public class VicareBridgeHandler extends BaseBridgeHandler {
     private static final Logger logger = LoggerFactory.getLogger(VicareBridgeHandler.class);
@@ -41,10 +41,10 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
     private String bindingVersion;
 
     private static class CachedResponse {
-        final List<Feature> response;
+        final CompletableFuture<List<Feature>> response;
         final Instant responseTimestamp;
 
-        public CachedResponse(List<Feature> response, Instant responseTimestamp) {
+        public CachedResponse(CompletableFuture<List<Feature>> response, Instant responseTimestamp) {
             this.response = response;
             this.responseTimestamp = responseTimestamp;
         }
@@ -121,26 +121,30 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
     }
 
     public Optional<Feature> handleBridgedDeviceCommand(ChannelUID channelUID, Command command) throws AuthenticationException, IOException, CommandFailureException {
-        logger.debug("Handling command {} for channel {} from thing {}", command, channelUID, channelUID.getThingUID());
+        logger.trace("Handling command {} for channel {} from thing {}", command, channelUID, channelUID.getThingUID());
         Thing targetThing = thingRegistry.get(channelUID.getThingUID());
         Channel channel = targetThing.getChannel(channelUID);
         if (command instanceof RefreshType) {
-            try {
-                List<Feature> features = getFeatures(targetThing);
-                String featureName = channel.getProperties().get(PROPERTY_FEATURE_NAME);
-                if (getThing().getStatus() != ThingStatus.ONLINE) {
-                    updateStatus(ThingStatus.ONLINE);
-                }
-                return features.stream()
-                        .filter(f -> f.getName().equals(featureName))
-                        .findAny();
-            } catch (AuthenticationException e) {
-                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "Unable to authenticate with Viessmann API: " + e.getMessage());
-                throw e;
-            } catch (IOException e) {
-                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "Unable to communicate with Viessmann API: " + e.getMessage());
-                throw e;
-            }
+            return getFeatures(targetThing)
+                    .thenApply(features -> {
+                        String featureName = channel.getProperties().get(PROPERTY_FEATURE_NAME);
+                        if (getThing().getStatus() != ThingStatus.ONLINE) {
+                            updateStatus(ThingStatus.ONLINE);
+                        }
+                        return features.stream()
+                                .filter(f -> f.getName().equals(featureName))
+                                .findAny();
+                               })
+                    .exceptionally(e -> {
+                        if (e instanceof AuthenticationException) {
+                          updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "Unable to authenticate with Viessmann API: " + e.getMessage());
+                        } else {
+                            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "Unable to communicate with Viessmann API: " + e.getMessage());
+                        }
+                        logger.warn("Unexpected exception refreshing", e);
+                        return empty();
+                    })
+                    .join();
         } else if (command instanceof StringType) {
             sendCommand(channelUID, targetThing, channel, () -> ((StringType) command).toString());
         } else if (command instanceof DecimalType) {
@@ -150,7 +154,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
         } else {
             logger.trace("Ignored unsupported command type {}", command);
         }
-        return Optional.empty();
+        return empty();
     }
 
     private void sendCommand(ChannelUID channelUID, Thing targetThing, Channel channel, Supplier<Object> valueSupplier) throws AuthenticationException, IOException, CommandFailureException {
@@ -163,7 +167,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
         }
     }
 
-    private synchronized List<Feature> getFeatures(Thing thing) throws AuthenticationException, IOException {
+    private synchronized CompletableFuture<List<Feature>> getFeatures(Thing thing) {
         Instant now = Instant.now();
         String key = thing.getUID().getId();
         CachedResponse response = cachedResponses.get(key);
@@ -172,8 +176,16 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
         }
 
         VicareUtil.IGD s = decodeThingUniqueId(VicareDeviceThingHandler.getDeviceUniqueId(thing));
-        List<Feature> features = vicareService.getFeatures(s.installationId, s.gatewaySerial, s.deviceId);
+        CompletableFuture<List<Feature>> features = new CompletableFuture<>();
         cachedResponses.put(key, new CachedResponse(features, now));
+        features.completeAsync(() -> {
+            try {
+                return vicareService.getFeatures(s.installationId, s.gatewaySerial, s.deviceId);
+            } catch (AuthenticationException | IOException e) {
+                features.completeExceptionally(e);
+                return null;
+            }
+        });
         return features;
     }
 
@@ -190,16 +202,16 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
         String commandName = channel.getProperties().get(PROPERTY_COMMAND_NAME);
         String featureName = channel.getProperties().get(PROPERTY_FEATURE_NAME);
         Thing thing = thingRegistry.get(channel.getUID().getThingUID());
-        try {
-            return getFeatures(thing).stream()
-                    .filter(f -> f.getName().equals(featureName))
-                    .flatMap(f -> f.getCommands().stream())
-                    .filter(c -> c.getName().equals(commandName))
-                    .findFirst();
-        } catch (IOException | AuthenticationException e) {
-            logger.debug("Unable to get command descriptor", e);
-            return Optional.empty();
-        }
+            return getFeatures(thing)
+                    .thenApply(features -> features.stream()
+                            .filter(f -> f.getName().equals(featureName))
+                            .flatMap(f -> f.getCommands().stream())
+                            .filter(c -> c.getName().equals(commandName))
+                            .findFirst())
+                    .exceptionally(e -> {
+                        logger.debug("Unable to get command descriptor", e);
+                        return empty();
+                    }).join();
     }
 
     boolean isFeatureScanRunning() {

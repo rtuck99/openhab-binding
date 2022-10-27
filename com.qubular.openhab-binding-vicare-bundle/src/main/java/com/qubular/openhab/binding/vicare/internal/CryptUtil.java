@@ -20,7 +20,6 @@ import java.security.spec.KeySpec;
 import java.util.Base64;
 import java.util.Dictionary;
 import java.util.Hashtable;
-import java.util.Optional;
 
 import static java.util.Objects.requireNonNullElse;
 import static java.util.Optional.ofNullable;

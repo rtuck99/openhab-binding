@@ -64,6 +64,7 @@ class GlowmarktHandlerFactoryTest {
         doReturn(new Hashtable<>()).when(config).getProperties();
         when(serviceProvider.getChannelTypeRegistry()).thenReturn(new ChannelTypeRegistry());
         when(serviceProvider.getItemChannelLinkRegistry()).thenReturn(itemChannelLinkRegistry);
+        doReturn(new org.openhab.core.config.core.Configuration()).when(bridge).getConfiguration();
     }
 
     @AfterEach

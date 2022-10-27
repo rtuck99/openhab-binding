@@ -22,15 +22,16 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.security.GeneralSecurityException;
+import java.security.InvalidKeyException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static com.qubular.binding.glowmarkt.internal.GlowmarktConstants.PROPERTY_BINDING_VERSION;
+import static java.util.Objects.requireNonNullElse;
+import static java.util.Objects.requireNonNullElseGet;
 import static java.util.Optional.ofNullable;
 
 public class GlowmarktBridgeHandler extends BaseBridgeHandler {
@@ -43,6 +44,7 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
     public static final String CONFIG_PARAM_PASSWORD = "password";
     private static final String CONFIG_PARAM_SECURE_PASSWORD = "securePassword";
     public static final String CONFIG_PARAM_CRON_SCHEDULE = "cronSchedule";
+    public static final String CONFIG_USE_LIMITED_ENCRYPTION = "useLimitedEncryption";
 
     private static final Logger logger = LoggerFactory.getLogger(GlowmarktBridgeHandler.class);
 
@@ -70,23 +72,35 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
         this.persistenceServiceRegistry = persistenceServiceRegistry;
         this.cronScheduler = cronScheduler;
         try {
-            this.cryptUtil = new CryptUtil(configurationAdmin.getConfiguration(PID));
+            org.osgi.service.cm.Configuration configuration = applyConfiguration(configurationAdmin);
+            this.cryptUtil = new CryptUtil(configuration);
         } catch (IOException e) {
             throw new RuntimeException("Unable to initialize configuration", e);
         }
     }
 
+    private org.osgi.service.cm.Configuration applyConfiguration(ConfigurationAdmin configurationAdmin) throws IOException {
+        Map<String, Object> configProps = getConfig().getProperties();
+        boolean useLimitedEncryption = requireNonNullElse((Boolean) configProps.get(CONFIG_USE_LIMITED_ENCRYPTION), false);
+        org.osgi.service.cm.Configuration configuration = configurationAdmin.getConfiguration(PID);
+        Dictionary<String, Object> configAdminProps = requireNonNullElseGet(configuration.getProperties(), Hashtable::new);
+        configAdminProps.put(CryptUtil.CONFIG_USE_LIMITED_ENCRYPTION, useLimitedEncryption);
+        configuration.update(configAdminProps);
+        return configuration;
+    }
+
     @Override
     public void initialize() {
         logger.info("Initializing GlowmarktBridgeHandler");
-        migratePassword();
-        updateStatus(ThingStatus.UNKNOWN);
+        if (migratePassword()) {
+            updateStatus(ThingStatus.UNKNOWN);
+        }
         updateProperty(PROPERTY_BINDING_VERSION, serviceProvider.getBindingVersion());
         oneTimeUpdateJob = scheduler.schedule(resourceUpdateJob(),5, TimeUnit.SECONDS);
         cronUpdateJob = cronScheduler.schedule(() -> resourceUpdateJob().run(), getCronSchedule());
     }
 
-    private void migratePassword() {
+    private boolean migratePassword() {
         Configuration config = getConfig();
         String password = (String) config.get(CONFIG_PARAM_PASSWORD);
         if (password != null && !password.replaceAll("\\*", "").isEmpty()) {
@@ -97,10 +111,17 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
                 editable.put(CONFIG_PARAM_SECURE_PASSWORD, encrypted);
                 editable.put(CONFIG_PARAM_PASSWORD, password.replaceAll(".", "*"));
                 updateConfiguration(editable);
+            } catch (InvalidKeyException e) {
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
+                             "Unable to encrypt your password, please check whether your crypto.policy is set" +
+                                     " to enable full strength encryption or enable limited encryption in Advanced" +
+                                     " Settings.");
+                return false;
             } catch (GeneralSecurityException | IOException e) {
                 throw new RuntimeException("Unable to encrypt password.", e);
             }
         }
+        return true;
     }
 
     @Override

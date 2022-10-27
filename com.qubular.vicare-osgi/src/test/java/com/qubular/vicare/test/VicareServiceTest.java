@@ -30,6 +30,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -145,7 +146,7 @@ public class VicareServiceTest {
 
     @Test
     @DisabledIf("realConnection")
-    public void extractAuthoriseCodeObtainsAnAccessToken() throws ExecutionException, InterruptedException, TimeoutException, ServletException, NamespaceException, IOException {
+    public void extractAuthoriseCodeObtainsAnAccessToken() throws ExecutionException, InterruptedException, TimeoutException, ServletException, NamespaceException, IOException, GeneralSecurityException {
         String contentAsString = httpClient.GET("http://localhost:9000/vicare/setup")
                 .getContentAsString();
         AtomicBoolean requested = new AtomicBoolean();

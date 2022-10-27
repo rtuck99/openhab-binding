@@ -2,6 +2,7 @@ package com.qubular.openhab.binding.vicare.internal;
 
 import com.qubular.openhab.binding.vicare.VicareServiceProvider;
 import com.qubular.openhab.binding.vicare.internal.configuration.SimpleConfiguration;
+import com.qubular.openhab.binding.vicare.internal.tokenstore.PersistedTokenStore;
 import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.CommandFailureException;
 import com.qubular.vicare.VicareConfiguration;
@@ -16,11 +17,13 @@ import org.openhab.core.thing.binding.BaseBridgeHandler;
 import org.openhab.core.thing.binding.ThingHandlerService;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.RefreshType;
+import org.osgi.service.cm.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.security.InvalidKeyException;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
@@ -28,9 +31,12 @@ import java.util.function.Supplier;
 
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThingUniqueId;
+import static java.util.Objects.requireNonNullElse;
+import static java.util.Objects.requireNonNullElseGet;
 import static java.util.Optional.empty;
 
 public class VicareBridgeHandler extends BaseBridgeHandler {
+    public static final String CONFIG_USE_LIMITED_ENCRYPTION = "useLimitedEncryption";
     private static final Logger logger = LoggerFactory.getLogger(VicareBridgeHandler.class);
     public static final int POLLING_STARTUP_DELAY_SECS = 10;
     private final ThingRegistry thingRegistry;
@@ -39,6 +45,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
     private final VicareService vicareService;
     private final Map<String, CachedResponse> cachedResponses = new HashMap<>();
     private String bindingVersion;
+    private final VicareServiceProvider vicareServiceProvider;
 
     private static class CachedResponse {
         final CompletableFuture<List<Feature>> response;
@@ -66,7 +73,8 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
         this.thingRegistry = vicareServiceProvider.getThingRegistry();
         this.config = vicareServiceProvider.getVicareConfiguration();
         this.bindingVersion = vicareServiceProvider.getBindingVersion();
-        ((SimpleConfiguration)this.config).setConfigurationParameters(getConfig().getProperties());
+        this.vicareServiceProvider = vicareServiceProvider;
+        applyConfiguration(getConfig().getProperties());
     }
 
     @Override
@@ -117,7 +125,22 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
     @Override
     public void handleConfigurationUpdate(Map<String, Object> configurationParameters) {
         super.handleConfigurationUpdate(configurationParameters);
+        applyConfiguration(configurationParameters);
+        cachedResponses.clear();
+    }
+
+    private void applyConfiguration(Map<String, Object> configurationParameters) {
         ((SimpleConfiguration) config).setConfigurationParameters(configurationParameters);
+        try {
+            Configuration configuration = vicareServiceProvider.getConfigurationAdmin().getConfiguration(
+                    PersistedTokenStore.TOKEN_STORE_PID);
+            Dictionary<String, Object> props = requireNonNullElseGet(configuration.getProperties(), Hashtable::new);
+            boolean useLimitedEncryption = requireNonNullElse((Boolean) configurationParameters.get(CONFIG_USE_LIMITED_ENCRYPTION), false);
+            props.put(CryptUtil.CONFIG_USE_LIMITED_ENCRYPTION, useLimitedEncryption);
+            configuration.update(props);
+        } catch (IOException e) {
+            logger.warn("Unable to write PersistedTokenStore configuration", e);
+        }
     }
 
     public Optional<Feature> handleBridgedDeviceCommand(ChannelUID channelUID, Command command) throws AuthenticationException, IOException, CommandFailureException {
@@ -182,7 +205,12 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
             try {
                 return vicareService.getFeatures(s.installationId, s.gatewaySerial, s.deviceId);
             } catch (AuthenticationException | IOException e) {
-                features.completeExceptionally(e);
+                if ((e instanceof AuthenticationException) &&
+                        (e.getCause() instanceof InvalidKeyException)) {
+                    features.completeExceptionally(new AuthenticationException("Unable to store access token, please check whether your crypto.policy is set to enable full strength encryption or enable limited encryption in Advanced Settings.", (Exception) e.getCause()));
+                } else {
+                    features.completeExceptionally(e);
+                }
                 return null;
             }
         });

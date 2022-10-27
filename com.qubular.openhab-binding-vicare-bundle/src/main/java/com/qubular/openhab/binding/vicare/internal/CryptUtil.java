@@ -1,6 +1,8 @@
 package com.qubular.openhab.binding.vicare.internal;
 
 import org.osgi.service.cm.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
@@ -20,11 +22,14 @@ import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.Optional;
 
+import static java.util.Objects.requireNonNullElse;
 import static java.util.Optional.ofNullable;
 
 public class CryptUtil {
+    private static final Logger logger = LoggerFactory.getLogger(CryptUtil.class);
     private static final String PW = "40964545-bd87-44db-8459-2003208b1e6a";
     private static final String CONFIG_SALT = "salt";
+    public static final String CONFIG_USE_LIMITED_ENCRYPTION = "useLimitedEncryption";
     private static final SecureRandom secureRandom = new SecureRandom();
     private final Configuration configuration;
 
@@ -55,7 +60,7 @@ public class CryptUtil {
             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
             SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
             int iterations = 256;
-            KeySpec spec = new PBEKeySpec(PW.toCharArray(), salt, iterations, 256);
+            KeySpec spec = new PBEKeySpec(PW.toCharArray(), salt, iterations, getUseLimitedEncryption() ? 128 : 256);
             SecretKey secretKey = keyFactory.generateSecret(spec);
             SecretKeySpec secretKeySpec = new SecretKeySpec(secretKey.getEncoded(), "AES");
             cipher.init(opmode, secretKeySpec, new IvParameterSpec(initializationVector));
@@ -63,7 +68,7 @@ public class CryptUtil {
     }
 
     private byte[] initializeSalt() {
-        Dictionary<String, Object> props = ofNullable(configuration.getProperties()).orElseGet(Hashtable::new);
+        Dictionary<String, Object> props = getProperties();
         byte[] salt = (byte[]) props.get(CONFIG_SALT);
         if (salt == null) {
             salt = sixteenRandomBytes();
@@ -77,10 +82,17 @@ public class CryptUtil {
         return salt;
     }
 
+    private boolean getUseLimitedEncryption() {
+        return requireNonNullElse((Boolean) getProperties().get(CONFIG_USE_LIMITED_ENCRYPTION), false);
+    }
+
+    private Dictionary<String, Object> getProperties() {
+        return ofNullable(configuration.getProperties()).orElseGet(Hashtable::new);
+    }
+
     private static byte[] sixteenRandomBytes() {
         byte[] bytes = new byte[16];
         secureRandom.nextBytes(bytes);
         return bytes;
     }
-
 }

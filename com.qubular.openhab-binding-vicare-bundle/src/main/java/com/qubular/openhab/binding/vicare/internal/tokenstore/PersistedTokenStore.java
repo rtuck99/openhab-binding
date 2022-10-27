@@ -28,7 +28,7 @@ import static java.util.Optional.ofNullable;
 
 @Component(service = TokenStore.class)
 public class PersistedTokenStore implements TokenStore {
-    private static final String TOKEN_STORE_PID = "com.qubular.openhab.binding.vicare.PersistedTokenStore";
+    public static final String TOKEN_STORE_PID = "com.qubular.openhab.binding.vicare.PersistedTokenStore";
     private static final String PROPERTY_ACCESS_TOKEN = "accessToken";
     private static final String PROPERTY_SECURE_ACCESS_TOKEN = "secureAccessToken";
     private static final String PROPERTY_REFRESH_TOKEN = "refreshToken";
@@ -47,9 +47,19 @@ public class PersistedTokenStore implements TokenStore {
         try {
             this.cryptUtil = new CryptUtil(configurationAdmin.getConfiguration(TOKEN_STORE_PID));
             migratePlainTextTokens();
-        } catch (IOException | GeneralSecurityException e) {
+        } catch (IOException e) {
+            throw new RuntimeException("Unable to write configuration.", e);
+        } catch (GeneralSecurityException e) {
+            logCryptoWarning(e);
             throw new RuntimeException("Unable to write configuration.", e);
         }
+    }
+
+    private void logCryptoWarning(GeneralSecurityException e) {
+        logger.error("Unable to initialize the CryptUtil. " +
+         "This may occur if full strength encryption is not enabled in your JVM. " +
+         "Please check that either you have enabled crypto.policy=unlimited in your OpenHAB installation, " +
+         "or if this is not possible that you have enabled the \"Use limited strength encryption\" advanced option in the Viessmann API Bridge.");
     }
 
     private void migratePlainTextTokens() throws IOException, GeneralSecurityException {
@@ -72,7 +82,7 @@ public class PersistedTokenStore implements TokenStore {
     }
 
     @Override
-    public AccessToken storeAccessToken(String accessToken, Instant expiry) {
+    public AccessToken storeAccessToken(String accessToken, Instant expiry) throws GeneralSecurityException {
         AccessToken token = new AccessToken(accessToken, expiry);
         try {
             Configuration configuration = configurationAdmin.getConfiguration(TOKEN_STORE_PID);
@@ -83,7 +93,7 @@ public class PersistedTokenStore implements TokenStore {
                 configuration.update(props);
                 eventAdmin.postEvent(new Event(TokenEvent.TOPIC_NEW_ACCESS_TOKEN, emptyMap()));
             }
-        } catch (IOException | GeneralSecurityException e) {
+        } catch (IOException e) {
             logger.warn("Unable to store access token", e);
         }
         return token;
@@ -111,7 +121,7 @@ public class PersistedTokenStore implements TokenStore {
         }
     }
     @Override
-    public void storeRefreshToken(String refreshToken) {
+    public void storeRefreshToken(String refreshToken) throws GeneralSecurityException {
         try {
             Configuration configuration = configurationAdmin.getConfiguration(TOKEN_STORE_PID);
             if (configuration != null) {
@@ -120,13 +130,13 @@ public class PersistedTokenStore implements TokenStore {
                 props.put(PROPERTY_SECURE_REFRESH_TOKEN, encrypted);
                 configuration.update(props);
             }
-        } catch (IOException | GeneralSecurityException e) {
+        } catch (IOException e) {
             logger.warn("Unable to store refresh token", e);
         }
     }
 
     @Override
-    public Optional<AccessToken> getAccessToken() {
+    public Optional<AccessToken> getAccessToken() throws GeneralSecurityException {
         try {
             Configuration configuration = configurationAdmin.getConfiguration(TOKEN_STORE_PID);
             if (configuration != null) {
@@ -140,8 +150,6 @@ public class PersistedTokenStore implements TokenStore {
             }
         } catch (IOException e) {
             logger.warn("Unable to fetch access token from store.", e);
-        } catch (GeneralSecurityException e) {
-            logger.warn("Unable to decrypt stored access token.", e);
         }
         return Optional.empty();
     }

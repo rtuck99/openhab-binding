@@ -2,6 +2,7 @@ package com.qubular.openhab.binding.vicare.internal;
 
 import com.qubular.openhab.binding.vicare.VicareServiceProvider;
 import com.qubular.openhab.binding.vicare.internal.configuration.SimpleConfiguration;
+import com.qubular.openhab.binding.vicare.internal.tokenstore.PersistedTokenStore;
 import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.CommandFailureException;
 import com.qubular.vicare.VicareService;
@@ -199,13 +200,18 @@ public class VicareBindingTest {
         Bundle bundle = mock(Bundle.class);
         doReturn(bundle).when(bundleContext).getBundle();
         org.osgi.service.cm.Configuration config = mock(org.osgi.service.cm.Configuration.class);
+        org.osgi.service.cm.Configuration persistedTokenStoreConfig = mock(org.osgi.service.cm.Configuration.class);
         doReturn(config).when(configurationAdmin).getConfiguration("com.qubular.openhab.binding.vicare.SimpleConfiguration");
+        doReturn(persistedTokenStoreConfig).when(configurationAdmin).getConfiguration(PersistedTokenStore.TOKEN_STORE_PID);
+        Dictionary<String, Object> ptsProps = new Hashtable<>();
+        doReturn(ptsProps).when(persistedTokenStoreConfig).getProperties();
         channelTypeRegistry = new ChannelTypeRegistry();
         when(vicareServiceProvider.getVicareConfiguration()).thenReturn(configuration);
         when(vicareServiceProvider.getVicareService()).thenReturn(vicareService);
         when(vicareServiceProvider.getBindingVersion()).thenReturn("3.3.0");
         when(vicareServiceProvider.getThingRegistry()).thenReturn(thingRegistry);
         when(vicareServiceProvider.getBundleContext()).thenReturn(bundleContext);
+        when(vicareServiceProvider.getConfigurationAdmin()).thenReturn(configurationAdmin);
     }
 
     @AfterEach

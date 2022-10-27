@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
@@ -42,6 +43,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static com.qubular.vicare.model.Status.*;
+import static java.lang.String.format;
 import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.StreamSupport.stream;
@@ -149,38 +151,49 @@ public class VicareServiceImpl implements VicareService {
     }
 
     private Optional<TokenStore.AccessToken> getValidAccessToken() throws AuthenticationException {
-        Optional<TokenStore.AccessToken> accessToken = tokenStore.getAccessToken();
-        if (!accessToken.isPresent() ||
-            accessToken.get().expiry.isBefore(Instant.now().plusSeconds(60))) {
-            String refreshToken = tokenStore.getRefreshToken().orElse(null);
-            if (refreshToken == null) {
-                throw new AuthenticationException("Unable to authenticate: No valid access token and no refresh token.");
-            } else {
-                logger.trace("Refreshing access token.");
-                Fields fields = new Fields();
-                fields.put("grant_type", "refresh_token");
-                fields.put("client_id", config.getClientId());
-                fields.put("refresh_token", refreshToken);
-                try {
-                    ContentResponse response = httpClientProvider.getHttpClient()
-                            .POST(config.getAccessServerURI())
-                            .content(new FormContentProvider(fields))
-                            .accept("application/json")
-                            .send();
-                    if (response.getStatus() == 200) {
-                        Gson gson = new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
-                        AccessGrantResponse accessGrantResponse = gson.fromJson(response.getContentAsString(), AccessGrantResponse.class);
-                        return of(tokenStore.storeAccessToken(accessGrantResponse.accessToken, Instant.now().plusSeconds(accessGrantResponse.expiresIn)));
-                    } else {
-                        logger.warn("Unable to refresh, access server sent {}", response.getStatus());
-                        throw new AuthenticationException("Unable to refresh access token");
+        try {
+            Optional<TokenStore.AccessToken> accessToken = tokenStore.getAccessToken();
+            if (!accessToken.isPresent() ||
+                    accessToken.get().expiry.isBefore(Instant.now().plusSeconds(60))) {
+                String refreshToken = tokenStore.getRefreshToken().orElse(null);
+                if (refreshToken == null) {
+                    throw new AuthenticationException(
+                            "Unable to authenticate: No valid access token and no refresh token.");
+                } else {
+                    logger.trace("Refreshing access token.");
+                    Fields fields = new Fields();
+                    fields.put("grant_type", "refresh_token");
+                    fields.put("client_id", config.getClientId());
+                    fields.put("refresh_token", refreshToken);
+                    try {
+                        ContentResponse response = httpClientProvider.getHttpClient()
+                                .POST(config.getAccessServerURI())
+                                .content(new FormContentProvider(fields))
+                                .accept("application/json")
+                                .send();
+                        if (response.getStatus() == 200) {
+                            Gson gson = new GsonBuilder().setFieldNamingPolicy(
+                                    FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
+                            AccessGrantResponse accessGrantResponse = gson.fromJson(response.getContentAsString(),
+                                                                                    AccessGrantResponse.class);
+                            return of(tokenStore.storeAccessToken(accessGrantResponse.accessToken,
+                                                                  Instant.now().plusSeconds(
+                                                                          accessGrantResponse.expiresIn)));
+                        } else {
+                            logger.warn("Unable to refresh, access server sent {}", response.getStatus());
+                            throw new AuthenticationException("Unable to refresh access token");
+                        }
+                    } catch (InterruptedException | TimeoutException | ExecutionException e) {
+                        throw new AuthenticationException("Unable to refresh access token", e);
                     }
-                } catch (InterruptedException | TimeoutException | ExecutionException e) {
-                    throw new AuthenticationException("Unable to refresh access token", e);
                 }
             }
+            return accessToken;
+        } catch (GeneralSecurityException e) {
+            String msg = format("Unable to obtain access token: %s", e.getMessage());
+            logger.warn(msg, e);
+            throw new AuthenticationException(msg, e);
         }
-        return accessToken;
     }
 
     @Override
@@ -190,7 +203,7 @@ public class VicareServiceImpl implements VicareService {
                 .orElseThrow(()-> new AuthenticationException("No access token for Viessmann API"));
 
         URI endpoint = URI.create(config.getIOTServerURI())
-                .resolve(String.format("equipment/installations/%s/gateways/%s/devices/%s/features", installationId, gatewaySerial, deviceId));
+                .resolve(format("equipment/installations/%s/gateways/%s/devices/%s/features", installationId, gatewaySerial, deviceId));
 
         try {
             String responseContent = maybeInjectFeatureResponse(installationId, gatewaySerial);
@@ -209,7 +222,7 @@ public class VicareServiceImpl implements VicareService {
                     try {
                         HttpErrorResponse errorResponse = apiGson().fromJson(responseContent, HttpErrorResponse.class);
                         if (errorResponse != null) {
-                            msg = String.format("Unable to request features from IoT API, server returned %s, %s: %s",
+                            msg = format("Unable to request features from IoT API, server returned %s, %s: %s",
                                                 contentResponse.getStatus(),
                                                 errorResponse.message,
                                                 errorResponse.errorType);
@@ -264,7 +277,7 @@ public class VicareServiceImpl implements VicareService {
             } else {
                 try {
                     HttpErrorResponse errorResponse = apiGson().fromJson(contentResponse.getContentAsString(), HttpErrorResponse.class);
-                    String msg = String.format("Failed to send command, server returned %d, %s - %s", contentResponse.getStatus(), errorResponse.errorType, errorResponse.message);
+                    String msg = format("Failed to send command, server returned %d, %s - %s", contentResponse.getStatus(), errorResponse.errorType, errorResponse.message);
                     logger.warn(msg);
                     throw new IOException(msg);
                 } catch (Exception e) {

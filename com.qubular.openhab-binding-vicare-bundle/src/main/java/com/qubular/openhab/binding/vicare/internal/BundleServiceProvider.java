@@ -5,6 +5,7 @@ import com.qubular.vicare.VicareConfiguration;
 import com.qubular.vicare.VicareService;
 import org.openhab.core.thing.ThingRegistry;
 import org.osgi.framework.BundleContext;
+import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -18,6 +19,8 @@ public class BundleServiceProvider implements VicareServiceProvider {
     private ThingRegistry thingRegistry;
     @Reference
     private VicareConfiguration vicareConfiguration;
+    @Reference
+    private ConfigurationAdmin configurationAdmin;
 
     private BundleContext bundleContext;
 
@@ -49,5 +52,10 @@ public class BundleServiceProvider implements VicareServiceProvider {
     @Override
     public BundleContext getBundleContext() {
         return bundleContext;
+    }
+
+    @Override
+    public ConfigurationAdmin getConfigurationAdmin() {
+        return configurationAdmin;
     }
 }

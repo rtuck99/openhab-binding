@@ -10,6 +10,7 @@ import org.osgi.service.cm.Configuration;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.security.Security;
 import java.util.Dictionary;
 import java.util.Hashtable;
 
@@ -51,6 +52,4 @@ class CryptUtilTest {
         String decrypted = cryptUtil.decrypt(encrypted);
         assertEquals(message, decrypted);
     }
-
-
 }

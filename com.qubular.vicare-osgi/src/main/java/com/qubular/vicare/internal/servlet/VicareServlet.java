@@ -23,11 +23,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpHeaders;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.InvalidKeyException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -139,12 +142,17 @@ public class VicareServlet extends HttpServlet {
                                     AccessGrantResponse accessGrantResponse = gson.fromJson(accessTokenResponse.getContentAsString(),
                                             AccessGrantResponse.class);
                                     logger.debug("Got access token, expiry in {}", accessGrantResponse.expiresIn);
-                                    tokenStore.storeAccessToken(accessGrantResponse.accessToken, Instant.now().plusSeconds(accessGrantResponse.expiresIn));
-                                    req.getSession().setAttribute(SESSION_ATTR_ACCESS_TOKEN, accessGrantResponse.accessToken);
-                                    if (accessGrantResponse.refreshToken != null) {
-                                        logger.debug("Got refresh token");
-                                        tokenStore.storeRefreshToken(accessGrantResponse.refreshToken);
-                                        resp.sendRedirect(RedirectURLHelper.getNavigatedURL(req).toURI().resolve("setup").toString());
+                                    try {
+                                        tokenStore.storeAccessToken(accessGrantResponse.accessToken, Instant.now().plusSeconds(accessGrantResponse.expiresIn));
+                                        req.getSession().setAttribute(SESSION_ATTR_ACCESS_TOKEN, accessGrantResponse.accessToken);
+                                        if (accessGrantResponse.refreshToken != null) {
+                                            logger.debug("Got refresh token");
+                                            tokenStore.storeRefreshToken(accessGrantResponse.refreshToken);
+                                            resp.sendRedirect(RedirectURLHelper.getNavigatedURL(req).toURI().resolve("setup").toString());
+                                        }
+                                    } catch (GeneralSecurityException e) {
+                                        logger.warn("Unable to store access token.", e);
+                                        renderCryptoWarning(req, resp);
                                     }
                                 }
                             } catch (InterruptedException | ExecutionException | TimeoutException e) {
@@ -175,10 +183,20 @@ public class VicareServlet extends HttpServlet {
         try (InputStream is = getClass().getResourceAsStream("setup.html")) {
             String html = new String(is.readAllBytes(), StandardCharsets.UTF_8);
 
-            boolean authorised = tokenStore.getAccessToken()
-                    .map(t -> t.expiry)
-                    .map(t -> t.isAfter(Instant.now()))
-                    .orElse(false);
+            boolean authorised;
+            try {
+                authorised = tokenStore.getAccessToken()
+                        .map(t -> t.expiry)
+                        .map(t -> t.isAfter(Instant.now()))
+                        .orElse(false);
+            } catch (GeneralSecurityException e) {
+                authorised = false;
+                logger.warn("Unable to decrypt existing access token.", e);
+                if (e.getCause() instanceof InvalidKeyException) {
+                    renderCryptoWarning(req, resp);
+                    return;
+                }
+            }
             html = html.replaceAll("\\$\\{redirectUri\\}", getRedirectURI(req).toString());
             html = html.replaceAll("\\$\\{authServerUri\\}", RedirectURLHelper.getNavigatedURL(req).toURI().resolve("redirect").toString());
             html = html.replaceAll("\\$\\{authorisationStatus\\}", authorised ? "AUTHORISED" : "NOT AUTHORISED");
@@ -228,5 +246,15 @@ public class VicareServlet extends HttpServlet {
 
         return AUTHORISE_ENDPOINT.toString() + "?" +
                 URIHelper.generateQueryParamsForURI(queryParams);
+    }
+
+    private void renderCryptoWarning(HttpServletRequest req, HttpServletResponse resp) {
+        resp.setStatus(SC_INTERNAL_SERVER_ERROR);
+        resp.setHeader("Content-Type", "text/html");
+        try (OutputStream os = resp.getOutputStream()) {
+            os.write(getClass().getResourceAsStream("cryptoWarning.html").readAllBytes());
+        } catch (IOException e) {
+            logger.warn("Unable to output error message", e);
+        }
     }
 }

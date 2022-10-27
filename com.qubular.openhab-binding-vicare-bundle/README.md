@@ -53,6 +53,7 @@ Changelog
 
 #### 3.3.5
 
+* Fix #18 Binding makes excessive calls during power outage
 * Fix #17 Text features missing from boiler channels
 * Additional device properties available on Thing 
 

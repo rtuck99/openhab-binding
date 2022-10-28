@@ -46,8 +46,13 @@ public class SimpleConfiguration implements VicareConfiguration {
     }
 
     @Override
+    public File getResponseCaptureFolder() {
+        return bundleContext.getDataFile("captures");
+    }
+
+    @Override
     public File getResponseCaptureFile() {
-        return bundleContext.getDataFile("responseCapture.json");
+        return new File(getResponseCaptureFolder(), "responseCapture.json");
     }
 
     @Override

@@ -14,12 +14,17 @@ public interface VicareConfiguration {
 
     String getIOTServerURI();
 
+    default File getResponseCaptureFolder() {
+        return null;
+    }
+
+    @Deprecated
     default File getResponseCaptureFile() {
         return null;
     }
 
     default boolean isResponseCaptureEnabled() {
-        return getResponseCaptureFile() != null;
+        return getResponseCaptureFolder() != null;
     }
 
     default File getResponseInjectionFile() {

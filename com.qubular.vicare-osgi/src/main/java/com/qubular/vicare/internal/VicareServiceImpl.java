@@ -16,7 +16,6 @@ import org.eclipse.jetty.client.util.FormContentProvider;
 import org.eclipse.jetty.client.util.StringContentProvider;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
-import org.eclipse.jetty.http.HttpStatus;
 import org.eclipse.jetty.util.Fields;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -28,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -131,6 +131,7 @@ public class VicareServiceImpl implements VicareService {
                     .method(HttpMethod.GET)
                     .send();
             if (iotApiResponse.getStatus() == SC_OK) {
+                maybeCaptureResponse(iotApiResponse.getContentAsString(), "installationsResponseCapture.json");
                 InstallationsResponse installations = apiGson().fromJson(iotApiResponse.getContentAsString(), InstallationsResponse.class);
                 maybeInjectInstallations(installations);
                 return installations.data;
@@ -214,7 +215,7 @@ public class VicareServiceImpl implements VicareService {
                         .method(HttpMethod.GET)
                         .send();
                 responseContent = contentResponse.getContentAsString();
-                maybeCaptureResponse(responseContent);
+                maybeCaptureResponse(responseContent, "responseCapture.json");
                 if (contentResponse.getStatus() == SC_OK) {
                     return extractFeatures(responseContent);
                 } else {
@@ -347,15 +348,25 @@ public class VicareServiceImpl implements VicareService {
     /**
      * capture the feature response to a file in order to aid debugging.
      * @param responseJson The json response
+     * @param fileName The capture file to create
      */
-    private void maybeCaptureResponse(String responseJson) {
+    private void maybeCaptureResponse(String responseJson, String fileName) {
         if (config.isResponseCaptureEnabled()) {
-            try (var fos = new FileOutputStream(config.getResponseCaptureFile(), false)) {
+            File responseCaptureFile = getCaptureFile(fileName);
+
+            try (var fos = new FileOutputStream(responseCaptureFile, false)) {
                 fos.write(responseJson.getBytes(StandardCharsets.UTF_8));
             } catch (IOException e) {
-                logger.warn("Unable to write to capture file {}: {}", config.getResponseCaptureFile(), e.getMessage());
+                logger.warn("Unable to write to capture file {}: {}", responseCaptureFile, e.getMessage());
             }
         }
+    }
+
+    private File getCaptureFile(String fileName) {
+        File responseCaptureFolder = config.getResponseCaptureFolder();
+        responseCaptureFolder.mkdirs();
+        File responseCaptureFile = new File(responseCaptureFolder, fileName);
+        return responseCaptureFile;
     }
 
     private static class InstantDeserializer implements JsonDeserializer<Instant> {

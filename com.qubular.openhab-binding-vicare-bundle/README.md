@@ -55,6 +55,7 @@ Changelog
 ### 3.3.6
 
 * Fix #21 Support setting for DHW target temperature heating.dhw.temperature.main
+* Fix #9 Add response capture for installations and gateways
 
 #### 3.3.5
 

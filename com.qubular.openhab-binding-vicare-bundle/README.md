@@ -30,6 +30,7 @@ Supported Features
 * DHW Heating status
 * DHW Hot water storage temperature
 * DHW Primary and Circulation Pump Status
+* DHW target temperature (read/write)
 * Holiday Program settings
 * Heating curve settings
 
@@ -50,6 +51,10 @@ and they will appear in your Inbox.
 
 Changelog
 ---------
+
+### 3.3.6
+
+* Fix #21 Support setting for DHW target temperature heating.dhw.temperature.main
 
 #### 3.3.5
 

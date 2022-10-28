@@ -164,8 +164,14 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                         }
 
                         private void maybeAddPropertiesForSetter(Feature f, String name, Map<String, String> props) {
-                            Optional<CommandDescriptor> setter = f.getCommands().stream().filter(
-                                    cd -> cd.getName().equalsIgnoreCase("set" + name)).findFirst();
+                            Optional<CommandDescriptor> setter = f.getCommands().stream()
+                                    .filter(cd -> cd.getName().equalsIgnoreCase("set" + name))
+                                    .findFirst();
+                            if (!setter.isPresent() && "value".equals(name)) {
+                                setter = f.getCommands().stream()
+                                        .filter(cd -> cd.getParams().size() == 1)
+                                        .findFirst();
+                            }
                             if (setter.isPresent()) {
                                 CommandDescriptor command = setter.get();
                                 props.put(PROPERTY_COMMAND_NAME, command.getName());

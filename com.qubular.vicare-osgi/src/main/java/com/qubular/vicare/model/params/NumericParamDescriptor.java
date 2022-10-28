@@ -17,7 +17,7 @@ public class NumericParamDescriptor extends ParamDescriptor<Double> {
 
     @Override
     public Class<Double> getType() {
-        return null;
+        return Double.class;
     }
 
     @Override

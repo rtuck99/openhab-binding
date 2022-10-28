@@ -711,4 +711,30 @@ public class VicareServiceTest {
         assertEquals(new Status("connected"), tempSensor.get().getStatus());
     }
 
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_dhw_temperature_main() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse.json");
+
+        Optional<NumericSensorFeature> mainTemp = features.stream()
+                .filter(f -> f.getName().equals("heating.dhw.temperature.main"))
+                .map(NumericSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(mainTemp.isPresent());
+        assertEquals(50.0, mainTemp.get().getValue().getValue(), 0.01);
+        assertEquals(new Unit("celsius"), mainTemp.get().getValue().getUnit());
+        assertEquals(1, mainTemp.get().getCommands().size());
+        CommandDescriptor command = mainTemp.get().getCommands().get(0);
+        assertEquals("setTargetTemperature", command.getName());
+        assertEquals(1, command.getParams().size());
+        assertTrue(command.isExecutable());
+        assertEquals(URI.create("https://api.viessmann.com/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.dhw.temperature.main/commands/setTargetTemperature"), command.getUri());
+        NumericParamDescriptor param = (NumericParamDescriptor) command.getParams().get(0);
+        assertEquals("temperature", param.getName());
+        assertEquals(Double.class, param.getType());
+        assertTrue(param.isRequired());
+        assertEquals(30, param.getMin());
+        assertEquals(60, param.getMax());
+        assertEquals(1, param.getStepping());
+    }
 }

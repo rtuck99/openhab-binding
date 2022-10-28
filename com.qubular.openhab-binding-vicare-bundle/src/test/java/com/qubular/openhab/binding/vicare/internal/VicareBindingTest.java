@@ -147,10 +147,24 @@ public class VicareBindingTest {
                                                                                                                                  new NumericParamDescriptor(true, "max", 21.0, 80.0, 1.0)), SET_LEVEL_LEVEL_URI)),
                                                                         Map.of("min", new DimensionalValue(Unit.CELSIUS, 20.0),
                                                                                "max", new DimensionalValue(Unit.CELSIUS, 45.0)));
+        Feature heatingDhwTemperatureMain = new NumericSensorFeature("heating.dhw.temperature.main",
+                                                                     "value",
+                                                                     List.of(new CommandDescriptor("setTargetTemperature",
+                                                                                                   true,
+                                                                                                   List.of(new NumericParamDescriptor(true,
+                                                                                                                                      "temperature",
+                                                                                                                                      30.0,
+                                                                                                                                      60.0,
+                                                                                                                                      1.0)),
+                                                                                                   URI.create("https://api.viessmann.com/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.dhw.temperature.main/commands/setTargetTemperature"))),
+                                                                     new DimensionalValue(Unit.CELSIUS, 50.0),
+                                                                     Status.NA,
+                                                                     null);
         doReturn(
                 List.of(temperatureSensor, statisticsFeature, textFeature, statusFeature, normalProgramFeature,
                         consumptionFeature, burnerFeature, curveFeature, holidayFeature, heatingDhw,
-                        heatingDhwTemperatureHotWaterStorage, operatingModesActive, heatingCircuitTemperatureLevels))
+                        heatingDhwTemperatureHotWaterStorage, operatingModesActive, heatingCircuitTemperatureLevels,
+                        heatingDhwTemperatureMain))
                 .when(vicareService)
                 .getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
     }
@@ -770,6 +784,38 @@ public class VicareBindingTest {
 
         handler.handleCommand(maxChannel.getUID(), QuantityType.valueOf("46  °C"));
         inOrder.verify(vicareService, timeout(1000)).sendCommand(SET_LEVEL_MAX_URI, Map.of("temperature", 46.0));
+    }
+
+    @Test
+    public void supportsHeatingDhwTemperatureMain() throws AuthenticationException, IOException, CommandFailureException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+
+        Channel tempChannel = findChannel(thingCaptor, "heating_dhw_temperature_main");
+        assertNotNull(tempChannel);
+        assertEquals("heating_dhw_temperature_main", tempChannel.getChannelTypeUID().getId());
+        assertEquals("heating.dhw.temperature.main", tempChannel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(tempChannel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(tempChannel.getUID()), stateCaptor.capture());
+        assertEquals(DecimalType.valueOf("50.0"), stateCaptor.getValue());
+
+        handler.handleCommand(tempChannel.getUID(), QuantityType.valueOf("51  °C"));
+        verify(vicareService, timeout(1000)).sendCommand(URI.create("https://api.viessmann.com/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.dhw.temperature.main/commands/setTargetTemperature"),
+                Map.of("temperature", 51.0));
     }
 
     private static Channel findChannel(ArgumentCaptor<Thing> thingCaptor, String channelId) {

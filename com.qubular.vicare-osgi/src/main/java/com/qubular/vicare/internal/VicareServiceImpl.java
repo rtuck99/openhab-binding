@@ -383,20 +383,26 @@ public class VicareServiceImpl implements VicareService {
                 JsonObject activeObject = properties.getAsJsonObject("active");
                 if (value != null) {
                     String valueType = value.get("type").getAsString();
+                    List<CommandDescriptor> commandDescriptors = generateCommands(commands);
                     if ("string".equals(valueType)) {
                         String textValue = value.get("value").getAsString();
-                        List<CommandDescriptor> commandDescriptors = generateCommands(commands);
                         return new TextFeature(featureName, textValue, commandDescriptors);
                     } else if ("number".equals(valueType)) {
                         if (statusObject != null) {
                             String status = statusObject.get("value").getAsString();
                             return new NumericSensorFeature(featureName,
-                                                            "value", dimensionalValueFromUnitValue(value),
-                                                            new Status(status), null);
+                                                            "value",
+                                                            commandDescriptors,
+                                                            dimensionalValueFromUnitValue(value),
+                                                            new Status(status),
+                                                            null);
                         } else {
                             return new NumericSensorFeature(featureName,
-                                                            "value", dimensionalValueFromUnitValue(value),
-                                                            NA, null);
+                                                            "value",
+                                                            commandDescriptors,
+                                                            dimensionalValueFromUnitValue(value),
+                                                            NA,
+                                                            null);
                         }
                     }
                 } else if (featureName.endsWith(".statistics")) {

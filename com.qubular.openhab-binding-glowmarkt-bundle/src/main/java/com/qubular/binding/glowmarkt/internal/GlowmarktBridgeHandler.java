@@ -191,7 +191,7 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
             try {
                 password = cryptUtil.decrypt((String) getConfig().get(CONFIG_PARAM_SECURE_PASSWORD));
             } catch (GeneralSecurityException e) {
-                throw new RuntimeException("Unable to decrypt password.", e);
+                throw new AuthenticationFailedException("Unable to decrypt password: " + e.getMessage(), e);
             }
             currentSession = glowmarktService.authenticate(getGlowmarktSettings(), username, password);
         }

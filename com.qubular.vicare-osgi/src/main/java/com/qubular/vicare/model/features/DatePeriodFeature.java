@@ -1,32 +1,38 @@
 package com.qubular.vicare.model.features;
 
-import com.qubular.vicare.model.Feature;
-import com.qubular.vicare.model.Status;
+import com.qubular.vicare.model.*;
+import com.qubular.vicare.model.values.BooleanValue;
+import com.qubular.vicare.model.values.LocalDateValue;
+import com.qubular.vicare.model.values.StatusValue;
 
 import java.time.LocalDate;
+import java.util.Map;
 
 public class DatePeriodFeature extends Feature {
-    private final Status active;
-    private final LocalDate start;
-    private final LocalDate end;
+    private final Map<String, Value> properties;
 
-    public DatePeriodFeature(String name, Status active, LocalDate start, LocalDate end) {
+    public DatePeriodFeature(String name, boolean active, LocalDate start, LocalDate end) {
         super(name);
-        this.active = active;
-        this.start = start;
-        this.end = end;
+        properties = Map.of("active", BooleanValue.valueOf(active),
+                            "start", new LocalDateValue(start),
+                            "end", new LocalDateValue(end));
     }
 
-    public Status getActive() {
-        return active;
+    public StatusValue getActive() {
+        return BooleanValue.TRUE.equals(properties.get("active")) ? StatusValue.ON : StatusValue.OFF;
     }
 
     public LocalDate getStart() {
-        return start;
+        return ((LocalDateValue) properties.get("start")).getValue();
     }
 
     public LocalDate getEnd() {
-        return end;
+        return ((LocalDateValue) properties.get("end")).getValue();
+    }
+
+    @Override
+    public Map<String, ? extends Value> getProperties() {
+        return properties;
     }
 
     @Override

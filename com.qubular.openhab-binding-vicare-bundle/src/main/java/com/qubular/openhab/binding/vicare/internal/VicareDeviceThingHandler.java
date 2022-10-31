@@ -5,9 +5,9 @@ import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.CommandFailureException;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.CommandDescriptor;
-import com.qubular.vicare.model.DimensionalValue;
+import com.qubular.vicare.model.values.DimensionalValue;
 import com.qubular.vicare.model.Feature;
-import com.qubular.vicare.model.Status;
+import com.qubular.vicare.model.values.StatusValue;
 import com.qubular.vicare.model.features.*;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.core.library.types.DateTimeType;
@@ -35,7 +35,6 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -45,9 +44,21 @@ import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThing
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.escapeUIDSegment;
 import static java.lang.String.format;
 import static java.util.Collections.singleton;
+import static java.util.stream.Collectors.toMap;
 import static org.osgi.service.event.EventConstants.EVENT_TOPIC;
 
 public class VicareDeviceThingHandler extends BaseThingHandler {
+    private static final Map<ConsumptionFeature.Stat, String> CONSUMPTION_CHANNEL_NAMES_BY_STAT = Map.of(
+            ConsumptionFeature.Stat.CURRENT_DAY, "currentDay",
+            ConsumptionFeature.Stat.CURRENT_WEEK, "currentWeek",
+            ConsumptionFeature.Stat.CURRENT_MONTH, "currentMonth",
+            ConsumptionFeature.Stat.CURRENT_YEAR, "currentYear",
+            ConsumptionFeature.Stat.LAST_SEVEN_DAYS, "lastSevenDays",
+            ConsumptionFeature.Stat.PREVIOUS_DAY, "previousDay",
+            ConsumptionFeature.Stat.PREVIOUS_WEEK, "previousWeek",
+            ConsumptionFeature.Stat.PREVIOUS_MONTH, "previousMonth",
+            ConsumptionFeature.Stat.PREVIOUS_YEAR, "previousYear"
+    );
     private static final Set<String> DEVICE_PROPERTIES = Set.of(
             PROPERTY_DEVICE_TYPE,
             PROPERTY_GATEWAY_SERIAL,
@@ -61,12 +72,9 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
     private final VicareServiceProvider vicareServiceProvider;
     private ServiceRegistration<EventHandler> discoveryListenerRegistration;
 
-    private static final Map<String, Function<ConsumptionFeature, DimensionalValue>> consumptionAccessorMap = Map.of(
-            "currentDay", ConsumptionFeature::getToday,
-            "lastSevenDays", ConsumptionFeature::getSevenDays,
-            "currentMonth", ConsumptionFeature::getMonth,
-            "currentYear", ConsumptionFeature::getYear
-    );
+    private static final Map<String, ConsumptionFeature.Stat> CONSUMPTION_STATS_BY_CHANNEL_NAME =
+            CONSUMPTION_CHANNEL_NAMES_BY_STAT.entrySet().stream()
+                    .collect(toMap(Map.Entry::getValue, Map.Entry::getKey));
 
     public VicareDeviceThingHandler(VicareServiceProvider vicareServiceProvider,
                                     Thing thing,
@@ -107,10 +115,10 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                         @Override
                         public void visit(ConsumptionFeature f) {
                             String id = escapeUIDSegment(f.getName());
-                            channels.add(consumptionChannel(id, f, "currentDay"));
-                            channels.add(consumptionChannel(id, f, "lastSevenDays"));
-                            channels.add(consumptionChannel(id, f, "currentMonth"));
-                            channels.add(consumptionChannel(id, f, "currentYear"));
+                            CONSUMPTION_CHANNEL_NAMES_BY_STAT.entrySet()
+                                    .stream()
+                                    .filter(e -> f.getConsumption(e.getKey()).isPresent())
+                                    .forEach(e -> channels.add(consumptionChannel(id, f, e.getValue())));
                         }
 
                         private Channel consumptionChannel(String id, Feature feature, String statName) {
@@ -131,7 +139,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                                     .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id)))
                                     .withProperties(props)
                                     .build());
-                            if (f.getStatus() != null && !Status.NA.equals(f.getStatus())) {
+                            if (f.getStatus() != null && !StatusValue.NA.equals(f.getStatus())) {
                                 String statusId = id + "_status";
                                 channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), statusId))
                                         .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(statusId)))
@@ -312,7 +320,8 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                     public void visit(ConsumptionFeature f) {
                         Channel channel = getThing().getChannel(channelUID);
                         String statName = channel.getProperties().get(PROPERTY_PROP_NAME);
-                        updateConsumptionStat(() -> consumptionAccessorMap.get(statName).apply(f).getValue());
+                        updateConsumptionStat(() -> f.getConsumption(CONSUMPTION_STATS_BY_CHANNEL_NAME.get(statName))
+                                .map(DimensionalValue::getValue).orElse(0.0));
                     }
 
                     private void updateConsumptionStat(Supplier<Double> valueSupplier) {
@@ -385,7 +394,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                         State newState = UnDefType.UNDEF;
                         switch (channel.getProperties().get(PROPERTY_PROP_NAME)) {
                             case "active":
-                                newState = Status.ON.equals(datePeriodFeature.getActive()) ? OnOffType.ON : OnOffType.OFF;
+                                newState = StatusValue.ON.equals(datePeriodFeature.getActive()) ? OnOffType.ON : OnOffType.OFF;
                                 break;
                             case "start":
                                 LocalDate startDate = datePeriodFeature.getStart();

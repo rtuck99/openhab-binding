@@ -70,7 +70,8 @@
                 com.qubular.vicare, \\
                 com.qubular.vicare.model, \\
                 com.qubular.vicare.model.features, \\
-                com.qubular.vicare.model.params
+                com.qubular.vicare.model.params, \\
+                com.qubular.vicare.model.values
               </bnd>
             </configuration>
           </execution>

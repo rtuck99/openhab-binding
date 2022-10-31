@@ -2,8 +2,11 @@ package com.qubular.vicare.model.features;
 
 import com.qubular.vicare.model.CommandDescriptor;
 import com.qubular.vicare.model.Feature;
+import com.qubular.vicare.model.values.StringValue;
+import com.qubular.vicare.model.Value;
 
 import java.util.List;
+import java.util.Map;
 
 import static java.util.Collections.emptyList;
 
@@ -21,6 +24,11 @@ public class TextFeature extends Feature {
 
     public String getValue() {
         return value;
+    }
+
+    @Override
+    public Map<String, ? extends Value> getProperties() {
+        return Map.of("value", new StringValue(value));
     }
 
     @Override

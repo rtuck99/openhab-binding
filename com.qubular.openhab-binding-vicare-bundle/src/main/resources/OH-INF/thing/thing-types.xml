@@ -380,4 +380,76 @@
     <description>Shows the end date of the holiday program</description>
     <state readOnly="true"/>
   </channel-type>
+  <channel-type id="heating_solar_active">
+    <item-type>Switch</item-type>
+    <label>Solar thermal status</label>
+    <description>Shows whether the solar thermal is activated and present on the heating installation</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_solar_power_production_currentDay">
+    <item-type>Number:Energy</item-type>
+    <label>Solar Power Production - Current Day</label>
+    <description>Shows statistics of solar power production for the current day</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_solar_power_production_previousDay">
+    <item-type>Number:Energy</item-type>
+    <label>Solar Power Production - Previous Day</label>
+    <description>Shows statistics of solar power production for the previous day</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_solar_power_production_currentWeek">
+    <item-type>Number:Energy</item-type>
+    <label>Solar Power Production - Current Week</label>
+    <description>Shows statistics of solar power production for the current week</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_solar_power_production_previousWeek">
+    <item-type>Number:Energy</item-type>
+    <label>Solar Power Production - Previous Week</label>
+    <description>Shows statistics of solar power production for the previous week</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_solar_power_production_currentMonth">
+    <item-type>Number:Energy</item-type>
+    <label>Solar Power Production - Current Month</label>
+    <description>Shows statistics of solar power production for the current month</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_solar_power_production_previousMonth">
+    <item-type>Number:Energy</item-type>
+    <label>Solar Power Production - Previous Month</label>
+    <description>Shows statistics of solar power production for the previous month</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_solar_power_production_currentYear">
+    <item-type>Number:Energy</item-type>
+    <label>Solar Power Production - Current Year</label>
+    <description>Shows statistics of solar power production for the current year</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_solar_power_production_previousYear">
+    <item-type>Number:Energy</item-type>
+    <label>Solar Power Production - Previous Year</label>
+    <description>Shows statistics of solar power production for the previous year</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_solar_pumps_circuit_status">
+    <item-type>String</item-type>
+    <label>Solar pump status</label>
+    <description>Shows the status of the solar pump</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_solar_sensors_temperature_collector">
+    <item-type>Number:Temperature</item-type>
+    <label>Solar Collector Temperature</label>
+    <description>Solar Collector Temperature in °C</description>
+    <state readOnly="true" pattern="%.1f °C"/>
+  </channel-type>
+  <channel-type id="heating_solar_sensors_temperature_dhw">
+    <item-type>Number:Temperature</item-type>
+    <label>Solar DHW Temperature</label>
+    <description>Show solar domestic hot water temperature in °C</description>
+    <state readOnly="true" pattern="%.1f °C"/>
+  </channel-type>
 </thing:thing-descriptions>

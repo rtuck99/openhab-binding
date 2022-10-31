@@ -4,6 +4,7 @@ import java.util.Objects;
 
 public class Unit {
     public static final Unit CELSIUS = new Unit("celsius");
+    public static final Unit KILOWATT_HOUR = new Unit("kilowattHour");
 
     private final String name;
 

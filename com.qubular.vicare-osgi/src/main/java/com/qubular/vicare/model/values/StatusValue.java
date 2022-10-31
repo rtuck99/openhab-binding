@@ -1,15 +1,17 @@
-package com.qubular.vicare.model;
+package com.qubular.vicare.model.values;
+
+import com.qubular.vicare.model.Value;
 
 import java.util.Objects;
 
-public class Status {
-    public static final Status NA = new Status("N/A");
-    public static final Status ON = new Status("on");
-    public static final Status OFF = new Status("off");
+public class StatusValue extends Value {
+    public static final StatusValue NA = new StatusValue("N/A");
+    public static final StatusValue ON = new StatusValue("on");
+    public static final StatusValue OFF = new StatusValue("off");
 
     private final String name;
 
-    public Status(String name) {
+    public StatusValue(String name) {
         this.name = name;
     }
 
@@ -21,7 +23,7 @@ public class Status {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Status status = (Status) o;
+        StatusValue status = (StatusValue) o;
         return Objects.equals(name, status.name);
     }
 
@@ -35,5 +37,10 @@ public class Status {
         return "Status{" +
                 "name='" + name + '\'' +
                 '}';
+    }
+
+    @Override
+    public String getType() {
+        return TYPE_STRING;
     }
 }

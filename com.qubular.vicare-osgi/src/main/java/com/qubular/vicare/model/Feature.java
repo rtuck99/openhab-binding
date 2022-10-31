@@ -4,6 +4,7 @@ import com.qubular.vicare.model.features.*;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public abstract class Feature {
     public interface Visitor {
@@ -36,6 +37,8 @@ public abstract class Feature {
     public String getName() {
         return name;
     }
+
+    public abstract Map<String, ? extends Value> getProperties();
 
     public abstract void accept(Visitor v);
 }

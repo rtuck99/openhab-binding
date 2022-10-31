@@ -1,8 +1,11 @@
-package com.qubular.vicare.model;
+package com.qubular.vicare.model.values;
+
+import com.qubular.vicare.model.Unit;
+import com.qubular.vicare.model.Value;
 
 import java.util.Objects;
 
-public class DimensionalValue {
+public class DimensionalValue extends Value {
     private Unit unit;
     private double value;
 
@@ -38,5 +41,10 @@ public class DimensionalValue {
                 "unit=" + unit +
                 ", value=" + value +
                 '}';
+    }
+
+    @Override
+    public String getType() {
+        return TYPE_NUMBER;
     }
 }

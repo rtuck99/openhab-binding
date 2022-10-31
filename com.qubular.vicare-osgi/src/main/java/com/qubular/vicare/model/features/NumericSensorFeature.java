@@ -1,45 +1,54 @@
 package com.qubular.vicare.model.features;
 
-import com.qubular.vicare.model.CommandDescriptor;
-import com.qubular.vicare.model.DimensionalValue;
-import com.qubular.vicare.model.Feature;
-import com.qubular.vicare.model.Status;
+import com.qubular.vicare.model.*;
+import com.qubular.vicare.model.values.BooleanValue;
+import com.qubular.vicare.model.values.DimensionalValue;
+import com.qubular.vicare.model.values.StatusValue;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class NumericSensorFeature extends Feature {
-    private final DimensionalValue value;
-    private final Status status;
-    private final Boolean active;
+    private final Map<String, Value> properties;
     private final String propertyName;
 
-    public NumericSensorFeature(String name, String propertyName, List<CommandDescriptor> commands, DimensionalValue value, Status status, Boolean active) {
+    public NumericSensorFeature(String name, String propertyName, List<CommandDescriptor> commands, DimensionalValue value, StatusValue status, Boolean active) {
         super(name, commands);
-        this.value = value;
-        this.status = status;
-        this.active = active;
+        properties = new HashMap<>();
+        properties.put(propertyName, value);
+        properties.put("status", status);
+        if (active != null) {
+            properties.put("active", BooleanValue.valueOf(active));
+        }
         this.propertyName = propertyName;
     }
 
-    public NumericSensorFeature(String name, String propertyName, DimensionalValue value, Status status, Boolean active) {
+    public NumericSensorFeature(String name, String propertyName, DimensionalValue value, StatusValue status, Boolean active) {
         this(name, propertyName, Collections.emptyList(), value, status, active);
     }
 
     public DimensionalValue getValue() {
-        return value;
+        return (DimensionalValue) properties.get(propertyName);
     }
 
-    public Status getStatus() {
-        return status;
+    public StatusValue getStatus() {
+        return (StatusValue) properties.get("status");
     }
 
     public Boolean isActive() {
-        return active;
+        BooleanValue active = (BooleanValue) properties.get("active");
+        return active == null ? null : active.getValue();
     }
 
     public String getPropertyName() {
         return propertyName;
+    }
+
+    @Override
+    public Map<String, ? extends Value> getProperties() {
+        return properties;
     }
 
     @Override

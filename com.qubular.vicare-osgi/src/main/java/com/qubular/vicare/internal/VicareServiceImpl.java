@@ -9,6 +9,9 @@ import com.qubular.vicare.model.features.*;
 import com.qubular.vicare.model.params.EnumParamDescriptor;
 import com.qubular.vicare.model.ParamDescriptor;
 import com.qubular.vicare.model.params.NumericParamDescriptor;
+import com.qubular.vicare.model.values.ArrayValue;
+import com.qubular.vicare.model.values.DimensionalValue;
+import com.qubular.vicare.model.values.StatusValue;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
@@ -41,11 +44,13 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
-import static com.qubular.vicare.model.Status.*;
+import static com.qubular.vicare.model.values.StatusValue.*;
 import static java.lang.String.format;
 import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toMap;
 import static java.util.stream.StreamSupport.stream;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 
@@ -405,7 +410,7 @@ public class VicareServiceImpl implements VicareService {
                                                             "value",
                                                             commandDescriptors,
                                                             dimensionalValueFromUnitValue(value),
-                                                            new Status(status),
+                                                            new StatusValue(status),
                                                             null);
                         } else {
                             return new NumericSensorFeature(featureName,
@@ -422,12 +427,12 @@ public class VicareServiceImpl implements VicareService {
                     Map<String, DimensionalValue> stats = properties.entrySet().stream()
                             .filter(e -> e.getValue().isJsonObject())
                             .filter(e -> "number".equals(e.getValue().getAsJsonObject().get("type").getAsString()))
-                            .collect(Collectors.toMap(Map.Entry::getKey,
+                            .collect(toMap(Map.Entry::getKey,
                                     e -> {
                                         JsonObject prop = e.getValue().getAsJsonObject();
                                         return dimensionalValueFromUnitValue(prop);
                                     }));
-                    return new ConsumptionFeature(featureName,
+                    return new ConsumptionSummaryFeature(featureName,
                             stats.get("currentDay"),
                             stats.get("lastSevenDays"),
                             stats.get("currentMonth"),
@@ -444,7 +449,7 @@ public class VicareServiceImpl implements VicareService {
                         );
                     } else if (startObject != null && endObject != null) {
                         boolean activeStatus = activeObject.get("value").getAsBoolean();
-                        return new DatePeriodFeature(featureName, activeStatus ? ON : OFF, dateFromYYYYMMDD(startObject), dateFromYYYYMMDD(endObject));
+                        return new DatePeriodFeature(featureName, activeStatus, dateFromYYYYMMDD(startObject), dateFromYYYYMMDD(endObject));
                     }
                 } else if (featureName.endsWith(".heating.curve")) {
                     JsonObject shiftObject = properties.getAsJsonObject("shift");
@@ -454,10 +459,25 @@ public class VicareServiceImpl implements VicareService {
                         DimensionalValue slope = dimensionalValueFromUnitValue(slopeObject);
                         return new CurveFeature(featureName, slope, shift);
                     }
+                } else if (featureName.endsWith(".production")) {
+                    Map<String, Value> arrayProperties = properties.entrySet().stream()
+                            .filter(e -> "array".equals(e.getValue().getAsJsonObject().get("type").getAsString()))
+                            .collect(toMap(Map.Entry::getKey, e -> {
+                                JsonObject property = e.getValue().getAsJsonObject();
+                                JsonArray jsonArray = property.get("value").getAsJsonArray();
+                                double[] values = new double[jsonArray.size()];
+                                for (int i = 0; i < jsonArray.size(); ++i) {
+                                    values[i] = jsonArray.get(i).getAsDouble();
+                                }
+                                Unit unit = new Unit(property.get("unit").getAsString());
+                                return new ArrayValue(unit, values);
+                            }));
+
+                    return new ConsumptionTotalFeature(featureName, arrayProperties);
                 } else if (statusObject != null || activeObject != null) {
-                    Status status = ofNullable(statusObject).map(o -> o.get("value"))
+                    StatusValue status = ofNullable(statusObject).map(o -> o.get("value"))
                             .map(JsonElement::getAsString)
-                            .map(Status::new)
+                            .map(StatusValue::new)
                             .orElse(NA);
                     Boolean active = ofNullable(activeObject).map(o -> o.get("value"))
                             .map(JsonElement::getAsBoolean)
@@ -474,7 +494,7 @@ public class VicareServiceImpl implements VicareService {
             Map<String, DimensionalValue> stats = properties.entrySet().stream()
                     .filter(e -> e.getValue().isJsonObject())
                     .filter(e -> "number".equals(e.getValue().getAsJsonObject().get("type").getAsString()))
-                    .collect(Collectors.toMap(Map.Entry::getKey,
+                    .collect(toMap(Map.Entry::getKey,
                             e -> {
                                 JsonObject prop = e.getValue().getAsJsonObject();
                                 return dimensionalValueFromUnitValue(prop);

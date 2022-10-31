@@ -1,25 +1,37 @@
 package com.qubular.vicare.model.features;
 
+import com.qubular.vicare.model.values.BooleanValue;
 import com.qubular.vicare.model.Feature;
-import com.qubular.vicare.model.Status;
+import com.qubular.vicare.model.values.StatusValue;
+import com.qubular.vicare.model.Value;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class StatusSensorFeature extends Feature {
-    private final Status status;
+    private final Map<String, Value> properties;
 
-    private final Boolean active;
-
-    public StatusSensorFeature(String name, Status status, Boolean active) {
+    public StatusSensorFeature(String name, StatusValue status, Boolean active) {
         super(name);
-        this.status = status;
-        this.active = active;
+        properties = new HashMap<>();
+        properties.put("status", status);
+        if (active != null) {
+            properties.put("active", BooleanValue.valueOf(active));
+        }
     }
 
-    public Status getStatus() {
-        return status;
+    public StatusValue getStatus() {
+        return (StatusValue) properties.get("status");
     }
 
     public Boolean isActive() {
-        return active;
+        BooleanValue active = (BooleanValue) properties.get("active");
+        return active == null ? null : active.getValue();
+    }
+
+    @Override
+    public Map<String, ? extends Value> getProperties() {
+        return properties;
     }
 
     @Override

@@ -1,24 +1,30 @@
 package com.qubular.vicare.model.features;
 
-import com.qubular.vicare.model.DimensionalValue;
+import com.qubular.vicare.model.values.DimensionalValue;
 import com.qubular.vicare.model.Feature;
 
+import java.util.Map;
+
 public class CurveFeature extends Feature {
-    private final DimensionalValue slope;
-    private final DimensionalValue shift;
+    private final Map<String, DimensionalValue> properties;
 
     public CurveFeature(String name, DimensionalValue slope, DimensionalValue shift) {
         super(name);
-        this.slope = slope;
-        this.shift = shift;
+        properties = Map.of("slope", slope,
+                            "shift", shift);
     }
 
     public DimensionalValue getSlope() {
-        return slope;
+        return properties.get("slope");
     }
 
     public DimensionalValue getShift() {
-        return shift;
+        return properties.get("shift");
+    }
+
+    @Override
+    public Map<String, DimensionalValue> getProperties() {
+        return properties;
     }
 
     @Override

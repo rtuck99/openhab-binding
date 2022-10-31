@@ -10,9 +10,11 @@ import com.qubular.vicare.model.*;
 import com.qubular.vicare.model.features.*;
 import com.qubular.vicare.model.params.EnumParamDescriptor;
 import com.qubular.vicare.model.params.NumericParamDescriptor;
+import com.qubular.vicare.model.values.ArrayValue;
+import com.qubular.vicare.model.values.DimensionalValue;
+import com.qubular.vicare.model.values.StatusValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -106,34 +108,34 @@ public class VicareBindingTest {
         doReturn(installations).when(vicareService).getInstallations();
 
         Feature temperatureSensor = new NumericSensorFeature("heating.dhw.sensors.temperature.outlet", "value",
-                                                             new DimensionalValue(new Unit("celsius"), 27.3), new Status("connected"), null
+                                                             new DimensionalValue(new Unit("celsius"), 27.3), new StatusValue("connected"), null
         );
         Feature statisticsFeature = new MultiValueFeature("heating.burners.0.statistics",
                                                           Map.of("starts", new DimensionalValue(new Unit("starts"), 5.0))
         );
         Feature textFeature = new TextFeature("device.serial", "7723181102527121");
-        Feature statusFeature = new StatusSensorFeature("heating.circuits.0.circulation.pump", new Status("on"), null);
+        Feature statusFeature = new StatusSensorFeature("heating.circuits.0.circulation.pump", new StatusValue("on"), null);
         Feature normalProgramFeature = new NumericSensorFeature("heating.circuits.0.operating.programs.normal",
                                                                 "temperature",
-                                                                new DimensionalValue(new Unit("celcius"), 21), Status.NA, true
+                                                                new DimensionalValue(new Unit("celcius"), 21), StatusValue.NA, true
         );
-        Feature consumptionFeature = new ConsumptionFeature("heating.gas.consumption.summary.dhw",
+        Feature consumptionFeature = new ConsumptionSummaryFeature("heating.gas.consumption.summary.dhw",
                 new DimensionalValue(new Unit("cubicMeter"), 0.2),
                 new DimensionalValue(new Unit("cubicMeter"), 2.1),
                 new DimensionalValue(new Unit("cubicMeter"), 1.8),
                 new DimensionalValue(new Unit("cubicMeter"), 5.9));
-        Feature burnerFeature = new StatusSensorFeature("heating.burners.0", Status.NA, true);
+        Feature burnerFeature = new StatusSensorFeature("heating.burners.0", StatusValue.NA, true);
         Feature curveFeature = new CurveFeature("heating.circuits.0.heating.curve",
                 new DimensionalValue(new Unit(""), 1.6),
                 new DimensionalValue(new Unit(""), -4.0));
         Feature holidayFeature = new DatePeriodFeature("heating.circuits.0.operating.programs.holiday",
-                Status.ON,
+                true,
                 LocalDate.parse("2022-12-23"),
                 LocalDate.parse("2022-12-26"));
-        Feature heatingDhw = new StatusSensorFeature("heating.dhw", Status.ON, true);
+        Feature heatingDhw = new StatusSensorFeature("heating.dhw", StatusValue.ON, true);
         Feature heatingDhwTemperatureHotWaterStorage = new NumericSensorFeature("heating.dhw.sensors.temperature.hotWaterStorage",
                                                                                 "value",
-                                                                                new DimensionalValue(new Unit("celsius"), 54.3), new Status("connected"), null
+                                                                                new DimensionalValue(new Unit("celsius"), 54.3), new StatusValue("connected"), null
         );
         Feature operatingModesActive = new TextFeature("heating.circuits.0.operating.modes.active", "dhw",
                                                      List.of(new CommandDescriptor("setMode", true,
@@ -158,13 +160,39 @@ public class VicareBindingTest {
                                                                                                                                       1.0)),
                                                                                                    URI.create("https://api.viessmann.com/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.dhw.temperature.main/commands/setTargetTemperature"))),
                                                                      new DimensionalValue(Unit.CELSIUS, 50.0),
-                                                                     Status.NA,
+                                                                     StatusValue.NA,
                                                                      null);
+        Feature solarSensorsTemperatureCollector = new NumericSensorFeature("heating.solar.sensors.temperature.collector",
+                                                                            "value",
+                                                                            new DimensionalValue(Unit.CELSIUS, 35.4),
+                                                                            new StatusValue("connected"),
+                                                                            null);
+        Feature solarPowerProduction = new ConsumptionTotalFeature("heating.solar.power.production",
+                                                                   Map.of("day", new ArrayValue(Unit.KILOWATT_HOUR, new double[]{0.0, 11.4, 7.3, 12.3, 27.3, 12.6, 2.9, 2.3}),
+                                                                          "week", new ArrayValue(Unit.KILOWATT_HOUR, new double[]{31.0, 58.3, 147.2, 44.5, 149.6, 21.9, 84.7}),
+                                                                          "month", new ArrayValue(Unit.KILOWATT_HOUR, new double[]{247.8, 355.5, 419.6, 437.9, 383.9, 512, 634.5, 905.1, 296.6, 57.7, 109.6, 162.7, 490.3}),
+                                                                          "year", new ArrayValue(Unit.KILOWATT_HOUR, new double[]{4250.6, 0})));
+        Feature solarSensorsTemperatureDHW = new NumericSensorFeature("heating.solar.sensors.temperature.dhw",
+                                                                      "value",
+                                                                      new DimensionalValue(Unit.CELSIUS, 28.1),
+                                                                      new StatusValue("connected"),
+                                                                      null);
+        Feature solarPumpsCircuit = new StatusSensorFeature("heating.solar.pumps.circuit",
+                                                            StatusValue.OFF,
+                                                            null);
+        Feature heatingSolar = new StatusSensorFeature("heating.solar",
+                                                        StatusValue.NA,
+                                                        true);
         doReturn(
                 List.of(temperatureSensor, statisticsFeature, textFeature, statusFeature, normalProgramFeature,
                         consumptionFeature, burnerFeature, curveFeature, holidayFeature, heatingDhw,
                         heatingDhwTemperatureHotWaterStorage, operatingModesActive, heatingCircuitTemperatureLevels,
-                        heatingDhwTemperatureMain))
+                        heatingDhwTemperatureMain,
+                        solarSensorsTemperatureCollector,
+                        solarPowerProduction,
+                        solarSensorsTemperatureDHW,
+                        solarPumpsCircuit,
+                        heatingSolar))
                 .when(vicareService)
                 .getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
     }
@@ -928,6 +956,171 @@ public class VicareBindingTest {
         assertEquals(StringType.valueOf("2222222222222222"), stateCaptor2.getValue());
     }
 
+    @Test
+    public void supportsHeatingSolarSensorsTemperatureCollector() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+
+        Channel tempChannel = findChannel(thingCaptor, "heating_solar_sensors_temperature_collector");
+        assertNotNull(tempChannel);
+        assertEquals("heating_solar_sensors_temperature_collector", tempChannel.getChannelTypeUID().getId());
+        assertEquals("heating.solar.sensors.temperature.collector", tempChannel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(tempChannel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(tempChannel.getUID()), stateCaptor.capture());
+        assertEquals(new DecimalType(35.4), stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsSolarPowerProduction() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        Channel channel = findChannel(thingCaptor, "heating_solar_power_production_currentDay");
+        assertEquals("heating_solar_power_production_currentDay", channel.getChannelTypeUID().getId());
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(new DecimalType(0), stateCaptor.getValue());
+
+        channel = findChannel(thingCaptor, "heating_solar_power_production_previousDay");
+        assertEquals("heating_solar_power_production_previousDay", channel.getChannelTypeUID().getId());
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(new DecimalType(11.4), stateCaptor.getValue());
+
+        channel = findChannel(thingCaptor, "heating_solar_power_production_currentWeek");
+        assertEquals("heating_solar_power_production_currentWeek", channel.getChannelTypeUID().getId());
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(new DecimalType(31), stateCaptor.getValue());
+
+        channel = findChannel(thingCaptor, "heating_solar_power_production_previousWeek");
+        assertEquals("heating_solar_power_production_previousWeek", channel.getChannelTypeUID().getId());
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(new DecimalType(58.3), stateCaptor.getValue());
+
+        channel = findChannel(thingCaptor, "heating_solar_power_production_currentMonth");
+        assertEquals("heating_solar_power_production_currentMonth", channel.getChannelTypeUID().getId());
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(new DecimalType(247.8), stateCaptor.getValue());
+
+        channel = findChannel(thingCaptor, "heating_solar_power_production_previousMonth");
+        assertEquals("heating_solar_power_production_previousMonth", channel.getChannelTypeUID().getId());
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(new DecimalType(355.5), stateCaptor.getValue());
+
+        channel = findChannel(thingCaptor, "heating_solar_power_production_currentYear");
+        assertEquals("heating_solar_power_production_currentYear", channel.getChannelTypeUID().getId());
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(new DecimalType(4250.6), stateCaptor.getValue());
+
+        channel = findChannel(thingCaptor, "heating_solar_power_production_previousYear");
+        assertEquals("heating_solar_power_production_previousYear", channel.getChannelTypeUID().getId());
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(new DecimalType(0), stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsSolarSensorsTemperatureDHW() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        Channel channel = findChannel(thingCaptor, "heating_solar_sensors_temperature_dhw");
+        assertEquals("heating_solar_sensors_temperature_dhw", channel.getChannelTypeUID().getId());
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(new DecimalType(28.1), stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsSolarPumpsCircuit() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        Channel channel = findChannel(thingCaptor, "heating_solar_pumps_circuit_status");
+        assertEquals("heating_solar_pumps_circuit_status", channel.getChannelTypeUID().getId());
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(StringType.valueOf("off"), stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsHeatingSolar() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        Channel channel = findChannel(thingCaptor, "heating_solar_active");
+        assertEquals("heating_solar_active", channel.getChannelTypeUID().getId());
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.ON, stateCaptor.getValue());
+    }
 
     private Thing heatingDeviceThing(String deviceId) {
         Thing deviceThing = mock(Thing.class);

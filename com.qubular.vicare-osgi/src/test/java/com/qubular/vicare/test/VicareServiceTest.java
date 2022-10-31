@@ -5,6 +5,7 @@ import com.qubular.vicare.model.*;
 import com.qubular.vicare.model.features.*;
 import com.qubular.vicare.model.params.EnumParamDescriptor;
 import com.qubular.vicare.model.params.NumericParamDescriptor;
+import com.qubular.vicare.model.values.StatusValue;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.http.HttpHeader;
@@ -43,7 +44,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static com.qubular.vicare.model.Status.OFF;
+import static com.qubular.vicare.model.values.StatusValue.OFF;
 import static java.util.Optional.ofNullable;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -468,19 +469,25 @@ public class VicareServiceTest {
     public void supports_heating_power_consumption_summary_dhw() throws ServletException, NamespaceException, AuthenticationException, IOException {
         List<Feature> features = getFeatures("deviceFeaturesResponse.json");
 
-        Optional<ConsumptionFeature> dhwConsumption = features.stream()
+        Optional<ConsumptionSummaryFeature> dhwConsumption = features.stream()
                 .filter(f -> f.getName().equals("heating.power.consumption.summary.dhw"))
-                .map(ConsumptionFeature.class::cast)
+                .map(ConsumptionSummaryFeature.class::cast)
                 .findFirst();
         assertTrue(dhwConsumption.isPresent());
-        assertEquals("kilowattHour", dhwConsumption.get().getToday().getUnit().getName());
-        assertEquals(0, dhwConsumption.get().getToday().getValue());
+        assertEquals("kilowattHour", ((ConsumptionFeature) dhwConsumption.get()).getConsumption(
+                ConsumptionFeature.Stat.CURRENT_DAY).orElse(null).getUnit().getName());
+        assertEquals(0, ((ConsumptionFeature) dhwConsumption.get()).getConsumption(
+                ConsumptionFeature.Stat.CURRENT_DAY).orElse(null).getValue());
         assertEquals("kilowattHour", dhwConsumption.get().getSevenDays().getUnit().getName());
         assertEquals(0.2, dhwConsumption.get().getSevenDays().getValue(), 0.001);
-        assertEquals("kilowattHour", dhwConsumption.get().getMonth().getUnit().getName());
-        assertEquals(0.2, dhwConsumption.get().getMonth().getValue(), 0.001);
-        assertEquals("kilowattHour", dhwConsumption.get().getYear().getUnit().getName());
-        assertEquals(0.9, dhwConsumption.get().getYear().getValue(), 0.001);
+        assertEquals("kilowattHour", ((ConsumptionFeature) dhwConsumption.get()).getConsumption(
+                ConsumptionFeature.Stat.CURRENT_MONTH).orElse(null).getUnit().getName());
+        assertEquals(0.2, ((ConsumptionFeature) dhwConsumption.get()).getConsumption(
+                ConsumptionFeature.Stat.CURRENT_MONTH).orElse(null).getValue(), 0.001);
+        assertEquals("kilowattHour", ((ConsumptionFeature) dhwConsumption.get()).getConsumption(
+                ConsumptionFeature.Stat.CURRENT_YEAR).orElse(null).getUnit().getName());
+        assertEquals(0.9, ((ConsumptionFeature) dhwConsumption.get()).getConsumption(
+                ConsumptionFeature.Stat.CURRENT_YEAR).orElse(null).getValue(), 0.001);
     }
 
     @Test
@@ -666,7 +673,7 @@ public class VicareServiceTest {
                 .map(StatusSensorFeature.class::cast)
                 .findFirst();
         assertTrue(dhwFeature.isPresent());
-        assertEquals(Status.ON, dhwFeature.get().getStatus());
+        assertEquals(StatusValue.ON, dhwFeature.get().getStatus());
         assertEquals(true, dhwFeature.get().isActive());
     }
 
@@ -680,7 +687,7 @@ public class VicareServiceTest {
                 .map(StatusSensorFeature.class::cast)
                 .findFirst();
         assertTrue(dhwFeature.isPresent());
-        assertEquals(Status.OFF, dhwFeature.get().getStatus());
+        assertEquals(StatusValue.OFF, dhwFeature.get().getStatus());
     }
 
     @Test
@@ -693,7 +700,7 @@ public class VicareServiceTest {
                 .map(StatusSensorFeature.class::cast)
                 .findFirst();
         assertTrue(dhwFeature.isPresent());
-        assertEquals(Status.ON, dhwFeature.get().getStatus());
+        assertEquals(StatusValue.ON, dhwFeature.get().getStatus());
     }
 
     @Test
@@ -708,7 +715,7 @@ public class VicareServiceTest {
         assertTrue(tempSensor.isPresent());
         assertEquals(54.3, tempSensor.get().getValue().getValue(), 0.01);
         assertEquals(new Unit("celsius"), tempSensor.get().getValue().getUnit());
-        assertEquals(new Status("connected"), tempSensor.get().getStatus());
+        assertEquals(new StatusValue("connected"), tempSensor.get().getStatus());
     }
 
     @Test
@@ -736,5 +743,67 @@ public class VicareServiceTest {
         assertEquals(30, param.getMin());
         assertEquals(60, param.getMax());
         assertEquals(1, param.getStepping());
+    }
+
+    @Test
+    public void supports_heating_solar_power_production() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<ConsumptionFeature> solarPower = features.stream()
+                .filter(f -> f.getName().equals("heating.solar.power.production"))
+                .map(ConsumptionFeature.class::cast)
+                .findFirst();
+
+        assertEquals(0.0, solarPower.get().getConsumption(ConsumptionFeature.Stat.CURRENT_DAY).get().getValue(), 0.001);
+        assertEquals(Unit.KILOWATT_HOUR, solarPower.get().getConsumption(ConsumptionFeature.Stat.CURRENT_DAY).get().getUnit());
+        assertEquals(11.4, solarPower.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_DAY).get().getValue(), 0.001);
+        assertEquals(31, solarPower.get().getConsumption(ConsumptionFeature.Stat.CURRENT_WEEK).get().getValue(), 0.001);
+        assertEquals(58.3, solarPower.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_WEEK).get().getValue(), 0.001);
+        assertEquals(247.8, solarPower.get().getConsumption(ConsumptionFeature.Stat.CURRENT_MONTH).get().getValue(), 0.001);
+        assertEquals(355.5, solarPower.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_MONTH).get().getValue(), 0.001);
+        assertEquals(4250.6, solarPower.get().getConsumption(ConsumptionFeature.Stat.CURRENT_YEAR).get().getValue(), 0.001);
+        assertEquals(0.0, solarPower.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_YEAR).get().getValue(), 0.001);
+    }
+
+    @Test
+    public void supports_heating_solar_sensors_temperature_collector() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<NumericSensorFeature> temp = features.stream()
+                .filter(f -> f.getName().equals("heating.solar.sensors.temperature.collector"))
+                .map(NumericSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(temp.isPresent());
+        assertEquals(35.4, temp.get().getValue().getValue(), 0.01);
+        assertEquals(new Unit("celsius"), temp.get().getValue().getUnit());
+        assertEquals(new StatusValue("connected"), temp.get().getStatus());
+    }
+
+    @Test
+    public void support_heating_solar_pumps_circuit() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<StatusSensorFeature> status = features.stream()
+                .filter(f -> f.getName().equals("heating.solar.pumps.circuit"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+
+        assertTrue(status.isPresent());
+        assertEquals(StatusValue.OFF, status.get().getStatus());
+        assertNull(status.get().isActive());
+    }
+
+    @Test
+    public void supports_heating_solar() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<StatusSensorFeature> status = features.stream()
+                .filter(f -> f.getName().equals("heating.solar"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+
+        assertTrue(status.isPresent());
+        assertEquals(true, status.get().isActive());
+        assertEquals(StatusValue.NA, status.get().getStatus());
     }
 }

@@ -1,40 +1,30 @@
 package com.qubular.vicare.model.features;
 
-import com.qubular.vicare.model.DimensionalValue;
+import com.qubular.vicare.model.values.DimensionalValue;
 import com.qubular.vicare.model.Feature;
 
-public class ConsumptionFeature extends Feature {
-    private final DimensionalValue today;
-    private final DimensionalValue sevenDays;
-    private final DimensionalValue month;
-    private final DimensionalValue year;
+import java.util.Optional;
 
-    public ConsumptionFeature(String name, DimensionalValue today, DimensionalValue sevenDays, DimensionalValue month, DimensionalValue year) {
-        super(name);
-        this.today = today;
-        this.sevenDays = sevenDays;
-        this.month = month;
-        this.year = year;
-    }
-
-    public DimensionalValue getToday() {
-        return today;
-    }
-
+public abstract class ConsumptionFeature extends Feature {
     public DimensionalValue getSevenDays() {
-        return sevenDays;
+        return getConsumption(Stat.LAST_SEVEN_DAYS).orElse(null);
     }
 
-    public DimensionalValue getMonth() {
-        return month;
+    public enum Stat {
+        CURRENT_DAY,
+        LAST_SEVEN_DAYS,
+        CURRENT_MONTH,
+        CURRENT_YEAR,
+        PREVIOUS_DAY,
+        CURRENT_WEEK,
+        PREVIOUS_WEEK,
+        PREVIOUS_MONTH,
+        PREVIOUS_YEAR
     }
 
-    public DimensionalValue getYear() {
-        return year;
+    public ConsumptionFeature(String name) {
+        super(name);
     }
 
-    @Override
-    public void accept(Visitor v) {
-        v.visit(this);
-    }
+    public abstract Optional<DimensionalValue> getConsumption(Stat stat);
 }

@@ -120,26 +120,27 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                             CONSUMPTION_CHANNEL_NAMES_BY_STAT.entrySet()
                                     .stream()
                                     .filter(e -> f.getConsumption(e.getKey()).isPresent())
-                                    .forEach(e -> channels.add(consumptionChannel(id, f, e.getValue())));
+                                    .map(e->consumptionChannel(id, f, e.getValue()))
+                                    .forEach(c -> c.ifPresent(channels::add));
                         }
 
-                        private Channel consumptionChannel(String id, Feature feature, String statName) {
+                        private Optional<Channel> consumptionChannel(String id, Feature feature, String statName) {
                             return channelBuilder(new ChannelUID(thing.getUID(), id + "_" + statName),
                                                   id + "_" + statName)
-                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
-                                            PROPERTY_PROP_NAME, statName))
-                                    .build();
+                                    .map(c -> c.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
+                                            PROPERTY_PROP_NAME, statName)))
+                                    .map(ChannelBuilder::build);
                         }
 
-                        private ChannelBuilder channelBuilder(ChannelUID thing, String id) {
+                        private Optional<ChannelBuilder> channelBuilder(ChannelUID channelUID, String id) {
                             ChannelTypeUID channelTypeUID = new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id));
-                            ChannelBuilder channelBuilder = ChannelBuilder.create(thing).withType(channelTypeUID);
-
-                            ChannelType channelType = vicareServiceProvider.getChannelTypeRegistry().getChannelType(channelTypeUID);
-                            if (channelType != null) {
-                                channelBuilder = channelBuilder.withAcceptedItemType(channelType.getItemType());
+                            try {
+                                return Optional.of(getCallback().createChannelBuilder(channelUID, channelTypeUID));
+                            } catch (IllegalArgumentException e) {
+                                // Channel type not found
+                                logger.warn("Unable to create channel {}: {}", channelUID, e.getMessage());
+                                return Optional.empty();
                             }
-                            return channelBuilder;
                         }
 
                         @Override
@@ -148,21 +149,24 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                             Map<String, String> props = new HashMap<>();
                             props.put(PROPERTY_FEATURE_NAME, feature.getName());
                             maybeAddPropertiesForSetter(f, f.getPropertyName(), props);
-                            channels.add(channelBuilder(new ChannelUID(thing.getUID(), id), id)
-                                    .withProperties(props)
-                                    .build());
+                            channelBuilder(new ChannelUID(thing.getUID(), id), id)
+                                 .map(c -> c.withProperties(props))
+                                 .map(ChannelBuilder::build)
+                                 .ifPresent(channels::add);
                             if (f.getStatus() != null && !StatusValue.NA.equals(f.getStatus())) {
                                 String statusId = id + "_status";
-                                channels.add(channelBuilder(new ChannelUID(thing.getUID(), statusId), statusId)
-                                        .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
-                                                PROPERTY_PROP_NAME, "status"))
-                                        .build());
+                                channelBuilder(new ChannelUID(thing.getUID(), statusId), statusId)
+                                        .map(c -> c.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
+                                                                          PROPERTY_PROP_NAME, "status")))
+                                        .map(ChannelBuilder::build)
+                                        .ifPresent(channels::add);
                             } else if (f.isActive() != null) {
                                 String activeId = id + "_active";
-                                channels.add(channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId)
-                                        .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
-                                                PROPERTY_PROP_NAME, "active"))
-                                        .build());
+                                channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId)
+                                        .map(c -> c.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
+                                                                          PROPERTY_PROP_NAME, "active")))
+                                        .map(ChannelBuilder::build)
+                                        .ifPresent(channels::add);
                             }
                         }
 
@@ -174,9 +178,9 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                                 props.put(PROPERTY_PROP_NAME, name);
                                 maybeAddPropertiesForSetter(f, name, props);
                                 String id = escapeUIDSegment(f.getName() + "_" + name);
-                                channels.add(channelBuilder(new ChannelUID(thing.getUID(), id), id)
-                                        .withProperties(props)
-                                        .build());
+                                channelBuilder(new ChannelUID(thing.getUID(), id), id)
+                                        .map(cb -> cb.withProperties(props).build())
+                                        .ifPresent(channels::add);
                             });
                         }
 
@@ -200,14 +204,14 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                         public void visit(StatusSensorFeature f) {
                             String activeId = escapeUIDSegment(f.getName() + "_active");
                             String statusId = escapeUIDSegment(f.getName() + "_status");
-                            channels.add(channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId)
-                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
-                                            PROPERTY_PROP_NAME, "active"))
-                                    .build());
-                            channels.add(channelBuilder(new ChannelUID(thing.getUID(), statusId), statusId)
-                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
-                                            PROPERTY_PROP_NAME, "status"))
-                                    .build());
+                            channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId)
+                                    .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
+                                                                        PROPERTY_PROP_NAME, "active")).build())
+                                    .ifPresent(channels::add);
+                            channelBuilder(new ChannelUID(thing.getUID(), statusId), statusId)
+                                    .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
+                                                                        PROPERTY_PROP_NAME, "status")).build())
+                                    .ifPresent(channels::add);
                         }
 
                         @Override
@@ -222,23 +226,24 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                                 props.put(PROPERTY_COMMAND_NAME, command.getName());
                                 props.put(PROPERTY_PARAM_NAME, command.getParams().get(0).getName());
                             }
-                            channels.add(channelBuilder(channelUID, id)
-                                                 .withProperties(props)
-                                                 .build());
+                            channelBuilder(channelUID, id)
+                                    .map(cb -> cb.withProperties(props)
+                                            .build())
+                                    .ifPresent(channels::add);
                         }
 
                         @Override
                         public void visit(CurveFeature f) {
                             String slopeId = escapeUIDSegment(f.getName() + "_slope");
-                            channels.add(channelBuilder(new ChannelUID(thing.getUID(), slopeId), slopeId)
-                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
-                                            PROPERTY_PROP_NAME, "slope"))
-                                    .build());
+                            channelBuilder(new ChannelUID(thing.getUID(), slopeId), slopeId)
+                                    .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
+                                                                        PROPERTY_PROP_NAME, "slope")).build())
+                                    .ifPresent(channels::add);
                             String shiftId = escapeUIDSegment(f.getName() + "_shift");
-                            channels.add(channelBuilder(new ChannelUID(thing.getUID(), shiftId), shiftId)
-                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
-                                            PROPERTY_PROP_NAME, "shift"))
-                                    .build());
+                            channelBuilder(new ChannelUID(thing.getUID(), shiftId), shiftId)
+                                    .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
+                                                                        PROPERTY_PROP_NAME, "shift")).build())
+                                    .ifPresent(channels::add);
                         }
 
                         @Override
@@ -246,18 +251,18 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                             String activeId = escapeUIDSegment(feature.getName() + "_active");
                             String startId = escapeUIDSegment(feature.getName() + "_start");
                             String endId = escapeUIDSegment(feature.getName() + "_end");
-                            channels.add(channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId)
-                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
-                                            PROPERTY_PROP_NAME, "active"))
-                                    .build());
-                            channels.add(channelBuilder(new ChannelUID(thing.getUID(), startId), startId)
-                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
-                                            PROPERTY_PROP_NAME, "start"))
-                                    .build());
-                            channels.add(channelBuilder(new ChannelUID(thing.getUID(), endId), endId)
-                                    .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
-                                            PROPERTY_PROP_NAME, "end"))
-                                    .build());
+                            channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId)
+                                    .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
+                                                                        PROPERTY_PROP_NAME, "active")).build())
+                                    .ifPresent(channels::add);
+                            channelBuilder(new ChannelUID(thing.getUID(), startId), startId)
+                                    .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
+                                                                        PROPERTY_PROP_NAME, "start")).build())
+                                    .ifPresent(channels::add);
+                            channelBuilder(new ChannelUID(thing.getUID(), endId), endId)
+                                    .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
+                                                                        PROPERTY_PROP_NAME, "end")).build())
+                                    .ifPresent(channels::add);
                         }
                     });
                 }
@@ -266,14 +271,9 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                     if (!newPropValues.isEmpty()) {
                         thingBuilder = thingBuilder.withProperties(newPropValues);
                     }
-                    ChannelTypeRegistry channelTypeRegistry = vicareServiceProvider.getChannelTypeRegistry();
-                    channels.stream()
-                            .filter(c -> channelTypeRegistry.getChannelType(c.getChannelTypeUID()) == null)
-                            .forEach(c -> logger.warn("Dropping channel with unknown channel type {}", c.getChannelTypeUID()));
 
                     if (!channels.isEmpty()) {
                         var sortedChannels = channels.stream()
-                                .filter(c -> channelTypeRegistry.getChannelType(c.getChannelTypeUID()) != null)
                                 .sorted(Comparator.comparing(c -> c.getUID().getId()))
                                 .collect(Collectors.toList());
                         thingBuilder = thingBuilder.withChannels(sortedChannels);

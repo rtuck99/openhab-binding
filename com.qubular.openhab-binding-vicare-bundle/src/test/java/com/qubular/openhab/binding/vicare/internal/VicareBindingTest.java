@@ -30,6 +30,7 @@ import org.openhab.core.config.discovery.DiscoveryResult;
 import org.openhab.core.library.types.*;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.*;
+import org.openhab.core.thing.binding.builder.ChannelBuilder;
 import org.openhab.core.thing.type.*;
 import org.openhab.core.types.*;
 import org.osgi.framework.Bundle;
@@ -497,17 +498,8 @@ public class VicareBindingTest {
                                                                              vicareServiceProvider);
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
-        ThingHandlerCallback callback = mock(ThingHandlerCallback.class);
-        when(callback.getBridge(THING_UID_BRIDGE)).thenReturn(bridge);
-        handler.setCallback(callback);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
 
-
-        doAnswer(invocation -> {
-            Thing thing = invocation.getArgument(0);
-            ThingUID uid = thing.getUID();
-            doReturn(thing).when(thingRegistry).get(uid);
-            return null;
-        }).when(callback).thingUpdated(any(Thing.class));
         handler.initialize();
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
@@ -554,17 +546,8 @@ public class VicareBindingTest {
                                                                              vicareServiceProvider);
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
-        ThingHandlerCallback callback = mock(ThingHandlerCallback.class);
-        when(callback.getBridge(THING_UID_BRIDGE)).thenReturn(bridge);
-        handler.setCallback(callback);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
 
-
-        doAnswer(invocation -> {
-            Thing thing = invocation.getArgument(0);
-            ThingUID uid = thing.getUID();
-            doReturn(thing).when(thingRegistry).get(uid);
-            return null;
-        }).when(callback).thingUpdated(any(Thing.class));
         handler.initialize();
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
@@ -674,6 +657,9 @@ public class VicareBindingTest {
             doReturn(thing).when(thingRegistry).get(uid);
             return null;
         }).when(callback).thingUpdated(any(Thing.class));
+        doAnswer(invocation -> ChannelBuilder.create(invocation.getArgument(0, ChannelUID.class))
+                .withType(invocation.getArgument(1, ChannelTypeUID.class))
+                .withAcceptedItemType("Number:Temperature")).when(callback).createChannelBuilder(any(ChannelUID.class), any(ChannelTypeUID.class));
         return callback;
     }
 

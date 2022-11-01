@@ -4,6 +4,7 @@ import com.qubular.openhab.binding.vicare.VicareServiceProvider;
 import com.qubular.vicare.VicareConfiguration;
 import com.qubular.vicare.VicareService;
 import org.openhab.core.thing.ThingRegistry;
+import org.openhab.core.thing.type.ChannelTypeRegistry;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.annotations.Activate;
@@ -21,6 +22,8 @@ public class BundleServiceProvider implements VicareServiceProvider {
     private VicareConfiguration vicareConfiguration;
     @Reference
     private ConfigurationAdmin configurationAdmin;
+    @Reference
+    private ChannelTypeRegistry channelTypeRegistry;
 
     private BundleContext bundleContext;
 
@@ -57,5 +60,10 @@ public class BundleServiceProvider implements VicareServiceProvider {
     @Override
     public ConfigurationAdmin getConfigurationAdmin() {
         return configurationAdmin;
+    }
+
+    @Override
+    public ChannelTypeRegistry getChannelTypeRegistry() {
+        return channelTypeRegistry;
     }
 }

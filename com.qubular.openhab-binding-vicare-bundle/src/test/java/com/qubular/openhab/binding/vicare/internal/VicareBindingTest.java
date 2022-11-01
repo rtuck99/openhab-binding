@@ -30,8 +30,7 @@ import org.openhab.core.config.discovery.DiscoveryResult;
 import org.openhab.core.library.types.*;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.*;
-import org.openhab.core.thing.type.ChannelTypeRegistry;
-import org.openhab.core.thing.type.DynamicCommandDescriptionProvider;
+import org.openhab.core.thing.type.*;
 import org.openhab.core.types.*;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -82,7 +81,7 @@ public class VicareBindingTest {
     private ConfigurationAdmin configurationAdmin;
     @Mock
     private VicareServiceProvider vicareServiceProvider;
-
+    @Mock
     private ChannelTypeRegistry channelTypeRegistry;
 
     private ComponentContext componentContext;
@@ -247,13 +246,14 @@ public class VicareBindingTest {
         doReturn(persistedTokenStoreConfig).when(configurationAdmin).getConfiguration(PersistedTokenStore.TOKEN_STORE_PID);
         Dictionary<String, Object> ptsProps = new Hashtable<>();
         doReturn(ptsProps).when(persistedTokenStoreConfig).getProperties();
-        channelTypeRegistry = new ChannelTypeRegistry();
+        doAnswer(i -> ChannelTypeBuilder.state(i.getArgument(0), "Label", "Number:Temperature").build()).when(channelTypeRegistry).getChannelType(any(ChannelTypeUID.class));
         when(vicareServiceProvider.getVicareConfiguration()).thenReturn(configuration);
         when(vicareServiceProvider.getVicareService()).thenReturn(vicareService);
         when(vicareServiceProvider.getBindingVersion()).thenReturn("3.3.0");
         when(vicareServiceProvider.getThingRegistry()).thenReturn(thingRegistry);
         when(vicareServiceProvider.getBundleContext()).thenReturn(bundleContext);
         when(vicareServiceProvider.getConfigurationAdmin()).thenReturn(configurationAdmin);
+        when(vicareServiceProvider.getChannelTypeRegistry()).thenReturn(channelTypeRegistry);
     }
 
     @AfterEach
@@ -430,10 +430,12 @@ public class VicareBindingTest {
         assertNotNull(channel);
         assertEquals("heating_dhw_sensors_temperature_outlet", channel.getChannelTypeUID().getId());
         assertEquals("heating.dhw.sensors.temperature.outlet", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+        assertEquals("Number:Temperature", channel.getAcceptedItemType());
 
         Channel dhwHotWaterStorageTempChannel = findChannel(thingCaptor, "heating_dhw_sensors_temperature_hotWaterStorage");
         assertEquals("heating_dhw_sensors_temperature_hotWaterStorage", dhwHotWaterStorageTempChannel.getChannelTypeUID().getId());
         assertEquals("heating.dhw.sensors.temperature.hotWaterStorage", dhwHotWaterStorageTempChannel.getProperties().get(PROPERTY_FEATURE_NAME));
+        assertEquals("Number:Temperature", dhwHotWaterStorageTempChannel.getAcceptedItemType());
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);

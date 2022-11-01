@@ -19,6 +19,8 @@ import org.openhab.core.thing.binding.BaseThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerService;
 import org.openhab.core.thing.binding.builder.ChannelBuilder;
 import org.openhab.core.thing.binding.builder.ThingBuilder;
+import org.openhab.core.thing.type.ChannelType;
+import org.openhab.core.thing.type.ChannelTypeRegistry;
 import org.openhab.core.thing.type.ChannelTypeUID;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.State;
@@ -122,11 +124,22 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                         }
 
                         private Channel consumptionChannel(String id, Feature feature, String statName) {
-                            return ChannelBuilder.create(new ChannelUID(thing.getUID(), id + "_" + statName))
-                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id + "_" + statName)))
+                            return channelBuilder(new ChannelUID(thing.getUID(), id + "_" + statName),
+                                                  id + "_" + statName)
                                     .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                             PROPERTY_PROP_NAME, statName))
                                     .build();
+                        }
+
+                        private ChannelBuilder channelBuilder(ChannelUID thing, String id) {
+                            ChannelTypeUID channelTypeUID = new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id));
+                            ChannelBuilder channelBuilder = ChannelBuilder.create(thing).withType(channelTypeUID);
+
+                            ChannelType channelType = vicareServiceProvider.getChannelTypeRegistry().getChannelType(channelTypeUID);
+                            if (channelType != null) {
+                                channelBuilder = channelBuilder.withAcceptedItemType(channelType.getItemType());
+                            }
+                            return channelBuilder;
                         }
 
                         @Override
@@ -135,21 +148,18 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                             Map<String, String> props = new HashMap<>();
                             props.put(PROPERTY_FEATURE_NAME, feature.getName());
                             maybeAddPropertiesForSetter(f, f.getPropertyName(), props);
-                            channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), id))
-                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id)))
+                            channels.add(channelBuilder(new ChannelUID(thing.getUID(), id), id)
                                     .withProperties(props)
                                     .build());
                             if (f.getStatus() != null && !StatusValue.NA.equals(f.getStatus())) {
                                 String statusId = id + "_status";
-                                channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), statusId))
-                                        .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(statusId)))
+                                channels.add(channelBuilder(new ChannelUID(thing.getUID(), statusId), statusId)
                                         .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                                 PROPERTY_PROP_NAME, "status"))
                                         .build());
                             } else if (f.isActive() != null) {
                                 String activeId = id + "_active";
-                                channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), activeId))
-                                        .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(activeId)))
+                                channels.add(channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId)
                                         .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                                 PROPERTY_PROP_NAME, "active"))
                                         .build());
@@ -164,8 +174,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                                 props.put(PROPERTY_PROP_NAME, name);
                                 maybeAddPropertiesForSetter(f, name, props);
                                 String id = escapeUIDSegment(f.getName() + "_" + name);
-                                channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), id))
-                                        .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id)))
+                                channels.add(channelBuilder(new ChannelUID(thing.getUID(), id), id)
                                         .withProperties(props)
                                         .build());
                             });
@@ -191,13 +200,11 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                         public void visit(StatusSensorFeature f) {
                             String activeId = escapeUIDSegment(f.getName() + "_active");
                             String statusId = escapeUIDSegment(f.getName() + "_status");
-                            channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), activeId))
-                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(activeId)))
+                            channels.add(channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId)
                                     .withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                             PROPERTY_PROP_NAME, "active"))
                                     .build());
-                            channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), statusId))
-                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(statusId)))
+                            channels.add(channelBuilder(new ChannelUID(thing.getUID(), statusId), statusId)
                                     .withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                             PROPERTY_PROP_NAME, "status"))
                                     .build());
@@ -215,8 +222,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                                 props.put(PROPERTY_COMMAND_NAME, command.getName());
                                 props.put(PROPERTY_PARAM_NAME, command.getParams().get(0).getName());
                             }
-                            channels.add(ChannelBuilder.create(channelUID)
-                                                 .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id)))
+                            channels.add(channelBuilder(channelUID, id)
                                                  .withProperties(props)
                                                  .build());
                         }
@@ -224,14 +230,12 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                         @Override
                         public void visit(CurveFeature f) {
                             String slopeId = escapeUIDSegment(f.getName() + "_slope");
-                            channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), slopeId))
-                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(slopeId)))
+                            channels.add(channelBuilder(new ChannelUID(thing.getUID(), slopeId), slopeId)
                                     .withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                             PROPERTY_PROP_NAME, "slope"))
                                     .build());
                             String shiftId = escapeUIDSegment(f.getName() + "_shift");
-                            channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), shiftId))
-                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(shiftId)))
+                            channels.add(channelBuilder(new ChannelUID(thing.getUID(), shiftId), shiftId)
                                     .withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                             PROPERTY_PROP_NAME, "shift"))
                                     .build());
@@ -242,18 +246,15 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                             String activeId = escapeUIDSegment(feature.getName() + "_active");
                             String startId = escapeUIDSegment(feature.getName() + "_start");
                             String endId = escapeUIDSegment(feature.getName() + "_end");
-                            channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), activeId))
-                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(activeId)))
+                            channels.add(channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId)
                                     .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                             PROPERTY_PROP_NAME, "active"))
                                     .build());
-                            channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), startId))
-                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(startId)))
+                            channels.add(channelBuilder(new ChannelUID(thing.getUID(), startId), startId)
                                     .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                             PROPERTY_PROP_NAME, "start"))
                                     .build());
-                            channels.add(ChannelBuilder.create(new ChannelUID(thing.getUID(), endId))
-                                    .withType(new ChannelTypeUID(BINDING_ID, channelIdToChannelType(endId)))
+                            channels.add(channelBuilder(new ChannelUID(thing.getUID(), endId), endId)
                                     .withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                             PROPERTY_PROP_NAME, "end"))
                                     .build());
@@ -265,8 +266,14 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                     if (!newPropValues.isEmpty()) {
                         thingBuilder = thingBuilder.withProperties(newPropValues);
                     }
+                    ChannelTypeRegistry channelTypeRegistry = vicareServiceProvider.getChannelTypeRegistry();
+                    channels.stream()
+                            .filter(c -> channelTypeRegistry.getChannelType(c.getChannelTypeUID()) == null)
+                            .forEach(c -> logger.warn("Dropping channel with unknown channel type {}", c.getChannelTypeUID()));
+
                     if (!channels.isEmpty()) {
                         var sortedChannels = channels.stream()
+                                .filter(c -> channelTypeRegistry.getChannelType(c.getChannelTypeUID()) != null)
                                 .sorted(Comparator.comparing(c -> c.getUID().getId()))
                                 .collect(Collectors.toList());
                         thingBuilder = thingBuilder.withChannels(sortedChannels);

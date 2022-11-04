@@ -5,7 +5,9 @@ import com.qubular.vicare.model.*;
 import com.qubular.vicare.model.features.*;
 import com.qubular.vicare.model.params.EnumParamDescriptor;
 import com.qubular.vicare.model.params.NumericParamDescriptor;
+import com.qubular.vicare.model.values.BooleanValue;
 import com.qubular.vicare.model.values.StatusValue;
+import com.qubular.vicare.model.values.StringValue;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.http.HttpHeader;
@@ -381,6 +383,19 @@ public class VicareServiceTest {
 
     @Test
     @DisabledIf("realConnection")
+    public void supports_heating_circuits_n_name() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<TextFeature> nameFeature = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.1.name"))
+                .map(TextFeature.class::cast)
+                .findFirst();
+        assertTrue(nameFeature.isPresent());
+        assertEquals("Fussboden", nameFeature.get().getValue());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
     public void supports_heating_circuits_n_temperature_levels() throws ServletException, NamespaceException, AuthenticationException, IOException, ExecutionException, InterruptedException, TimeoutException, CommandFailureException {
         List<Feature> features = getFeatures("deviceFeaturesResponse3.json");
 
@@ -543,6 +558,62 @@ public class VicareServiceTest {
 
     @Test
     @DisabledIf("realConnection")
+    public void supports_heating_circuits_N_operating_modes_dhw() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<StatusSensorFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.1.operating.modes.dhw"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+
+        assertTrue(feature.isPresent());
+        assertEquals(Boolean.FALSE, feature.get().isActive());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_circuits_N_operating_modes_dhwAndHeating() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<StatusSensorFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.1.operating.modes.dhwAndHeating"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+
+        assertTrue(feature.isPresent());
+        assertEquals(Boolean.TRUE, feature.get().isActive());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_circuits_N_operating_modes_standby() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<StatusSensorFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.1.operating.modes.standby"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+
+        assertTrue(feature.isPresent());
+        assertEquals(Boolean.FALSE, feature.get().isActive());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_circuits_N_operating_programs_forcedLastFromSchedule() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<StatusSensorFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.1.operating.programs.forcedLastFromSchedule"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+
+        assertTrue(feature.isPresent());
+        assertEquals(Boolean.FALSE, feature.get().isActive());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
     public void supports_heating_circuits_0_operating_programs_normal() throws ServletException, NamespaceException, AuthenticationException, IOException, CommandFailureException, ExecutionException, InterruptedException, TimeoutException {
         List<Feature> features = getFeatures("deviceFeaturesResponse.json");
 
@@ -588,6 +659,22 @@ public class VicareServiceTest {
         vicareService.sendCommand(URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normal/commands/setTemperature"),
                                   Map.of("targetTemperature", 23.0));
         assertEquals("{\"targetTemperature\":23.0}", requestContent.get(1, TimeUnit.SECONDS));
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_circuits_N_operating_programs_reducedEnergySaving() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<Feature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.1.operating.programs.reducedEnergySaving"))
+                .map(Feature.class::cast)
+                .findFirst();
+
+        assertTrue(feature.isPresent());
+        assertEquals(BooleanValue.FALSE, feature.get().getProperties().get("active"));
+        assertEquals(new StringValue("unknown"), feature.get().getProperties().get("reason"));
+        assertEquals(new StringValue("heating"), feature.get().getProperties().get("demand"));
     }
 
     @Test

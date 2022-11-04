@@ -5,6 +5,7 @@ import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.CommandFailureException;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.CommandDescriptor;
+import com.qubular.vicare.model.Value;
 import com.qubular.vicare.model.values.DimensionalValue;
 import com.qubular.vicare.model.Feature;
 import com.qubular.vicare.model.values.StatusValue;
@@ -202,16 +203,28 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
                         @Override
                         public void visit(StatusSensorFeature f) {
-                            String activeId = escapeUIDSegment(f.getName() + "_active");
-                            String statusId = escapeUIDSegment(f.getName() + "_status");
-                            channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId)
-                                    .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
-                                                                        PROPERTY_PROP_NAME, "active")).build())
-                                    .ifPresent(channels::add);
-                            channelBuilder(new ChannelUID(thing.getUID(), statusId), statusId)
-                                    .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
-                                                                        PROPERTY_PROP_NAME, "status")).build())
-                                    .ifPresent(channels::add);
+                            f.getProperties().forEach((k, v) -> {
+                                        switch (k) {
+                                            case "active":
+                                                String activeId = escapeUIDSegment(f.getName() + "_active");
+                                                channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId)
+                                                        .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
+                                                                                            PROPERTY_PROP_NAME, "active")).build())
+                                                        .ifPresent(channels::add);
+                                                break;
+                                            case "status":
+                                                String statusId = escapeUIDSegment(f.getName() + "_status");
+                                                channelBuilder(new ChannelUID(thing.getUID(), statusId), statusId)
+                                                        .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
+                                                                                            PROPERTY_PROP_NAME, "status")).build())
+                                                        .ifPresent(channels::add);
+                                                break;
+                                            default:
+                                                switch(v.getType()) {
+                                                    case Value.TYPE_BOOLEAN:
+                                                }
+                                        }
+                                    });
                         }
 
                         @Override

@@ -17,7 +17,7 @@ public class StringValue extends Value {
 
     @Override
     public String getType() {
-        return "string";
+        return TYPE_STRING;
     }
 
     @Override

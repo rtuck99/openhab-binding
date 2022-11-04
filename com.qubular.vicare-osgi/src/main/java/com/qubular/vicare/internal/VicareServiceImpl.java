@@ -9,9 +9,7 @@ import com.qubular.vicare.model.features.*;
 import com.qubular.vicare.model.params.EnumParamDescriptor;
 import com.qubular.vicare.model.ParamDescriptor;
 import com.qubular.vicare.model.params.NumericParamDescriptor;
-import com.qubular.vicare.model.values.ArrayValue;
-import com.qubular.vicare.model.values.DimensionalValue;
-import com.qubular.vicare.model.values.StatusValue;
+import com.qubular.vicare.model.values.*;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
@@ -43,13 +41,13 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import static com.qubular.vicare.model.values.StatusValue.*;
 import static java.lang.String.format;
-import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
+import static java.util.Optional.*;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.StreamSupport.stream;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
@@ -400,10 +398,10 @@ public class VicareServiceImpl implements VicareService {
                 if (value != null) {
                     String valueType = value.get("type").getAsString();
                     List<CommandDescriptor> commandDescriptors = generateCommands(commands);
-                    if ("string".equals(valueType)) {
+                    if (TYPE_STRING.equals(valueType)) {
                         String textValue = value.get("value").getAsString();
                         return new TextFeature(featureName, textValue, commandDescriptors);
-                    } else if ("number".equals(valueType)) {
+                    } else if (TYPE_NUMBER.equals(valueType)) {
                         if (statusObject != null) {
                             String status = statusObject.get("value").getAsString();
                             return new NumericSensorFeature(featureName,
@@ -426,7 +424,7 @@ public class VicareServiceImpl implements VicareService {
                 } else if (featureName.contains(".consumption.summary")) {
                     Map<String, DimensionalValue> stats = properties.entrySet().stream()
                             .filter(e -> e.getValue().isJsonObject())
-                            .filter(e -> "number".equals(e.getValue().getAsJsonObject().get("type").getAsString()))
+                            .filter(e -> TYPE_NUMBER.equals(e.getValue().getAsJsonObject().get("type").getAsString()))
                             .collect(toMap(Map.Entry::getKey,
                                     e -> {
                                         JsonObject prop = e.getValue().getAsJsonObject();
@@ -450,6 +448,8 @@ public class VicareServiceImpl implements VicareService {
                     } else if (startObject != null && endObject != null) {
                         boolean activeStatus = activeObject.get("value").getAsBoolean();
                         return new DatePeriodFeature(featureName, activeStatus, dateFromYYYYMMDD(startObject), dateFromYYYYMMDD(endObject));
+                    } else if (activeObject != null) {
+                        return new StatusSensorFeature(featureName, propertyMap(properties));
                     }
                 } else if (featureName.endsWith(".heating.curve")) {
                     JsonObject shiftObject = properties.getAsJsonObject("shift");
@@ -461,7 +461,7 @@ public class VicareServiceImpl implements VicareService {
                     }
                 } else if (featureName.endsWith(".production")) {
                     Map<String, Value> arrayProperties = properties.entrySet().stream()
-                            .filter(e -> "array".equals(e.getValue().getAsJsonObject().get("type").getAsString()))
+                            .filter(e -> TYPE_ARRAY.equals(e.getValue().getAsJsonObject().get("type").getAsString()))
                             .collect(toMap(Map.Entry::getKey, e -> {
                                 JsonObject property = e.getValue().getAsJsonObject();
                                 JsonArray jsonArray = property.get("value").getAsJsonArray();
@@ -474,6 +474,9 @@ public class VicareServiceImpl implements VicareService {
                             }));
 
                     return new ConsumptionTotalFeature(featureName, arrayProperties);
+                } else if (featureName.endsWith(".name") && properties.has("name")) {
+                    JsonObject nameProp = properties.get("name").getAsJsonObject();
+                    return new TextFeature(featureName, nameProp.get("value").getAsString(), Collections.emptyList());
                 } else if (statusObject != null || activeObject != null) {
                     StatusValue status = ofNullable(statusObject).map(o -> o.get("value"))
                             .map(JsonElement::getAsString)
@@ -490,10 +493,32 @@ public class VicareServiceImpl implements VicareService {
             return null;
         }
 
+        private static Map<String, Value> propertyMap(JsonObject properties) {
+            return properties.entrySet().stream()
+                    .filter(e -> e.getValue().isJsonObject())
+                    .map(e -> Map.entry(e.getKey(), e.getValue().getAsJsonObject()))
+                    .filter(e -> Set.of(TYPE_STRING, TYPE_BOOLEAN).contains(e.getValue().get("type").getAsString()))
+                    .collect(Collectors.toMap(Map.Entry::getKey,
+                                              e -> {
+                                                  JsonObject propObject = e.getValue().getAsJsonObject();
+                                                  switch (propObject.get("type").getAsString()) {
+                                                      case TYPE_STRING:
+                                                          return new StringValue(propObject.get("value").getAsString());
+                                                      case TYPE_BOOLEAN:
+                                                          return BooleanValue.valueOf(
+                                                                  propObject.get("value").getAsBoolean());
+                                                      default:
+                                                          throw new IllegalStateException(
+                                                                  "Unsupported property type " + propObject.get(
+                                                                          "type").getAsString());
+                                                  }
+                                              }));
+        }
+
         private static MultiValueFeature createMultiValueFeature(String featureName, JsonObject properties, JsonObject commands) {
             Map<String, DimensionalValue> stats = properties.entrySet().stream()
                     .filter(e -> e.getValue().isJsonObject())
-                    .filter(e -> "number".equals(e.getValue().getAsJsonObject().get("type").getAsString()))
+                    .filter(e -> TYPE_NUMBER.equals(e.getValue().getAsJsonObject().get("type").getAsString()))
                     .collect(toMap(Map.Entry::getKey,
                             e -> {
                                 JsonObject prop = e.getValue().getAsJsonObject();
@@ -528,7 +553,7 @@ public class VicareServiceImpl implements VicareService {
             String type = jsonObject.get("type").getAsString();
             JsonObject constraints = jsonObject.get("constraints").getAsJsonObject();
             switch (type) {
-                case "string":
+                case TYPE_STRING:
                     if (constraints.has("enum")) {
                         Set<String> enumValues = stream(constraints.getAsJsonArray("enum").spliterator(), false)
                                 .map(JsonElement::getAsString)
@@ -536,7 +561,7 @@ public class VicareServiceImpl implements VicareService {
                         return new EnumParamDescriptor(jsonObject.get("required").getAsBoolean(), name, enumValues);
                     }
                     break;
-                case "number":
+                case TYPE_NUMBER:
                     return new NumericParamDescriptor(jsonObject.get("required").getAsBoolean(),
                                                       name,
                                                       ofNullable(constraints.get("min")).map(JsonElement::getAsDouble).orElse(null),

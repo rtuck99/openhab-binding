@@ -92,12 +92,12 @@
     <description>Shows whether frost protection of the installation is turned on for the device</description>
     <state readOnly="true"/>
   </channel-type>
-<!--  <channel-type id="heating_circuits_name">-->
-<!--    <label>Heating Circuit Name</label>-->
-<!--    <description>Shows the name given for the heating circuit N</description>-->
-<!--    <category>Text</category>-->
-<!--    <state readOnly="true"/>-->
-<!--  </channel-type>-->
+  <channel-type id="heating_circuits_name">
+    <label>Heating Circuit Name</label>
+    <description>Shows the name given for the heating circuit N</description>
+    <category>Text</category>
+    <state readOnly="true"/>
+  </channel-type>
   <channel-type id="heating_circuits_sensors_temperature_supply">
     <item-type>Number:Temperature</item-type>
     <label>Heating Circuit Supply Temperature</label>
@@ -176,10 +176,37 @@
     <category>Heating</category>
     <state readOnly="false"/>
   </channel-type>
+  <channel-type id="heating_circuits_operating_modes_dhw_active">
+    <item-type>Switch</item-type>
+    <label>Heating Circuit DHW Operating Mode Active</label>
+    <description>Shows whether the domestic hot water (DHW) only operating mode is active.</description>
+    <category>Heating</category>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_modes_dhwAndHeating_active">
+    <item-type>Switch</item-type>
+    <label>Heating Circuit DHW And Heating Operating Mode Active</label>
+    <description>Shows whether the domestic hot water (DHW) and heating operating mode is active.</description>
+    <category>Heating</category>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_modes_standby_active">
+    <item-type>Switch</item-type>
+    <label>Heating Circuit DHW And Heating Operating Mode Active</label>
+    <description>Shows whether the Standby operating mode is active now. In this mode, the device will only start heating to protect installation from frost. Other commands, e.g. charging of DHW (oneTimeCharge), are still executable while this operating mode is active.</description>
+    <category>Heating</category>
+    <state readOnly="true"/>
+  </channel-type>
   <channel-type id="heating_circuits_operating_programs_active">
     <item-type>String</item-type>
     <label>Active Operating Program</label>
     <description>Shows the current active operating program on the device</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_programs_forcedLastFromSchedule_active">
+    <item-type>Switch</item-type>
+    <label>Extended Heating</label>
+    <description>If activated, the last program activated by the schedule will be sustained until this feature is deactivated.</description>
     <state readOnly="true"/>
   </channel-type>
   <channel-type id="heating_circuits_operating_programs_holiday_active">

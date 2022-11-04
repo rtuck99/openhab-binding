@@ -23,7 +23,7 @@ public class BooleanValue extends Value {
 
     @Override
     public String getType() {
-        return "boolean";
+        return TYPE_BOOLEAN;
     }
 
     @Override

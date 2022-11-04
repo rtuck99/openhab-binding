@@ -10,9 +10,7 @@ import com.qubular.vicare.model.*;
 import com.qubular.vicare.model.features.*;
 import com.qubular.vicare.model.params.EnumParamDescriptor;
 import com.qubular.vicare.model.params.NumericParamDescriptor;
-import com.qubular.vicare.model.values.ArrayValue;
-import com.qubular.vicare.model.values.DimensionalValue;
-import com.qubular.vicare.model.values.StatusValue;
+import com.qubular.vicare.model.values.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,6 +50,7 @@ import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.encodeThingId;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.encodeThingUniqueId;
 import static com.qubular.vicare.model.Device.DEVICE_TYPE_HEATING;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.*;
@@ -183,6 +182,24 @@ public class VicareBindingTest {
         Feature heatingSolar = new StatusSensorFeature("heating.solar",
                                                         StatusValue.NA,
                                                         true);
+        Feature heatingCircuitName = new TextFeature("heating.circuits.0.name",
+                                                     "testName", emptyList());
+        Feature operatingModesDHW = new StatusSensorFeature("heating.circuits.1.operating.modes.dhw",
+                                                            StatusValue.NA,
+                                                            false);
+        Feature operatingModesDHWAndHeating = new StatusSensorFeature("heating.circuits.1.operating.modes.dhwAndHeating",
+                                                                      StatusValue.NA,
+                                                                      true);
+        Feature operatingModesStandby = new StatusSensorFeature("heating.circuits.1.operating.modes.standby",
+                                                                StatusValue.NA,
+                                                                false);
+        Feature heatingCircuitsOperatingProgramsForcedLastFromSchedule = new StatusSensorFeature("heating.circuits.1.operating.programs.forcedLastFromSchedule",
+                                                                                                 StatusValue.NA,
+                                                                                                 false);
+        Feature heatingCircuitsOperatingProgramsReducedEnergySaving = new StatusSensorFeature("heating.circuits.1.operating.programs.reducedEnergySaving",
+                                                                                              Map.of("active", BooleanValue.valueOf(false),
+                                                                                                     "reason", new StringValue("unknown"),
+                                                                                                     "demand", new StringValue("heating")));
         doReturn(
                 List.of(temperatureSensor, statisticsFeature, textFeature, statusFeature, normalProgramFeature,
                         consumptionFeature, burnerFeature, curveFeature, holidayFeature, heatingDhw,
@@ -192,7 +209,12 @@ public class VicareBindingTest {
                         solarPowerProduction,
                         solarSensorsTemperatureDHW,
                         solarPumpsCircuit,
-                        heatingSolar))
+                        heatingSolar,
+                        heatingCircuitName,
+                        operatingModesDHW,
+                        operatingModesDHWAndHeating,
+                        operatingModesStandby,
+                        heatingCircuitsOperatingProgramsForcedLastFromSchedule))
                 .when(vicareService)
                 .getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
     }
@@ -762,6 +784,194 @@ public class VicareBindingTest {
         VicareBridgeHandler bridgeHandler = new VicareBridgeHandler(vicareServiceProvider, bridge);
         bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
         when(bridge.getHandler()).thenReturn(bridgeHandler);
+    }
+
+    @Test
+    public void supportsHeatingCircuitName() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
+
+        Channel channel = findChannel(thingCaptor, "heating_circuits_0_name");
+        assertNotNull(channel);
+        assertEquals("heating_circuits_name", channel.getChannelTypeUID().getId());
+        assertEquals("heating.circuits.0.name", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(StringType.valueOf("testName"), stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsHeatingCircuitOperatingModesDHW() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
+
+        Channel channel = findChannel(thingCaptor, "heating_circuits_1_operating_modes_dhw_active");
+        assertNotNull(channel);
+        assertEquals("heating_circuits_operating_modes_dhw_active", channel.getChannelTypeUID().getId());
+        assertEquals("heating.circuits.1.operating.modes.dhw", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.OFF, stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsHeatingCircuitOperatingModesDHWAndHeating() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
+
+        Channel channel = findChannel(thingCaptor, "heating_circuits_1_operating_modes_dhwAndHeating_active");
+        assertNotNull(channel);
+        assertEquals("heating_circuits_operating_modes_dhwAndHeating_active", channel.getChannelTypeUID().getId());
+        assertEquals("heating.circuits.1.operating.modes.dhwAndHeating", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.ON, stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsHeatingCircuitOperatingModesStandby() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
+
+        Channel channel = findChannel(thingCaptor, "heating_circuits_1_operating_modes_standby_active");
+        assertNotNull(channel);
+        assertEquals("heating_circuits_operating_modes_standby_active", channel.getChannelTypeUID().getId());
+        assertEquals("heating.circuits.1.operating.modes.standby", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.OFF, stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsHeatingCircuitOperatingProgramsForcedLastFromSchedule() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
+
+        Channel channel = findChannel(thingCaptor, "heating_circuits_1_operating_programs_forcedLastFromSchedule_active");
+        assertNotNull(channel);
+        assertEquals("heating_circuits_operating_programs_forcedLastFromSchedule_active", channel.getChannelTypeUID().getId());
+        assertEquals("heating.circuits.1.operating.programs.forcedLastFromSchedule", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.OFF, stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsHeatingCircuitOperatingProgramsReducedEnergySaving() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
+
+        Channel channel = findChannel(thingCaptor, "heating_circuits_1_operating_programs_reducedEnergySaving_active");
+        assertNotNull(channel);
+        assertEquals("heating_circuits_operating_programs_reducedEnergySaving_active", channel.getChannelTypeUID().getId());
+        assertEquals("heating.circuits.1.operating.programs.reducedEnergySaving", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.OFF, stateCaptor.getValue());
+
+        channel = findChannel(thingCaptor, "heating_circuits_1_operating_programs_reducedEnergySaving_reason");
+        assertNotNull(channel);
+        assertEquals("heating_circuits_operating_programs_reducedEnergySaving_reason", channel.getChannelTypeUID().getId());
+        assertEquals("heating.circuits.1.operating.programs.reducedEnergySaving", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(new StringValue("unknown"), stateCaptor.getValue());
+
+        channel = findChannel(thingCaptor, "heating_circuits_1_operating_programs_reducedEnergySaving_demand");
+        assertNotNull(channel);
+        assertEquals("heating_circuits_operating_programs_reducedEnergySaving_demand", channel.getChannelTypeUID().getId());
+        assertEquals("heating.circuits.1.operating.programs.reducedEnergySaving", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(new StringValue("heating"), stateCaptor.getValue());
     }
 
     @Test

@@ -5,6 +5,9 @@ import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.CommandFailureException;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.CommandDescriptor;
+import com.qubular.vicare.model.ParamDescriptor;
+import com.qubular.vicare.model.params.EnumParamDescriptor;
+import com.qubular.vicare.model.params.NumericParamDescriptor;
 import com.qubular.vicare.model.values.DimensionalValue;
 import com.qubular.vicare.model.Feature;
 import com.qubular.vicare.model.values.StatusValue;
@@ -19,12 +22,8 @@ import org.openhab.core.thing.binding.BaseThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerService;
 import org.openhab.core.thing.binding.builder.ChannelBuilder;
 import org.openhab.core.thing.binding.builder.ThingBuilder;
-import org.openhab.core.thing.type.ChannelType;
-import org.openhab.core.thing.type.ChannelTypeRegistry;
-import org.openhab.core.thing.type.ChannelTypeUID;
-import org.openhab.core.types.Command;
-import org.openhab.core.types.State;
-import org.openhab.core.types.UnDefType;
+import org.openhab.core.thing.type.*;
+import org.openhab.core.types.*;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
@@ -32,11 +31,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -45,11 +50,10 @@ import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThingUniqueId;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.escapeUIDSegment;
 import static java.lang.String.format;
-import static java.util.Collections.singleton;
 import static java.util.stream.Collectors.toMap;
 import static org.osgi.service.event.EventConstants.EVENT_TOPIC;
 
-public class VicareDeviceThingHandler extends BaseThingHandler {
+public class VicareDeviceThingHandler extends BaseThingHandler implements ChannelTypeProvider {
     private static final Map<ConsumptionFeature.Stat, String> CONSUMPTION_CHANNEL_NAMES_BY_STAT = Map.of(
             ConsumptionFeature.Stat.CURRENT_DAY, "currentDay",
             ConsumptionFeature.Stat.CURRENT_WEEK, "currentWeek",
@@ -77,6 +81,8 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
     private static final Map<String, ConsumptionFeature.Stat> CONSUMPTION_STATS_BY_CHANNEL_NAME =
             CONSUMPTION_CHANNEL_NAMES_BY_STAT.entrySet().stream()
                     .collect(toMap(Map.Entry::getValue, Map.Entry::getKey));
+
+    private static final Map<ChannelTypeUID, ChannelType> channelTypes = new ConcurrentHashMap<>();
 
     public VicareDeviceThingHandler(VicareServiceProvider vicareServiceProvider,
                                     Thing thing,
@@ -125,15 +131,17 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                         }
 
                         private Optional<Channel> consumptionChannel(String id, Feature feature, String statName) {
+                            Map<String, String> props = Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
+                                    PROPERTY_PROP_NAME, statName);
                             return channelBuilder(new ChannelUID(thing.getUID(), id + "_" + statName),
-                                                  id + "_" + statName)
-                                    .map(c -> c.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
-                                            PROPERTY_PROP_NAME, statName)))
+                                                  id + "_" + statName, null, props, null)
+                                    .map(c -> c.withProperties(props))
                                     .map(ChannelBuilder::build);
                         }
 
-                        private Optional<ChannelBuilder> channelBuilder(ChannelUID channelUID, String id) {
-                            ChannelTypeUID channelTypeUID = new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id));
+                        private Optional<ChannelBuilder> channelBuilder(ChannelUID channelUID, String id, String templateId, Map<String, String> props, CommandDescriptor commandDescriptor) {
+                            ChannelTypeUID channelTypeUID = createChannelType(feature, templateId,
+                                    channelIdToChannelType(id), props, commandDescriptor).getUID();
                             try {
                                 return Optional.of(getCallback().createChannelBuilder(channelUID, channelTypeUID));
                             } catch (IllegalArgumentException e) {
@@ -149,20 +157,20 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                             Map<String, String> props = new HashMap<>();
                             props.put(PROPERTY_FEATURE_NAME, feature.getName());
                             maybeAddPropertiesForSetter(f, f.getPropertyName(), props);
-                            channelBuilder(new ChannelUID(thing.getUID(), id), id)
+                            channelBuilder(new ChannelUID(thing.getUID(), id), id, , props, commandDescriptor)
                                  .map(c -> c.withProperties(props))
                                  .map(ChannelBuilder::build)
                                  .ifPresent(channels::add);
                             if (f.getStatus() != null && !StatusValue.NA.equals(f.getStatus())) {
                                 String statusId = id + "_status";
-                                channelBuilder(new ChannelUID(thing.getUID(), statusId), statusId)
+                                channelBuilder(new ChannelUID(thing.getUID(), statusId), statusId, templateId, props, commandDescriptor)
                                         .map(c -> c.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                                                           PROPERTY_PROP_NAME, "status")))
                                         .map(ChannelBuilder::build)
                                         .ifPresent(channels::add);
                             } else if (f.isActive() != null) {
                                 String activeId = id + "_active";
-                                channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId)
+                                channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId, templateId, props, commandDescriptor)
                                         .map(c -> c.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                                                           PROPERTY_PROP_NAME, "active")))
                                         .map(ChannelBuilder::build)
@@ -178,7 +186,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                                 props.put(PROPERTY_PROP_NAME, name);
                                 maybeAddPropertiesForSetter(f, name, props);
                                 String id = escapeUIDSegment(f.getName() + "_" + name);
-                                channelBuilder(new ChannelUID(thing.getUID(), id), id)
+                                channelBuilder(new ChannelUID(thing.getUID(), id), id, templateId, props, commandDescriptor)
                                         .map(cb -> cb.withProperties(props).build())
                                         .ifPresent(channels::add);
                             });
@@ -204,11 +212,11 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                         public void visit(StatusSensorFeature f) {
                             String activeId = escapeUIDSegment(f.getName() + "_active");
                             String statusId = escapeUIDSegment(f.getName() + "_status");
-                            channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId)
+                            channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId, templateId, props, commandDescriptor)
                                     .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                                                         PROPERTY_PROP_NAME, "active")).build())
                                     .ifPresent(channels::add);
-                            channelBuilder(new ChannelUID(thing.getUID(), statusId), statusId)
+                            channelBuilder(new ChannelUID(thing.getUID(), statusId), statusId, templateId, props, commandDescriptor)
                                     .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                                                         PROPERTY_PROP_NAME, "status")).build())
                                     .ifPresent(channels::add);
@@ -220,13 +228,14 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                             ChannelUID channelUID = new ChannelUID(thing.getUID(), id);
                             Map<String, String> props = new HashMap<>();
                             props.put(PROPERTY_FEATURE_NAME, f.getName());
+                            CommandDescriptor command = null;
                             if (f.getCommands().size() == 1 &&
                                 f.getCommands().get(0).getParams().size() == 1) {
-                                CommandDescriptor command = feature.getCommands().get(0);
+                                command = feature.getCommands().get(0);
                                 props.put(PROPERTY_COMMAND_NAME, command.getName());
                                 props.put(PROPERTY_PARAM_NAME, command.getParams().get(0).getName());
                             }
-                            channelBuilder(channelUID, id)
+                            channelBuilder(channelUID, id, null, props, command)
                                     .map(cb -> cb.withProperties(props)
                                             .build())
                                     .ifPresent(channels::add);
@@ -235,12 +244,12 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                         @Override
                         public void visit(CurveFeature f) {
                             String slopeId = escapeUIDSegment(f.getName() + "_slope");
-                            channelBuilder(new ChannelUID(thing.getUID(), slopeId), slopeId)
+                            channelBuilder(new ChannelUID(thing.getUID(), slopeId), slopeId, templateId, props, commandDescriptor)
                                     .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                                                         PROPERTY_PROP_NAME, "slope")).build())
                                     .ifPresent(channels::add);
                             String shiftId = escapeUIDSegment(f.getName() + "_shift");
-                            channelBuilder(new ChannelUID(thing.getUID(), shiftId), shiftId)
+                            channelBuilder(new ChannelUID(thing.getUID(), shiftId), shiftId, templateId, props, commandDescriptor)
                                     .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                                                         PROPERTY_PROP_NAME, "shift")).build())
                                     .ifPresent(channels::add);
@@ -251,15 +260,15 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                             String activeId = escapeUIDSegment(feature.getName() + "_active");
                             String startId = escapeUIDSegment(feature.getName() + "_start");
                             String endId = escapeUIDSegment(feature.getName() + "_end");
-                            channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId)
+                            channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId, templateId, props, commandDescriptor)
                                     .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                                                         PROPERTY_PROP_NAME, "active")).build())
                                     .ifPresent(channels::add);
-                            channelBuilder(new ChannelUID(thing.getUID(), startId), startId)
+                            channelBuilder(new ChannelUID(thing.getUID(), startId), startId, templateId, props, commandDescriptor)
                                     .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                                                         PROPERTY_PROP_NAME, "start")).build())
                                     .ifPresent(channels::add);
-                            channelBuilder(new ChannelUID(thing.getUID(), endId), endId)
+                            channelBuilder(new ChannelUID(thing.getUID(), endId), endId, templateId, props, commandDescriptor)
                                     .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                                                         PROPERTY_PROP_NAME, "end")).build())
                                     .ifPresent(channels::add);
@@ -434,7 +443,17 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
     @Override
     public Collection<Class<? extends ThingHandlerService>> getServices() {
-        return singleton(DeviceDynamicCommandDescriptionProvider.class);
+        return List.of(DeviceDynamicCommandDescriptionProvider.class, VicareChannelTypeProvider.class);
+    }
+
+    @Override
+    public Collection<ChannelType> getChannelTypes(@Nullable Locale locale) {
+        return channelTypes.values();
+    }
+
+    @Override
+    public @Nullable ChannelType getChannelType(ChannelTypeUID channelTypeUID, @Nullable Locale locale) {
+        return channelTypes.get(channelTypeUID);
     }
 
     protected @Nullable VicareBridgeHandler getBridgeHandler() {
@@ -461,5 +480,175 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
             updateProperties(oldProps);
         }
+    }
+
+    private String channelTypeId(String id) {
+        String prefix = getThing().getUID().getAsString();
+        byte[] md5s = new byte[0];
+        try {
+            md5s = MessageDigest.getInstance("MD5").digest(prefix.getBytes(StandardCharsets.UTF_8));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("Unable to get MD5 message digest algorithm");
+        }
+        ByteBuffer encode = Base64.getEncoder()
+                .withoutPadding()
+                .encode(ByteBuffer.wrap(md5s).limit(32));
+        return String.format("%s_%s", new String(encode.array(), StandardCharsets.UTF_8).replace('+','-').replace('/','_'), id);
+    }
+
+    private ChannelType createChannelType(Feature feature, String templateId, String suffix,
+                                   Map<String, String> props, CommandDescriptor commandDescriptor) {
+        ChannelTypeUID channelTypeUID = new ChannelTypeUID(BINDING_ID, suffix);
+        ChannelType channelType = vicareServiceProvider.getChannelTypeRegistry().getChannelType(channelTypeUID);
+        if (channelType == null) {
+            ChannelType template = null;
+            if (templateId != null) {
+                template = vicareServiceProvider.getChannelTypeRegistry().getChannelType(new ChannelTypeUID(BINDING_ID, templateId));
+            }
+            if (template == null) {
+                var visitor = new Feature.Visitor() {
+                    String templateId;
+
+                    @Override
+                    public void visit(ConsumptionFeature f) {
+                        templateId = ConsumptionFeature.class.getSimpleName();
+                    }
+
+                    @Override
+                    public void visit(NumericSensorFeature f) {
+                        templateId = NumericSensorFeature.class.getSimpleName();
+                    }
+
+                    @Override
+                    public void visit(MultiValueFeature f) {
+                        templateId = MultiValueFeature.class.getSimpleName();
+                    }
+
+                    @Override
+                    public void visit(StatusSensorFeature f) {
+                        templateId = StatusSensorFeature.class.getSimpleName();
+                    }
+
+                    @Override
+                    public void visit(TextFeature f) {
+                        templateId = TextFeature.class.getSimpleName();
+                    }
+
+                    @Override
+                    public void visit(CurveFeature f) {
+                        templateId = CurveFeature.class.getSimpleName();
+                    }
+
+                    @Override
+                    public void visit(DatePeriodFeature datePeriodFeature) {
+                        templateId = DatePeriodFeature.class.getSimpleName();
+                    }
+                };
+                feature.accept(visitor);
+                template = vicareServiceProvider.getChannelTypeRegistry().getChannelType(new ChannelTypeUID(BINDING_ID, "default_template" + visitor.templateId));
+            }
+            String label = template.getLabel()
+                    .replaceAll("\\$\\{groupName}", props.get("groupName"))
+                    .replaceAll("\\$\\{propertyName}", props.get(PROPERTY_PROP_NAME));
+
+            String description = template.getDescription()
+                    .replaceAll("\\$\\{groupName}", props.get("groupName"))
+                    .replaceAll("\\$\\{propertyName}", props.get(PROPERTY_PROP_NAME));
+
+            StateChannelTypeBuilder builder = ChannelTypeBuilder.state(channelTypeUID, label, template.getItemType())
+                    .withDescription(description)
+                    .withCategory(template.getCategory())
+                    .withAutoUpdatePolicy(template.getAutoUpdatePolicy());
+
+            builder = stateDescription(feature, builder, template, commandDescriptor);
+            channelType = builder.build();
+            channelTypes.put(new ChannelTypeUID(BINDING_ID, channelTypeId(suffix)), channelType);
+        }
+        return channelType;
+    }
+
+    private StateChannelTypeBuilder stateDescription(Feature feature, StateChannelTypeBuilder builder, ChannelType template,
+                                                     CommandDescriptor commandDescriptor) {
+        StateDescription state = template.getState();
+        if (state != null) {
+            StateDescriptionFragmentBuilder sdf = StateDescriptionFragmentBuilder.create();
+            ParamDescriptor paramDescriptor = commandDescriptor != null &&
+                    commandDescriptor.getParams().size() == 1 ?
+                    commandDescriptor.getParams().get(0) : null;
+            feature.accept(new Feature.Visitor() {
+                @Override
+                public void visit(ConsumptionFeature f) {
+
+                }
+
+                @Override
+                public void visit(NumericSensorFeature f) {
+                    if (paramDescriptor == null || paramDescriptor instanceof NumericParamDescriptor) {
+                        addNumericStateDescriptors(state, sdf, (NumericParamDescriptor) paramDescriptor);
+                    }
+                }
+
+                @Override
+                public void visit(MultiValueFeature f) {
+                    if (paramDescriptor == null || paramDescriptor instanceof NumericParamDescriptor) {
+                        addNumericStateDescriptors(state, sdf, (NumericParamDescriptor) paramDescriptor);
+                    }
+                }
+
+                @Override
+                public void visit(StatusSensorFeature f) {
+                }
+
+                @Override
+                public void visit(TextFeature f) {
+                    if (paramDescriptor instanceof EnumParamDescriptor) {
+                        sdf.withOptions(((EnumParamDescriptor)paramDescriptor).getAllowedValues()
+                                .stream()
+                                .map(s -> new StateOption(s, s))
+                                .collect(Collectors.toList()));
+                    }
+                }
+
+                @Override
+                public void visit(CurveFeature f) {
+                    if (paramDescriptor == null || paramDescriptor instanceof NumericParamDescriptor) {
+                        addNumericStateDescriptors(state, sdf, (NumericParamDescriptor) paramDescriptor);
+                    }
+                }
+
+                @Override
+                public void visit(DatePeriodFeature datePeriodFeature) {
+
+                }
+            });
+            if (state.getPattern() != null)
+                sdf.withPattern(state.getPattern());
+            if (state.getOptions() != null && !state.getOptions().isEmpty())
+                sdf.withOptions(state.getOptions());
+
+            sdf.withReadOnly(state.isReadOnly());
+
+            return builder.withStateDescriptionFragment(sdf.build());
+        } else {
+            return builder;
+        }
+    }
+
+    private StateDescriptionFragmentBuilder addNumericStateDescriptors(StateDescription state,
+                                                                       StateDescriptionFragmentBuilder sdf,
+                                                                       NumericParamDescriptor paramDescriptor) {
+        if (state.getMaximum() != null)
+            sdf = sdf.withMaximum(state.getMaximum());
+        else if (paramDescriptor != null && paramDescriptor.getMax() != null)
+            sdf = sdf.withMaximum(BigDecimal.valueOf(paramDescriptor.getMax()));
+        if (state.getMinimum() != null)
+            sdf = sdf.withMinimum(state.getMinimum());
+        else if (paramDescriptor != null && paramDescriptor.getMin() != null)
+            sdf = sdf.withMinimum(BigDecimal.valueOf(paramDescriptor.getMin()));
+        if (state.getStep() != null)
+            sdf = sdf.withStep(state.getStep());
+        else if (paramDescriptor != null && paramDescriptor.getStepping() != null)
+            sdf = sdf.withStep(BigDecimal.valueOf(paramDescriptor.getStepping()));
+        return sdf;
     }
 }

@@ -47,4 +47,9 @@ public class DimensionalValue extends Value {
     public String getType() {
         return TYPE_NUMBER;
     }
+
+    @Override
+    public void accept(Visitor v) {
+        v.visit(this);
+    }
 }

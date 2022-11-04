@@ -12,7 +12,7 @@ public class StringValue extends Value {
     }
 
     public String getValue() {
-        return "value";
+        return value;
     }
 
     @Override
@@ -31,5 +31,10 @@ public class StringValue extends Value {
     @Override
     public int hashCode() {
         return Objects.hash(value);
+    }
+
+    @Override
+    public void accept(Visitor v) {
+        v.visit(this);
     }
 }

@@ -33,4 +33,9 @@ public class LocalDateValue extends Value {
     public int hashCode() {
         return Objects.hash(value);
     }
+
+    @Override
+    public void accept(Visitor v) {
+        v.visit(this);
+    }
 }

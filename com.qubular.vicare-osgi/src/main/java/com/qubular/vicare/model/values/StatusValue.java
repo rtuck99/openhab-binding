@@ -43,4 +43,9 @@ public class StatusValue extends Value {
     public String getType() {
         return TYPE_STRING;
     }
+
+    @Override
+    public void accept(Visitor v) {
+        v.visit(this);
+    }
 }

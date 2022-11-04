@@ -214,7 +214,8 @@ public class VicareBindingTest {
                         operatingModesDHW,
                         operatingModesDHWAndHeating,
                         operatingModesStandby,
-                        heatingCircuitsOperatingProgramsForcedLastFromSchedule))
+                        heatingCircuitsOperatingProgramsForcedLastFromSchedule,
+                        heatingCircuitsOperatingProgramsReducedEnergySaving))
                 .when(vicareService)
                 .getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
     }
@@ -959,9 +960,8 @@ public class VicareBindingTest {
         assertEquals("heating.circuits.1.operating.programs.reducedEnergySaving", channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new StringValue("unknown"), stateCaptor.getValue());
+        assertEquals(new StringType("unknown"), stateCaptor.getValue());
 
         channel = findChannel(thingCaptor, "heating_circuits_1_operating_programs_reducedEnergySaving_demand");
         assertNotNull(channel);
@@ -969,9 +969,8 @@ public class VicareBindingTest {
         assertEquals("heating.circuits.1.operating.programs.reducedEnergySaving", channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new StringValue("heating"), stateCaptor.getValue());
+        assertEquals(new StringType("heating"), stateCaptor.getValue());
     }
 
     @Test

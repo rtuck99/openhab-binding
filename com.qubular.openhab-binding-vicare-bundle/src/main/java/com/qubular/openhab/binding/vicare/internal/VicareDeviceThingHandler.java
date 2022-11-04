@@ -6,9 +6,8 @@ import com.qubular.vicare.CommandFailureException;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.CommandDescriptor;
 import com.qubular.vicare.model.Value;
-import com.qubular.vicare.model.values.DimensionalValue;
+import com.qubular.vicare.model.values.*;
 import com.qubular.vicare.model.Feature;
-import com.qubular.vicare.model.values.StatusValue;
 import com.qubular.vicare.model.features.*;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.core.library.types.DateTimeType;
@@ -220,9 +219,47 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                                                         .ifPresent(channels::add);
                                                 break;
                                             default:
-                                                switch(v.getType()) {
-                                                    case Value.TYPE_BOOLEAN:
-                                                }
+                                                var visitor = new Value.Visitor(){
+                                                    @Override
+                                                    public void visit(ArrayValue v) {
+                                                        unsupportedValue(v);
+                                                    }
+
+                                                    @Override
+                                                    public void visit(BooleanValue v) {
+                                                        unsupportedValue(v);
+                                                    }
+
+                                                    @Override
+                                                    public void visit(DimensionalValue v) {
+                                                        unsupportedValue(v);
+                                                    }
+
+                                                    @Override
+                                                    public void visit(LocalDateValue v) {
+                                                        unsupportedValue(v);
+                                                    }
+
+                                                    @Override
+                                                    public void visit(StatusValue v) {
+                                                        unsupportedValue(v);
+                                                    }
+
+                                                    @Override
+                                                    public void visit(StringValue v) {
+                                                        String id = escapeUIDSegment(f.getName() + "_" + k);
+                                                        channelBuilder(new ChannelUID(thing.getUID(), id), id)
+                                                                .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
+                                                                        PROPERTY_PROP_NAME, k)).build())
+                                                                .ifPresent(channels::add);
+                                                    }
+
+                                                    private void unsupportedValue(Value v) {
+                                                        logger.warn("Dropping unsupported value {} for {}.{}",
+                                                                v, f.getName(), k);
+                                                    }
+                                                };
+                                                v.accept(visitor);
                                         }
                                     });
                         }
@@ -374,15 +411,61 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                     public void visit(StatusSensorFeature f) {
                         Channel channel = getThing().getChannel(channelUID);
                         String propertyName = channel.getProperties().get(PROPERTY_PROP_NAME);
-                        State state = null;
-                        if ("active".equals(propertyName)) {
-                            if (f.isActive() == null) {
-                                state = UnDefType.UNDEF;
-                            } else {
-                                state = f.isActive() ? OnOffType.ON : OnOffType.OFF;
-                            }
-                        } else if ("status".equals(propertyName)) {
-                            state = StringType.valueOf(f.getStatus() == null ? null : f.getStatus().getName());
+                        State state = UnDefType.UNDEF;
+                        switch (propertyName) {
+                            case "active":
+                                if (f.isActive() == null) {
+                                    state = UnDefType.UNDEF;
+                                } else {
+                                    state = f.isActive() ? OnOffType.ON : OnOffType.OFF;
+                                }
+                                break;
+                            case "status":
+                                state = StringType.valueOf(f.getStatus() == null ? null : f.getStatus().getName());
+                                break;
+                            default:
+                                Value value = f.getProperties().get(propertyName);
+                                var visitor = new Value.Visitor() {
+                                    State state = UnDefType.UNDEF;
+
+                                    @Override
+                                    public void visit(ArrayValue v) {
+                                        unsupportedValue(v);
+                                    }
+
+                                    @Override
+                                    public void visit(BooleanValue v) {
+                                        unsupportedValue(v);
+                                    }
+
+                                    @Override
+                                    public void visit(DimensionalValue v) {
+                                        unsupportedValue(v);
+                                    }
+
+                                    @Override
+                                    public void visit(LocalDateValue v) {
+                                        unsupportedValue(v);
+                                    }
+
+                                    @Override
+                                    public void visit(StatusValue v) {
+                                        unsupportedValue(v);
+                                    }
+
+                                    @Override
+                                    public void visit(StringValue v) {
+                                        state = new StringType(v.getValue());
+                                    }
+
+                                    private void unsupportedValue(Value v) {
+                                        logger.trace("Unable to update unsupported value {} for property {}.{}",
+                                                v, f.getName(), propertyName);
+                                    }
+                                };
+                                value.accept(visitor);
+                                state = visitor.state;
+                                break;
                         }
                         updateState(channelUID, state);
                     }

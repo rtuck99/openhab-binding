@@ -25,4 +25,9 @@ public class ArrayValue extends Value {
     public Unit getUnit() {
         return unit;
     }
+
+    @Override
+    public void accept(Visitor v) {
+        v.visit(this);
+    }
 }

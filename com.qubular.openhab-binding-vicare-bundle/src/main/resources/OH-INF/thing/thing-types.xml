@@ -266,6 +266,11 @@
     <category>Heating</category>
     <state pattern="%d °C"/>
   </channel-type>
+  <channel-type id="heating_circuits_operating_programs_reducedEnergySaving_active">
+    <item-type>Switch</item-type>
+    <label>Redued Energy Saving Program Active</label>
+    <description></description>
+  </channel-type>
   <channel-type id="heating_circuits_operating_programs_normal_active">
     <item-type>Switch</item-type>
     <label>Normal Operating Program Active</label>

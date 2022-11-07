@@ -344,8 +344,11 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                 .filter(cd -> cd.getParams().isEmpty())
                 .map(cd -> {
                     String id = escapeUIDSegment(feature.getName() + "_" + cd.getName());
+
                     return channelBuilder(new ChannelUID(getThing().getUID(), id),
                                                        channelIdToChannelType(id))
+                            .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
+                                    PROPERTY_COMMAND_NAME, cd.getName())))
                             .map(ChannelBuilder::build);
                 })
                 .filter(Optional::isPresent)

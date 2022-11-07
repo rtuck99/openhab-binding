@@ -856,6 +856,19 @@ public class VicareServiceTest {
 
     @Test
     @DisabledIf("realConnection")
+    public void supports_heating_dhw_operating_modes_off() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<StatusSensorFeature> dhwFeature = features.stream()
+                .filter(f -> f.getName().equals("heating.dhw.operating.modes.off"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(dhwFeature.isPresent());
+        assertFalse(dhwFeature.get().isActive());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
     public void supports_heating_dhw_pumps_primary() throws ServletException, AuthenticationException, NamespaceException, IOException {
         List<Feature> features = getFeatures("deviceFeaturesResponse2.json");
 
@@ -923,6 +936,82 @@ public class VicareServiceTest {
     }
 
     @Test
+    @DisabledIf("realConnection")
+    public void supports_heat_dhw_sensors_temperature_outlet() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse.json");
+
+        Optional<NumericSensorFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.dhw.sensors.temperature.outlet"))
+                .map(NumericSensorFeature.class::cast)
+                .findFirst();
+
+        assertEquals(27.3, feature.get().getValue().getValue(), 0.01f);
+        assertEquals(Unit.CELSIUS, feature.get().getValue().getUnit());
+        assertEquals(new StatusValue("connected"), feature.get().getStatus());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_gas_consumption_dhw() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<ConsumptionFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.gas.consumption.dhw"))
+                .map(ConsumptionFeature.class::cast)
+                .findFirst();
+
+        assertEquals(1.7, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_DAY).get().getValue(), 0.01f);
+        assertEquals(1.2, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_DAY).get().getValue(), 0.01f);
+        assertEquals(4.6, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_WEEK).get().getValue(), 0.01f);
+        assertEquals(17.6, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_WEEK).get().getValue(), 0.01f);
+        assertEquals(22.2, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_MONTH).get().getValue(), 0.01f);
+        assertEquals(33.5, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_MONTH).get().getValue(), 0.01f);
+        assertEquals(730.9, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_YEAR).get().getValue(), 0.01f);
+        assertEquals(676.3, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_YEAR).get().getValue(), 0.01f);
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_gas_consumption_heating() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<ConsumptionFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.gas.consumption.heating"))
+                .map(ConsumptionFeature.class::cast)
+                .findFirst();
+
+        assertEquals(0.0, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_DAY).get().getValue(), 0.01f);
+        assertEquals(0.0, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_DAY).get().getValue(), 0.01f);
+        assertEquals(0.0, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_WEEK).get().getValue(), 0.01f);
+        assertEquals(0.0, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_WEEK).get().getValue(), 0.01f);
+        assertEquals(3.0, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_MONTH).get().getValue(), 0.01f);
+        assertEquals(0.0, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_MONTH).get().getValue(), 0.01f);
+        assertEquals(3.0, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_YEAR).get().getValue(), 0.01f);
+        assertEquals(871.3, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_YEAR).get().getValue(), 0.01f);
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_gas_consumption_total() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<ConsumptionFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.gas.consumption.total"))
+                .map(ConsumptionFeature.class::cast)
+                .findFirst();
+
+        assertEquals(1.7, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_DAY).get().getValue(), 0.01f);
+        assertEquals(1.2, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_DAY).get().getValue(), 0.01f);
+        assertEquals(4.6, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_WEEK).get().getValue(), 0.01f);
+        assertEquals(17.6, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_WEEK).get().getValue(), 0.01f);
+        assertEquals(25.2, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_MONTH).get().getValue(), 0.01f);
+        assertEquals(33.5, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_MONTH).get().getValue(), 0.01f);
+        assertEquals(733.9, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_YEAR).get().getValue(), 0.01f);
+        assertEquals(1547.6, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_YEAR).get().getValue(), 0.01f);
+    }
+
+    @Test
+    @DisabledIf("realConnection")
     public void supports_heating_solar_power_production() throws ServletException, AuthenticationException, NamespaceException, IOException {
         List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
 
@@ -943,6 +1032,7 @@ public class VicareServiceTest {
     }
 
     @Test
+    @DisabledIf("realConnection")
     public void supports_heating_solar_sensors_temperature_collector() throws ServletException, AuthenticationException, NamespaceException, IOException {
         List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
 
@@ -957,6 +1047,7 @@ public class VicareServiceTest {
     }
 
     @Test
+    @DisabledIf("realConnection")
     public void support_heating_solar_pumps_circuit() throws ServletException, AuthenticationException, NamespaceException, IOException {
         List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
 
@@ -971,6 +1062,7 @@ public class VicareServiceTest {
     }
 
     @Test
+    @DisabledIf("realConnection")
     public void supports_heating_solar() throws ServletException, AuthenticationException, NamespaceException, IOException {
         List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
 

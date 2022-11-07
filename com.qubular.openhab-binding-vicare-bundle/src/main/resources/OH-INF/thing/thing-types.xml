@@ -129,6 +129,27 @@
     <label>DHW Hygiene Enabled</label>
     <state readOnly="true"/>
   </channel-type>
+  <channel-type id="heating_dhw_oneTimeCharge">
+    <item-type>Switch</item-type>
+    <label>DHW One Time Charge</label>
+    <description>Shows whether the one-time charge of domestic hot water is active.</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_dhw_oneTimeCharge_activate">
+    <item-type>Switch</item-type>
+    <label>Activate DHW One Time Charge</label>
+    <description>The command to activate the one-time charge of domestic hot water. The command will be sent when this channel receives the ON command.</description>
+  </channel-type>
+  <channel-type id="heating_dhw_oneTimeCharge_deactivate">
+    <item-type>Switch</item-type>
+    <label>Deactivate DHW One Time Charge</label>
+    <description>The command to deactivate the one-time charge of domestic hot water. The command will be sent when this channel receives the ON command.</description>
+  </channel-type>
+  <channel-type id="heating_dhw_operating_modes_off_active">
+    <item-type>Switch</item-type>
+    <label>DHW Operating Modes Off</label>
+    <state readOnly="true"/>
+  </channel-type>
   <channel-type id="heating_dhw_status">
     <item-type>String</item-type>
     <label>DHW Status</label>
@@ -157,9 +178,15 @@
   <channel-type id="heating_dhw_sensors_temperature_hotWaterStorage">
     <item-type>Number:Temperature</item-type>
     <label>DHW Storage Temperature</label>
-    <description>Shows the status and the value of the temperature sensor located in the hot water storage</description>
+    <description>Shows the value of the temperature sensor located in the hot water storage</description>
     <category>Temperature</category>
     <state readOnly="true" pattern="%.1f °C"/>
+  </channel-type>
+  <channel-type id="heating_dhw_sensors_temperature_hotWaterStorage_status">
+    <item-type>String</item-type>
+    <label>DHW Storage Status</label>
+    <description>Shows the status of the temperature sensor located in the hot water storage.</description>
+    <state readOnly="true"/>
   </channel-type>
   <channel-type id="heating_dhw_temperature_main">
     <item-type>Number:Temperature</item-type>
@@ -337,6 +364,102 @@
     <category>Heating</category>
     <state pattern="%d °C"/>
   </channel-type>
+  <channel-type id="heating_gas_consumption_dhw_currentDay">
+    <item-type>Number:Volume</item-type>
+    <label>DHW Gas Consumption Current Day</label>
+    <description>Shows statistics of gas usage for heating up the DHW for the current day</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_dhw_previousDay">
+    <item-type>Number:Volume</item-type>
+    <label>DHW Gas Consumption Current Day</label>
+    <description>Shows statistics of gas usage for heating up the DHW for the previous day</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_dhw_currentWeek">
+    <item-type>Number:Volume</item-type>
+    <label>DHW Gas Consumption Current Week</label>
+    <description>Shows statistics of gas usage for heating up the DHW for the current week</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_dhw_previousWeek">
+    <item-type>Number:Volume</item-type>
+    <label>DHW Gas Consumption Previous Week</label>
+    <description>Shows statistics of gas usage for heating up the DHW for the previous week</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_dhw_currentMonth">
+    <item-type>Number:Volume</item-type>
+    <label>DHW Gas Consumption Current Month</label>
+    <description>Shows statistics of gas usage for heating up the DHW for the current month</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_dhw_previousMonth">
+    <item-type>Number:Volume</item-type>
+    <label>DHW Gas Consumption Previous Month</label>
+    <description>Shows statistics of gas usage for heating up the DHW for the previous month</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_dhw_currentYear">
+    <item-type>Number:Volume</item-type>
+    <label>DHW Gas Consumption Current Year</label>
+    <description>Shows statistics of gas usage for heating up the DHW for the current year</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_dhw_previousYear">
+    <item-type>Number:Volume</item-type>
+    <label>DHW Gas Consumption Previous Year</label>
+    <description>Shows statistics of gas usage for heating up the DHW for the previous year</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_heating_currentDay">
+    <item-type>Number:Volume</item-type>
+    <label>Heating Gas Consumption Current Day</label>
+    <description>Shows statistics of gas usage for heating up rooms for the current day</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_heating_previousDay">
+    <item-type>Number:Volume</item-type>
+    <label>Heating Gas Consumption Current Day</label>
+    <description>Shows statistics of gas usage for heating up rooms for the previous day</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_heating_currentWeek">
+    <item-type>Number:Volume</item-type>
+    <label>Heating Gas Consumption Current Week</label>
+    <description>Shows statistics of gas usage for heating up rooms for the current week</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_heating_previousWeek">
+    <item-type>Number:Volume</item-type>
+    <label>Heating Gas Consumption Previous Week</label>
+    <description>Shows statistics of gas usage for heating up rooms for the previous week</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_heating_currentMonth">
+    <item-type>Number:Volume</item-type>
+    <label>Heating Gas Consumption Current Month</label>
+    <description>Shows statistics of gas usage for heating up rooms for the current month</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_heating_previousMonth">
+    <item-type>Number:Volume</item-type>
+    <label>Heating Gas Consumption Previous Month</label>
+    <description>Shows statistics of gas usage for heating up rooms for the previous month</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_heating_currentYear">
+    <item-type>Number:Volume</item-type>
+    <label>Heating Gas Consumption Current Year</label>
+    <description>Shows statistics of gas usage for heating up rooms for the current year</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_heating_previousYear">
+    <item-type>Number:Volume</item-type>
+    <label>Heating Gas Consumption Previous Year</label>
+    <description>Shows statistics of gas usage for heating up rooms for the previous year</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
   <channel-type id="heating_gas_consumption_summary_dhw_currentDay">
     <item-type>Number:Volume</item-type>
     <label>DHW Gas Consumption Current Day</label>
@@ -407,6 +530,54 @@
     <item-type>Number:Volume</item-type>
     <label>Heating Gas Consumption Current Year</label>
     <description>Shows statistics of gas usage for heating up rooms for the current year</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_total_currentDay">
+    <item-type>Number:Volume</item-type>
+    <label>Total Gas Consumption Current Day</label>
+    <description>Shows statistics of total gas usage for the current day</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_total_previousDay">
+    <item-type>Number:Volume</item-type>
+    <label>Total Gas Consumption Current Day</label>
+    <description>Shows statistics of total gas usage for the previous day</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_total_currentWeek">
+    <item-type>Number:Volume</item-type>
+    <label>Total Gas Consumption Current Week</label>
+    <description>Shows statistics of total gas usage for the current week</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_total_previousWeek">
+    <item-type>Number:Volume</item-type>
+    <label>Total Gas Consumption Previous Week</label>
+    <description>Shows statistics of total gas usage for the previous week</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_total_currentMonth">
+    <item-type>Number:Volume</item-type>
+    <label>Total Gas Consumption Current Month</label>
+    <description>Shows statistics of total gas usage for the current month</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_total_previousMonth">
+    <item-type>Number:Volume</item-type>
+    <label>Total Gas Consumption Previous Month</label>
+    <description>Shows statistics of total gas usage for the previous month</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_total_currentYear">
+    <item-type>Number:Volume</item-type>
+    <label>Total Gas Consumption Current Year</label>
+    <description>Shows statistics of total gas usage for the current year</description>
+    <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_gas_consumption_total_previousYear">
+    <item-type>Number:Volume</item-type>
+    <label>Total Gas Consumption Previous Year</label>
+    <description>Shows statistics of total gas usage for the previous year</description>
     <state readOnly="true" pattern="%.1f m³"/>
   </channel-type>
   <channel-type id="heating_power_consumption_summary_heating_currentDay">

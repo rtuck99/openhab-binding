@@ -457,7 +457,8 @@ public class VicareServiceImpl implements VicareService {
                         DimensionalValue slope = dimensionalValueFromUnitValue(slopeObject);
                         return new CurveFeature(featureName, slope, shift);
                     }
-                } else if (featureName.endsWith(".production")) {
+                } else if (featureName.endsWith(".production") ||
+                featureName.contains(".consumption.")) {
                     Map<String, Value> arrayProperties = properties.entrySet().stream()
                             .filter(e -> TYPE_ARRAY.equals(e.getValue().getAsJsonObject().get("type").getAsString()))
                             .collect(toMap(Map.Entry::getKey, e -> {

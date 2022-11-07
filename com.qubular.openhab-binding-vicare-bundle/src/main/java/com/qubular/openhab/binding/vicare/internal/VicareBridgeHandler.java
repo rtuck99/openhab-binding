@@ -9,7 +9,9 @@ import com.qubular.vicare.VicareConfiguration;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.CommandDescriptor;
 import com.qubular.vicare.model.Feature;
+import com.qubular.vicare.model.Value;
 import org.openhab.core.library.types.DecimalType;
+import org.openhab.core.library.types.OnOffType;
 import org.openhab.core.library.types.QuantityType;
 import org.openhab.core.library.types.StringType;
 import org.openhab.core.thing.*;
@@ -31,6 +33,7 @@ import java.util.function.Supplier;
 
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThingUniqueId;
+import static java.util.Collections.emptyMap;
 import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
 import static java.util.Optional.empty;
@@ -174,8 +177,12 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
             sendCommand(channelUID, targetThing, channel, () -> ((DecimalType) command).doubleValue());
         } else if (command instanceof QuantityType) {
             sendCommand(channelUID, targetThing, channel, () -> ((QuantityType<?>) command).doubleValue());
+        } else if (command instanceof OnOffType) {
+            sendCommand(channelUID, targetThing, channel, () -> OnOffType.ON.equals(command));
         } else {
-            logger.trace("Ignored unsupported command type {}", command);
+            {
+                logger.trace("Ignored unsupported command type {}", command);
+            }
         }
         return empty();
     }
@@ -185,8 +192,14 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
         if (commandDescriptor != null) {
             Object value = valueSupplier.get();
             logger.debug("Sending command {} ({})", commandDescriptor.getUri(), value);
-            vicareService.sendCommand(commandDescriptor.getUri(), Map.of(channel.getProperties().get(PROPERTY_PARAM_NAME),
-                                                                         value));
+            Map<String, Object> values = new HashMap<>();
+            String paramName = channel.getProperties().get(PROPERTY_PARAM_NAME);
+            if (paramName != null) {
+                values.put(paramName, value);
+                vicareService.sendCommand(commandDescriptor.getUri(), values);
+            } else if (Boolean.TRUE.equals(value)) {
+                vicareService.sendCommand(commandDescriptor.getUri(), emptyMap());
+            }
         }
     }
 

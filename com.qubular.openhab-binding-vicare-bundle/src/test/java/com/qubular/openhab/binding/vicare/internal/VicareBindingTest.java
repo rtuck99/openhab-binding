@@ -220,6 +220,9 @@ public class VicareBindingTest {
                                                                   Map.of("active", BooleanValue.FALSE),
                                                                   List.of(new CommandDescriptor("activate", true, emptyList(), URI.create("https://api.viessmann.com/iot/v1/equipment/installations/123456/gateways/00/devices/0/features/heating.dhw.oneTimeCharge/commands/activate")),
                                                                           new CommandDescriptor("deactivate", false, emptyList(), URI.create("https://api.viessmann.com/iot/v1/equipment/installations/123456/gateways/00/devices/0/features/heating.dhw.oneTimeCharge/commands/deactivate"))));
+        Feature heatingDHWOperatingModesOff = new StatusSensorFeature("heating.dhw.operating.modes.off",
+                StatusValue.NA,
+                false);
         doReturn(
                 List.of(temperatureSensor, statisticsFeature, textFeature, statusFeature, normalProgramFeature,
                         consumptionFeature, burnerFeature, curveFeature, holidayFeature, heatingDhw,
@@ -241,7 +244,8 @@ public class VicareBindingTest {
                         heatingCircuitsSensorsTemperatureSupply,
                         heatingCircuitsZoneMode,
                         heatingDHWHygiene,
-                        heatingDHWOneTimeCharge))
+                        heatingDHWOneTimeCharge,
+                        heatingDHWOperatingModesOff))
                 .when(vicareService)
                 .getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
     }
@@ -496,6 +500,22 @@ public class VicareBindingTest {
         handler.handleCommand(dhwHotWaterStorageTempChannel.getUID(), RefreshType.REFRESH);
         verify(callback, timeout(1000)).stateUpdated(eq(dhwHotWaterStorageTempChannel.getUID()), stateCaptor.capture());
         assertEquals(54.3, ((DecimalType) stateCaptor.getValue()).doubleValue(), 0.01);
+
+        channel = findChannel(thingCaptor, "heating_dhw_sensors_temperature_outlet_status");
+        assertEquals("heating_dhw_sensors_temperature_outlet_status", channel.getChannelTypeUID().getId());
+        assertEquals("heating.dhw.sensors.temperature.outlet", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(new StringType("connected"), stateCaptor.getValue());
+
+        channel = findChannel(thingCaptor, "heating_dhw_sensors_temperature_hotWaterStorage_status");
+        assertEquals("heating_dhw_sensors_temperature_hotWaterStorage_status", channel.getChannelTypeUID().getId());
+        assertEquals("heating.dhw.sensors.temperature.hotWaterStorage", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(new StringType("connected"), stateCaptor.getValue());
     }
 
     @Test
@@ -692,7 +712,6 @@ public class VicareBindingTest {
             throw new RuntimeException(e);
         }
         inOrder.verify(vicareService, timeout(1000)).sendCommand(eq(SET_MODE_URI), eq(Map.of("mode", "heating")));
-
     }
 
     private ThingHandlerCallback simpleHandlerCallback(Bridge bridge, ThingHandler handler) {
@@ -1219,7 +1238,7 @@ public class VicareBindingTest {
         assertEquals("heating.dhw.oneTimeCharge", channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), OnOffType.ON);
-        verify(vicareService).sendCommand(URI.create("https://api.viessmann.com/iot/v1/equipment/installations/123456/gateways/00/devices/0/features/heating.dhw.oneTimeCharge/commands/activate"), emptyMap());
+        verify(vicareService, timeout(1000)).sendCommand(URI.create("https://api.viessmann.com/iot/v1/equipment/installations/123456/gateways/00/devices/0/features/heating.dhw.oneTimeCharge/commands/activate"), emptyMap());
 
         channel = findChannel(thingCaptor, "heating_dhw_oneTimeCharge_deactivate");
         assertNotNull(channel);
@@ -1227,7 +1246,35 @@ public class VicareBindingTest {
         assertEquals("heating.dhw.oneTimeCharge", channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), OnOffType.ON);
-        verify(vicareService).sendCommand(URI.create("https://api.viessmann.com/iot/v1/equipment/installations/123456/gateways/00/devices/0/features/heating.dhw.oneTimeCharge/commands/deactivate"), emptyMap());
+        verify(vicareService, timeout(1000)).sendCommand(URI.create("https://api.viessmann.com/iot/v1/equipment/installations/123456/gateways/00/devices/0/features/heating.dhw.oneTimeCharge/commands/deactivate"), emptyMap());
+    }
+
+    @Test
+    public void supportsHeatingDhwOperatingModesOff() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+
+        Channel channel = findChannel(thingCaptor, "heating_dhw_operating_modes_off_active");
+        assertNotNull(channel);
+        assertEquals("heating_dhw_operating_modes_off_active", channel.getChannelTypeUID().getId());
+        assertEquals("heating.dhw.operating.modes.off", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.OFF, stateCaptor.getValue());
     }
 
     @Test

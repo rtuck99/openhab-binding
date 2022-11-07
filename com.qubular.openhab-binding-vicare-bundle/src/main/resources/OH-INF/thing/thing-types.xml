@@ -93,6 +93,7 @@
     <state readOnly="true"/>
   </channel-type>
   <channel-type id="heating_circuits_name">
+    <item-type>String</item-type>
     <label>Heating Circuit Name</label>
     <description>Shows the name given for the heating circuit N</description>
     <category>Text</category>
@@ -272,6 +273,24 @@
     <description>Shows the end date of the holiday program</description>
     <state readOnly="true"/>
   </channel-type>
+  <channel-type id="heating_circuits_operating_programs_holidayAtHome_active">
+    <item-type>Switch</item-type>
+    <label>Holiday At Home Operating Program Active</label>
+    <description>Shows whether the holiday at home program is active</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_programs_holidayAtHome_start">
+    <item-type>DateTime</item-type>
+    <label>Holiday At Home Operating Program Start</label>
+    <description>Shows the start date of the holiday at home program</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_programs_holidayAtHome_end">
+    <item-type>DateTime</item-type>
+    <label>Holiday At Home Operating Program End</label>
+    <description>Shows the end date of the holiday at home program</description>
+    <state readOnly="true"/>
+  </channel-type>
   <channel-type id="heating_circuits_operating_programs_comfort_active">
     <item-type>Switch</item-type>
     <label>Comfort Operating Program Active</label>
@@ -372,7 +391,7 @@
   </channel-type>
   <channel-type id="heating_gas_consumption_dhw_previousDay">
     <item-type>Number:Volume</item-type>
-    <label>DHW Gas Consumption Current Day</label>
+    <label>DHW Gas Consumption Previous Day</label>
     <description>Shows statistics of gas usage for heating up the DHW for the previous day</description>
     <state readOnly="true" pattern="%.1f m³"/>
   </channel-type>
@@ -420,7 +439,7 @@
   </channel-type>
   <channel-type id="heating_gas_consumption_heating_previousDay">
     <item-type>Number:Volume</item-type>
-    <label>Heating Gas Consumption Current Day</label>
+    <label>Heating Gas Consumption Previous Day</label>
     <description>Shows statistics of gas usage for heating up rooms for the previous day</description>
     <state readOnly="true" pattern="%.1f m³"/>
   </channel-type>
@@ -540,7 +559,7 @@
   </channel-type>
   <channel-type id="heating_gas_consumption_total_previousDay">
     <item-type>Number:Volume</item-type>
-    <label>Total Gas Consumption Current Day</label>
+    <label>Total Gas Consumption Previous Day</label>
     <description>Shows statistics of total gas usage for the previous day</description>
     <state readOnly="true" pattern="%.1f m³"/>
   </channel-type>
@@ -580,6 +599,102 @@
     <description>Shows statistics of total gas usage for the previous year</description>
     <state readOnly="true" pattern="%.1f m³"/>
   </channel-type>
+  <channel-type id="heating_power_consumption_dhw_currentDay">
+    <item-type>Number:Energy</item-type>
+    <label>DHW Power Consumption Current Day</label>
+    <description>Shows statistics of power usage for heating up the DHW for the current day</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_dhw_previousDay">
+    <item-type>Number:Energy</item-type>
+    <label>DHW Power Consumption Previous Day</label>
+    <description>Shows statistics of power usage for heating up the DHW for the previous day</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_dhw_currentWeek">
+    <item-type>Number:Energy</item-type>
+    <label>DHW Power Consumption Current Week</label>
+    <description>Shows statistics of power usage for heating up the DHW for the current week</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_dhw_previousWeek">
+    <item-type>Number:Energy</item-type>
+    <label>DHW Power Consumption Previous Week</label>
+    <description>Shows statistics of power usage for heating up the DHW for the previous week</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_dhw_currentMonth">
+    <item-type>Number:Energy</item-type>
+    <label>DHW Power Consumption Current Month</label>
+    <description>Shows statistics of power usage for heating up the DHW for the current month</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_dhw_previousMonth">
+    <item-type>Number:Energy</item-type>
+    <label>DHW Power Consumption Previous Month</label>
+    <description>Shows statistics of power usage for heating up the DHW for the previous month</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_dhw_currentYear">
+    <item-type>Number:Energy</item-type>
+    <label>DHW Power Consumption Current Year</label>
+    <description>Shows statistics of power usage for heating up the DHW for the current year</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_dhw_previousYear">
+    <item-type>Number:Energy</item-type>
+    <label>DHW Power Consumption Previous Year</label>
+    <description>Shows statistics of power usage for heating up the DHW for the previous year</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_heating_currentDay">
+    <item-type>Number:Energy</item-type>
+    <label>Heating Power Consumption Current Day</label>
+    <description>Shows statistics of power usage for heating up rooms for the current day</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_heating_previousDay">
+    <item-type>Number:Energy</item-type>
+    <label>Heating Power Consumption Previous Day</label>
+    <description>Shows statistics of power usage for heating up rooms for the previous day</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_heating_currentWeek">
+    <item-type>Number:Energy</item-type>
+    <label>Heating Power Consumption Current Week</label>
+    <description>Shows statistics of power usage for heating up rooms for the current week</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_heating_previousWeek">
+    <item-type>Number:Energy</item-type>
+    <label>Heating Power Consumption Previous Week</label>
+    <description>Shows statistics of power usage for heating up rooms for the previous week</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_heating_currentMonth">
+    <item-type>Number:Energy</item-type>
+    <label>Heating Power Consumption Current Month</label>
+    <description>Shows statistics of power usage for heating up rooms for the current month</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_heating_previousMonth">
+    <item-type>Number:Energy</item-type>
+    <label>Heating Power Consumption Previous Month</label>
+    <description>Shows statistics of power usage for heating up rooms for the previous month</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_heating_currentYear">
+    <item-type>Number:Energy</item-type>
+    <label>Heating Power Consumption Current Year</label>
+    <description>Shows statistics of power usage for heating up rooms for the current year</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_heating_previousYear">
+    <item-type>Number:Energy</item-type>
+    <label>Heating Power Consumption Previous Year</label>
+    <description>Shows statistics of power usage for heating up rooms for the previous year</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
   <channel-type id="heating_power_consumption_summary_heating_currentDay">
     <item-type>Number:Energy</item-type>
     <label>Heating Power Consumption Current Day</label>
@@ -602,6 +717,54 @@
     <item-type>Number:Energy</item-type>
     <label>Heating Power Consumption Current Year</label>
     <description>Shows statistics of power usage for heating up rooms for the current year</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_total_currentDay">
+    <item-type>Number:Energy</item-type>
+    <label>Total Power Consumption Current Day</label>
+    <description>Shows total power consumption statistics for the current day</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_total_previousDay">
+    <item-type>Number:Energy</item-type>
+    <label>Total Power Consumption Previous Day</label>
+    <description>Shows total power consumption statistics for the previous day</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_total_currentWeek">
+    <item-type>Number:Energy</item-type>
+    <label>Total Power Consumption Current Week</label>
+    <description>Shows total power consumption statistics for the current week</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_total_previousWeek">
+    <item-type>Number:Energy</item-type>
+    <label>Total Power Consumption Previous Week</label>
+    <description>Shows total power consumption statistics for the previous week</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_total_currentMonth">
+    <item-type>Number:Energy</item-type>
+    <label>Total Power Consumption Current Month</label>
+    <description>Shows total power consumption statistics for the current month</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_total_previousMonth">
+    <item-type>Number:Energy</item-type>
+    <label>Total Power Consumption Previous Month</label>
+    <description>Shows total power consumption statistics for the previous month</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_total_currentYear">
+    <item-type>Number:Energy</item-type>
+    <label>Total Power Consumption Current Year</label>
+    <description>Shows total power consumption statistics for the current year</description>
+    <state readOnly="true" pattern="%.1f kWh"/>
+  </channel-type>
+  <channel-type id="heating_power_consumption_total_previousYear">
+    <item-type>Number:Energy</item-type>
+    <label>Total Power Consumption Previous Year</label>
+    <description>Shows total power consumption statistics for the previous year</description>
     <state readOnly="true" pattern="%.1f kWh"/>
   </channel-type>
   <channel-type id="heating_operating_programs_holiday_active">

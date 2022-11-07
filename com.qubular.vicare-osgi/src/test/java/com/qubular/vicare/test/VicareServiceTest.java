@@ -481,6 +481,66 @@ public class VicareServiceTest {
 
     @Test
     @DisabledIf("realConnection")
+    public void supports_heating_power_consumption_dhw() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<ConsumptionFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.power.consumption.dhw"))
+                .map(ConsumptionFeature.class::cast)
+                .findFirst();
+
+        assertEquals(0.0, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_DAY).get().getValue(), 0.01f);
+        assertEquals(0.0, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_DAY).get().getValue(), 0.01f);
+        assertEquals(0.0, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_WEEK).get().getValue(), 0.01f);
+        assertEquals(0.1, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_WEEK).get().getValue(), 0.01f);
+        assertEquals(0.7, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_MONTH).get().getValue(), 0.01f);
+        assertEquals(1.1, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_MONTH).get().getValue(), 0.01f);
+        assertEquals(25.0, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_YEAR).get().getValue(), 0.01f);
+        assertEquals(23.0, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_YEAR).get().getValue(), 0.01f);
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_power_consumption_heating() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<ConsumptionFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.power.consumption.heating"))
+                .map(ConsumptionFeature.class::cast)
+                .findFirst();
+
+        assertEquals(0.0, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_DAY).get().getValue(), 0.01f);
+        assertEquals(0.1, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_DAY).get().getValue(), 0.01f);
+        assertEquals(0.3, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_WEEK).get().getValue(), 0.01f);
+        assertEquals(0.7, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_WEEK).get().getValue(), 0.01f);
+        assertEquals(2.8, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_MONTH).get().getValue(), 0.01f);
+        assertEquals(3.5, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_MONTH).get().getValue(), 0.01f);
+        assertEquals(34.1, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_YEAR).get().getValue(), 0.01f);
+        assertEquals(118.2, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_YEAR).get().getValue(), 0.01f);
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_power_consumption_total() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<ConsumptionFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.power.consumption.total"))
+                .map(ConsumptionFeature.class::cast)
+                .findFirst();
+
+        assertEquals(0.0, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_DAY).get().getValue(), 0.01f);
+        assertEquals(0.1, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_DAY).get().getValue(), 0.01f);
+        assertEquals(0.3, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_WEEK).get().getValue(), 0.01f);
+        assertEquals(0.8, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_WEEK).get().getValue(), 0.01f);
+        assertEquals(3.5, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_MONTH).get().getValue(), 0.01f);
+        assertEquals(4.6, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_MONTH).get().getValue(), 0.01f);
+        assertEquals(59.1, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_YEAR).get().getValue(), 0.01f);
+        assertEquals(141.2, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_YEAR).get().getValue(), 0.01f);
+    }
+
+    @Test
+    @DisabledIf("realConnection")
     public void supports_heating_power_consumption_summary_dhw() throws ServletException, NamespaceException, AuthenticationException, IOException {
         List<Feature> features = getFeatures("deviceFeaturesResponse.json");
 
@@ -774,6 +834,21 @@ public class VicareServiceTest {
         assertTrue(dateFeature.isPresent());
         assertEquals(LocalDate.parse("2022-12-23"), dateFeature.get().getStart());
         assertEquals(LocalDate.parse("2022-12-26"), dateFeature.get().getEnd());
+        assertEquals(OFF, dateFeature.get().getActive());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_operating_programs_holidayAtHome() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<DatePeriodFeature> dateFeature = features.stream()
+                .filter(f -> f.getName().equals("heating.operating.programs.holidayAtHome"))
+                .map(DatePeriodFeature.class::cast)
+                .findFirst();
+        assertTrue(dateFeature.isPresent());
+        assertEquals(null, dateFeature.get().getStart());
+        assertEquals(null, dateFeature.get().getEnd());
         assertEquals(OFF, dateFeature.get().getActive());
     }
 

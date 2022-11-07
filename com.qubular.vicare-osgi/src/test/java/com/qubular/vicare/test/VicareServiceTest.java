@@ -6,6 +6,7 @@ import com.qubular.vicare.model.features.*;
 import com.qubular.vicare.model.params.EnumParamDescriptor;
 import com.qubular.vicare.model.params.NumericParamDescriptor;
 import com.qubular.vicare.model.values.BooleanValue;
+import com.qubular.vicare.model.values.DimensionalValue;
 import com.qubular.vicare.model.values.StatusValue;
 import com.qubular.vicare.model.values.StringValue;
 import org.eclipse.jetty.client.HttpClient;
@@ -399,15 +400,15 @@ public class VicareServiceTest {
     public void supports_heating_circuits_n_temperature_levels() throws ServletException, NamespaceException, AuthenticationException, IOException, ExecutionException, InterruptedException, TimeoutException, CommandFailureException {
         List<Feature> features = getFeatures("deviceFeaturesResponse3.json");
 
-        Optional<MultiValueFeature> temperatureLevels = features.stream()
+        Optional<Feature> temperatureLevels = features.stream()
                 .filter(f -> f.getName().equals("heating.circuits.0.temperature.levels"))
-                .map(MultiValueFeature.class::cast)
+                .map(Feature.class::cast)
                 .findFirst();
         assertTrue(temperatureLevels.isPresent());
-        assertEquals(20, temperatureLevels.get().getValues().get("min").getValue(), 1e-6);
-        assertEquals("celsius", temperatureLevels.get().getValues().get("min").getUnit().getName());
-        assertEquals(45, temperatureLevels.get().getValues().get("max").getValue(), 1e-6);
-        assertEquals("celsius", temperatureLevels.get().getValues().get("max").getUnit().getName());
+        assertEquals(20, ((DimensionalValue)temperatureLevels.get().getProperties().get("min")).getValue(), 1e-6);
+        assertEquals("celsius", ((DimensionalValue)temperatureLevels.get().getProperties().get("min")).getUnit().getName());
+        assertEquals(45, ((DimensionalValue)temperatureLevels.get().getProperties().get("max")).getValue(), 1e-6);
+        assertEquals("celsius", ((DimensionalValue)temperatureLevels.get().getProperties().get("max")).getUnit().getName());
 
         assertEquals(3, temperatureLevels.get().getCommands().size());
         Map<String, CommandDescriptor> commands = temperatureLevels.get().getCommands().stream()
@@ -468,15 +469,14 @@ public class VicareServiceTest {
     public void supports_heating_burners_n_statistics() throws ServletException, NamespaceException, AuthenticationException, IOException {
         List<Feature> features = getFeatures("deviceFeaturesResponse.json");
 
-        Optional<MultiValueFeature> burnerStats = features.stream()
+        Optional<Feature> burnerStats = features.stream()
                 .filter(f -> f.getName().equals("heating.burners.0.statistics"))
-                .map(MultiValueFeature.class::cast)
                 .findFirst();
         assertTrue(burnerStats.isPresent());
-        assertEquals("hour", burnerStats.get().getValues().get("hours").getUnit().getName());
-        assertEquals(5, burnerStats.get().getValues().get("hours").getValue());
-        assertEquals("", burnerStats.get().getValues().get("starts").getUnit().getName());
-        assertEquals(312, burnerStats.get().getValues().get("starts").getValue());
+        assertEquals("hour", ((DimensionalValue)burnerStats.get().getProperties().get("hours")).getUnit().getName());
+        assertEquals(5, ((DimensionalValue)burnerStats.get().getProperties().get("hours")).getValue());
+        assertEquals("", ((DimensionalValue)burnerStats.get().getProperties().get("starts")).getUnit().getName());
+        assertEquals(312, ((DimensionalValue)burnerStats.get().getProperties().get("starts")).getValue());
     }
 
     @Test
@@ -679,6 +679,64 @@ public class VicareServiceTest {
 
     @Test
     @DisabledIf("realConnection")
+    public void suppports_heating_circuits_N_operating_programs_standby() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<StatusSensorFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.1.operating.programs.standby"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+
+        assertTrue(feature.isPresent());
+        assertEquals(BooleanValue.FALSE, feature.get().getProperties().get("active"));
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void suppports_heating_circuits_N_operating_programs_summerEco() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<StatusSensorFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.1.operating.programs.summerEco"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+
+        assertTrue(feature.isPresent());
+        assertEquals(BooleanValue.FALSE, feature.get().getProperties().get("active"));
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void suppports_heating_circuits_N_sensors_temperature_supply() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<NumericSensorFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.1.sensors.temperature.supply"))
+                .map(NumericSensorFeature.class::cast)
+                .findFirst();
+
+        assertTrue(feature.isPresent());
+        assertEquals(new StatusValue("connected"), feature.get().getStatus());
+        assertEquals(new DimensionalValue(Unit.CELSIUS, 24.6), feature.get().getValue());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void suppports_heating_circuits_N_zone_mode() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<StatusSensorFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.1.zone.mode"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+
+        assertTrue(feature.isPresent());
+        assertEquals(StatusValue.NA, feature.get().getStatus());
+        assertEquals(false, feature.get().isActive());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
     public void supports_heating_burners_n() throws ServletException, NamespaceException, AuthenticationException, IOException {
         List<Feature> features = getFeatures("deviceFeaturesResponse.json");
 
@@ -762,6 +820,38 @@ public class VicareServiceTest {
         assertTrue(dhwFeature.isPresent());
         assertEquals(StatusValue.ON, dhwFeature.get().getStatus());
         assertEquals(true, dhwFeature.get().isActive());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_dhw_hygiene() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<Feature> dhwFeature = features.stream()
+                .filter(f -> f.getName().equals("heating.dhw.hygiene"))
+                .findFirst();
+        assertTrue(dhwFeature.isPresent());
+        assertEquals(BooleanValue.FALSE, dhwFeature.get().getProperties().get("enabled"));
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_dhw_oneTimeCharge() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<StatusSensorFeature> dhwFeature = features.stream()
+                .filter(f -> f.getName().equals("heating.dhw.oneTimeCharge"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(dhwFeature.isPresent());
+        assertFalse(dhwFeature.get().isActive());
+        assertEquals(2, dhwFeature.get().getCommands().size());
+        assertEquals("activate", dhwFeature.get().getCommands().get(0).getName());
+        assertTrue(dhwFeature.get().getCommands().get(0).getParams().isEmpty());
+        assertEquals(URI.create("https://api.viessmann.com/iot/v1/equipment/installations/123456/gateways/00/devices/0/features/heating.dhw.oneTimeCharge/commands/activate"), dhwFeature.get().getCommands().get(0).getUri());
+        assertEquals("deactivate", dhwFeature.get().getCommands().get(1).getName());
+        assertTrue(dhwFeature.get().getCommands().get(1).getParams().isEmpty());
+        assertEquals(URI.create("https://api.viessmann.com/iot/v1/equipment/installations/123456/gateways/00/devices/0/features/heating.dhw.oneTimeCharge/commands/deactivate"), dhwFeature.get().getCommands().get(1).getUri());
     }
 
     @Test

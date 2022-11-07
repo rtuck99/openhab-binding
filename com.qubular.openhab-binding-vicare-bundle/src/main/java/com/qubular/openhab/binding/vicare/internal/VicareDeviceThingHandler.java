@@ -132,17 +132,6 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                                     .map(ChannelBuilder::build);
                         }
 
-                        private Optional<ChannelBuilder> channelBuilder(ChannelUID channelUID, String id) {
-                            ChannelTypeUID channelTypeUID = new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id));
-                            try {
-                                return Optional.of(getCallback().createChannelBuilder(channelUID, channelTypeUID));
-                            } catch (IllegalArgumentException e) {
-                                // Channel type not found
-                                logger.warn("Unable to create channel {}: {}", channelUID, e.getMessage());
-                                return Optional.empty();
-                            }
-                        }
-
                         @Override
                         public void visit(NumericSensorFeature f) {
                             String id = escapeUIDSegment(f.getName());
@@ -170,20 +159,6 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                             }
                         }
 
-                        @Override
-                        public void visit(MultiValueFeature f) {
-                            f.getValues().forEach((name, value) -> {
-                                Map<String, String> props = new HashMap<>();
-                                props.put(PROPERTY_FEATURE_NAME, feature.getName());
-                                props.put(PROPERTY_PROP_NAME, name);
-                                maybeAddPropertiesForSetter(f, name, props);
-                                String id = escapeUIDSegment(f.getName() + "_" + name);
-                                channelBuilder(new ChannelUID(thing.getUID(), id), id)
-                                        .map(cb -> cb.withProperties(props).build())
-                                        .ifPresent(channels::add);
-                            });
-                        }
-
                         private void maybeAddPropertiesForSetter(Feature f, String name, Map<String, String> props) {
                             Optional<CommandDescriptor> setter = f.getCommands().stream()
                                     .filter(cd -> cd.getName().equalsIgnoreCase("set" + name))
@@ -204,13 +179,6 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                         public void visit(StatusSensorFeature f) {
                             f.getProperties().forEach((k, v) -> {
                                         switch (k) {
-                                            case "active":
-                                                String activeId = escapeUIDSegment(f.getName() + "_active");
-                                                channelBuilder(new ChannelUID(thing.getUID(), activeId), activeId)
-                                                        .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
-                                                                                            PROPERTY_PROP_NAME, "active")).build())
-                                                        .ifPresent(channels::add);
-                                                break;
                                             case "status":
                                                 String statusId = escapeUIDSegment(f.getName() + "_status");
                                                 channelBuilder(new ChannelUID(thing.getUID(), statusId), statusId)
@@ -227,12 +195,23 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
                                                     @Override
                                                     public void visit(BooleanValue v) {
-                                                        unsupportedValue(v);
+                                                        String id = escapeUIDSegment(f.getName() + "_" + k);
+                                                        channelBuilder(new ChannelUID(thing.getUID(), id), id)
+                                                                .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
+                                                                                                    PROPERTY_PROP_NAME, k)).build())
+                                                                .ifPresent(channels::add);
                                                     }
 
                                                     @Override
                                                     public void visit(DimensionalValue v) {
-                                                        unsupportedValue(v);
+                                                        Map<String, String> props = new HashMap<>();
+                                                        props.put(PROPERTY_FEATURE_NAME, feature.getName());
+                                                        props.put(PROPERTY_PROP_NAME, k);
+                                                        maybeAddPropertiesForSetter(f, k, props);
+                                                        String id = escapeUIDSegment(f.getName() + "_" + k);
+                                                        channelBuilder(new ChannelUID(thing.getUID(), id), id)
+                                                                .map(cb -> cb.withProperties(props).build())
+                                                                .ifPresent(channels::add);
                                                     }
 
                                                     @Override
@@ -315,6 +294,8 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                                     .ifPresent(channels::add);
                         }
                     });
+
+                    channels.addAll(addChannelsForVoidParamCommands(feature));
                 }
                 if (!channels.isEmpty() || !newPropValues.isEmpty()) {
                     ThingBuilder thingBuilder = editThing();
@@ -344,6 +325,32 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
             }
 
         }).exceptionally(t -> { logger.warn("Unexpected error initializing Thing", t); return null; });
+    }
+
+    private Optional<ChannelBuilder> channelBuilder(ChannelUID channelUID, String id) {
+        ChannelTypeUID channelTypeUID = new ChannelTypeUID(BINDING_ID, channelIdToChannelType(id));
+        try {
+            return Optional.of(getCallback().createChannelBuilder(channelUID, channelTypeUID));
+        } catch (IllegalArgumentException e) {
+            // Channel type not found
+            logger.warn("Unable to create channel {}: {}", channelUID, e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+
+    private Collection<? extends Channel> addChannelsForVoidParamCommands(Feature feature) {
+        return feature.getCommands().stream()
+                .filter(cd -> cd.getParams().isEmpty())
+                .map(cd -> {
+                    String id = escapeUIDSegment(feature.getName() + "_" + cd.getName());
+                    return channelBuilder(new ChannelUID(getThing().getUID(), id),
+                                                       channelIdToChannelType(id))
+                            .map(ChannelBuilder::build);
+                })
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.toList());
     }
 
     static String getDeviceUniqueId(Thing t) {
@@ -400,26 +407,11 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                     }
 
                     @Override
-                    public void visit(MultiValueFeature f) {
-                        Channel channel = getThing().getChannel(channelUID);
-                        String statisticName = channel.getProperties().get(PROPERTY_PROP_NAME);
-                        double value = f.getValues().get(statisticName).getValue();
-                        updateState(channelUID, new DecimalType(value));
-                    }
-
-                    @Override
                     public void visit(StatusSensorFeature f) {
                         Channel channel = getThing().getChannel(channelUID);
                         String propertyName = channel.getProperties().get(PROPERTY_PROP_NAME);
-                        State state = UnDefType.UNDEF;
+                        State state;
                         switch (propertyName) {
-                            case "active":
-                                if (f.isActive() == null) {
-                                    state = UnDefType.UNDEF;
-                                } else {
-                                    state = f.isActive() ? OnOffType.ON : OnOffType.OFF;
-                                }
-                                break;
                             case "status":
                                 state = StringType.valueOf(f.getStatus() == null ? null : f.getStatus().getName());
                                 break;
@@ -435,12 +427,12 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
                                     @Override
                                     public void visit(BooleanValue v) {
-                                        unsupportedValue(v);
+                                        state = v.getValue() ? OnOffType.ON : OnOffType.OFF;
                                     }
 
                                     @Override
                                     public void visit(DimensionalValue v) {
-                                        unsupportedValue(v);
+                                        state = new DecimalType(v.getValue());
                                     }
 
                                     @Override

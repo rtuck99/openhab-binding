@@ -101,14 +101,32 @@
   <channel-type id="heating_circuits_sensors_temperature_supply">
     <item-type>Number:Temperature</item-type>
     <label>Heating Circuit Supply Temperature</label>
-    <description>Shows the status and the value of the supply temperature sensor for circuit N</description>
+    <description>Shows the value of the supply temperature sensor for circuit N</description>
     <category>Temperature</category>
     <state readOnly="true" pattern="%.1f °C"/>
+  </channel-type>
+  <channel-type id="heating_circuits_sensors_temperature_supply_status">
+    <item-type>String</item-type>
+    <label>Heating Circuit Supply Temperature Sensor Status</label>
+    <description>Shows the status of the supply temperature sensor for circuit N</description>
+    <category>Temperature</category>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_zone_mode_active">
+    <item-type>Switch</item-type>
+    <label>Heating Circuit Zone Mode Active</label>
+    <description>Shows if a zone is connected to the heating circuit</description>
+    <state readOnly="true"/>
   </channel-type>
   <channel-type id="heating_dhw_active">
     <item-type>Switch</item-type>
     <label>DHW active</label>
     <description>Whether domestic hot water (DHW) is activated</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_dhw_hygiene_enabled">
+    <item-type>Switch</item-type>
+    <label>DHW Hygiene Enabled</label>
     <state readOnly="true"/>
   </channel-type>
   <channel-type id="heating_dhw_status">
@@ -268,8 +286,29 @@
   </channel-type>
   <channel-type id="heating_circuits_operating_programs_reducedEnergySaving_active">
     <item-type>Switch</item-type>
-    <label>Redued Energy Saving Program Active</label>
-    <description></description>
+    <label>Reduced Energy Saving Program Active</label>
+    <description>Shows whether the device is currently heating in the Energy Saving operating mode while the reduced temperature is scheduled</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_programs_reducedEnergySaving_reason">
+    <item-type>String</item-type>
+    <label>Reduced Energy Saving Program Reason</label>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_programs_reducedEnergySaving_demand">
+    <item-type>String</item-type>
+    <label>Reduced Energy Saving Program Demand</label>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_programs_standby">
+    <item-type>Switch</item-type>
+    <label>Standby Program Active</label>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_circuits_operating_programs_summerEco">
+    <item-type>Switch</item-type>
+    <label>Summer Eco Program Active</label>
+    <state readOnly="true"/>
   </channel-type>
   <channel-type id="heating_circuits_operating_programs_normal_active">
     <item-type>Switch</item-type>

@@ -109,7 +109,7 @@ public class VicareBindingTest {
         Feature temperatureSensor = new NumericSensorFeature("heating.dhw.sensors.temperature.outlet", "value",
                                                              new DimensionalValue(new Unit("celsius"), 27.3), new StatusValue("connected"), null
         );
-        Feature statisticsFeature = new MultiValueFeature("heating.burners.0.statistics",
+        Feature statisticsFeature = new StatusSensorFeature("heating.burners.0.statistics",
                                                           Map.of("starts", new DimensionalValue(new Unit("starts"), 5.0))
         );
         Feature textFeature = new TextFeature("device.serial", "7723181102527121");
@@ -141,13 +141,13 @@ public class VicareBindingTest {
                                                                                    List.of(new EnumParamDescriptor(true, "mode",
                                                                                                                    Set.of("standby", "heating", "dhw", "dhwAndHeating"))),
                                                                                    SET_MODE_URI)));
-        Feature heatingCircuitTemperatureLevels = new MultiValueFeature("heating.circuits.0.temperature.levels",
+        Feature heatingCircuitTemperatureLevels = new StatusSensorFeature("heating.circuits.0.temperature.levels",
+                                                                        Map.of("min", new DimensionalValue(Unit.CELSIUS, 20.0),
+                                                                               "max", new DimensionalValue(Unit.CELSIUS, 45.0)),
                                                                         List.of(new CommandDescriptor("setMin", false, List.of(new NumericParamDescriptor(true, "temperature", 20.0, 20.0, 1.0)), SET_LEVEL_MIN_URI),
                                                                                 new CommandDescriptor("setMax", true, List.of(new NumericParamDescriptor(true, "temperature", 21.0, 80.0, 1.0)), SET_LEVEL_MAX_URI),
-                                                                                new CommandDescriptor("setLevels", true, List.of(new NumericParamDescriptor(true, "min", 20.0, 20.0, 1.0),
-                                                                                                                                 new NumericParamDescriptor(true, "max", 21.0, 80.0, 1.0)), SET_LEVEL_LEVEL_URI)),
-                                                                        Map.of("min", new DimensionalValue(Unit.CELSIUS, 20.0),
-                                                                               "max", new DimensionalValue(Unit.CELSIUS, 45.0)));
+                                                                                new CommandDescriptor("setLevels", true, List.of(new NumericParamDescriptor(true, "min", 20.0, 20.0, 1.0), new NumericParamDescriptor(true, "max", 21.0, 80.0, 1.0)), SET_LEVEL_LEVEL_URI))
+        );
         Feature heatingDhwTemperatureMain = new NumericSensorFeature("heating.dhw.temperature.main",
                                                                      "value",
                                                                      List.of(new CommandDescriptor("setTargetTemperature",
@@ -200,6 +200,26 @@ public class VicareBindingTest {
                                                                                               Map.of("active", BooleanValue.valueOf(false),
                                                                                                      "reason", new StringValue("unknown"),
                                                                                                      "demand", new StringValue("heating")));
+        Feature heatingCircuitsOperatingProgramsStandby = new StatusSensorFeature("heating.circuits.1.operating.programs.standby",
+                                                                                  StatusValue.NA,
+                                                                                  false);
+        Feature heatingCircuitsOperatingProgramsSummerEco = new StatusSensorFeature("heating.circuits.1.operating.programs.summerEco",
+                                                                                    StatusValue.NA,
+                                                                                    false);
+        Feature heatingCircuitsSensorsTemperatureSupply = new NumericSensorFeature("heating.circuits.1.sensors.temperature.supply",
+                                                                                   "value",
+                                                                                   new DimensionalValue(Unit.CELSIUS, 24.6),
+                                                                                   new StatusValue("connected"),
+                                                                                   false);
+        Feature heatingCircuitsZoneMode = new StatusSensorFeature("heating.circuits.1.zone.mode",
+                                                                  StatusValue.NA,
+                                                                  false);
+        Feature heatingDHWHygiene = new StatusSensorFeature("heating.dhw.hygiene",
+                                                            Map.of("enabled", BooleanValue.FALSE));
+        Feature heatingDHWOneTimeCharge = new StatusSensorFeature("heating.dhw.oneTimeCharge",
+                                                                  Map.of("active", BooleanValue.FALSE),
+                                                                  List.of(new CommandDescriptor("activate", true, emptyList(), URI.create("https://api.viessmann.com/iot/v1/equipment/installations/123456/gateways/00/devices/0/features/heating.dhw.oneTimeCharge/commands/activate")),
+                                                                          new CommandDescriptor("deactivate", false, emptyList(), URI.create("https://api.viessmann.com/iot/v1/equipment/installations/123456/gateways/00/devices/0/features/heating.dhw.oneTimeCharge/commands/deactivate"))));
         doReturn(
                 List.of(temperatureSensor, statisticsFeature, textFeature, statusFeature, normalProgramFeature,
                         consumptionFeature, burnerFeature, curveFeature, holidayFeature, heatingDhw,
@@ -215,7 +235,13 @@ public class VicareBindingTest {
                         operatingModesDHWAndHeating,
                         operatingModesStandby,
                         heatingCircuitsOperatingProgramsForcedLastFromSchedule,
-                        heatingCircuitsOperatingProgramsReducedEnergySaving))
+                        heatingCircuitsOperatingProgramsReducedEnergySaving,
+                        heatingCircuitsOperatingProgramsStandby,
+                        heatingCircuitsOperatingProgramsSummerEco,
+                        heatingCircuitsSensorsTemperatureSupply,
+                        heatingCircuitsZoneMode,
+                        heatingDHWHygiene,
+                        heatingDHWOneTimeCharge))
                 .when(vicareService)
                 .getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
     }
@@ -974,6 +1000,127 @@ public class VicareBindingTest {
     }
 
     @Test
+    public void supportsHeatingCircuitOperatingProgramsStandby() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
+
+        Channel channel = findChannel(thingCaptor, "heating_circuits_1_operating_programs_standby_active");
+        assertNotNull(channel);
+        assertEquals("heating_circuits_operating_programs_standby_active", channel.getChannelTypeUID().getId());
+        assertEquals("heating.circuits.1.operating.programs.standby", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.OFF, stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsHeatingCircuitOperatingProgramsSummerEco() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
+
+        Channel channel = findChannel(thingCaptor, "heating_circuits_1_operating_programs_summerEco_active");
+        assertNotNull(channel);
+        assertEquals("heating_circuits_operating_programs_summerEco_active", channel.getChannelTypeUID().getId());
+        assertEquals("heating.circuits.1.operating.programs.summerEco", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.OFF, stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsHeatingCircuitSensorsTemperatureSupply() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
+
+        Channel channel = findChannel(thingCaptor, "heating_circuits_1_sensors_temperature_supply");
+        assertNotNull(channel);
+        assertEquals("heating_circuits_sensors_temperature_supply", channel.getChannelTypeUID().getId());
+        assertEquals("heating.circuits.1.sensors.temperature.supply", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(DecimalType.valueOf("24.6"), stateCaptor.getValue());
+
+        channel = findChannel(thingCaptor, "heating_circuits_1_sensors_temperature_supply_status");
+        assertNotNull(channel);
+        assertEquals("heating_circuits_sensors_temperature_supply_status", channel.getChannelTypeUID().getId());
+        assertEquals("heating.circuits.1.sensors.temperature.supply", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(StringType.valueOf("connected"), stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsHeatingCircuitZoneMode() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
+
+        Channel channel = findChannel(thingCaptor, "heating_circuits_1_zone_mode_active");
+        assertNotNull(channel);
+        assertEquals("heating_circuits_zone_mode_active", channel.getChannelTypeUID().getId());
+        assertEquals("heating.circuits.1.zone.mode", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.OFF, stateCaptor.getValue());
+    }
+
+    @Test
     public void supportsHeatingCircuitTemperatureLevels() throws AuthenticationException, IOException, CommandFailureException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
@@ -1009,6 +1156,78 @@ public class VicareBindingTest {
 
         handler.handleCommand(maxChannel.getUID(), QuantityType.valueOf("46  °C"));
         inOrder.verify(vicareService, timeout(1000)).sendCommand(SET_LEVEL_MAX_URI, Map.of("temperature", 46.0));
+    }
+
+    @Test
+    public void supportsHeatingDhwHygiene() throws AuthenticationException, IOException, CommandFailureException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+
+        Channel channel = findChannel(thingCaptor, "heating_dhw_hygiene_enabled");
+        assertNotNull(channel);
+        assertEquals("heating_dhw_hygiene_enabled", channel.getChannelTypeUID().getId());
+        assertEquals("heating.dhw.hygiene", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.OFF, stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsHeatingDhwOneTimeCharge() throws AuthenticationException, IOException, CommandFailureException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        handler.initialize();
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+
+        Channel channel = findChannel(thingCaptor, "heating_dhw_oneTimeCharge_active");
+        assertNotNull(channel);
+        assertEquals("heating_dhw_oneTimeCharge_active", channel.getChannelTypeUID().getId());
+        assertEquals("heating.dhw.oneTimeCharge", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.OFF, stateCaptor.getValue());
+
+        channel = findChannel(thingCaptor, "heating_dhw_oneTimeCharge_activate");
+        assertNotNull(channel);
+        assertEquals("heating_dhw_oneTimeCharge_activate", channel.getChannelTypeUID().getId());
+        assertEquals("heating.dhw.oneTimeCharge", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), OnOffType.ON);
+        verify(vicareService).sendCommand(URI.create("https://api.viessmann.com/iot/v1/equipment/installations/123456/gateways/00/devices/0/features/heating.dhw.oneTimeCharge/commands/activate"), emptyMap());
+
+        channel = findChannel(thingCaptor, "heating_dhw_oneTimeCharge_deactivate");
+        assertNotNull(channel);
+        assertEquals("heating_dhw_oneTimeCharge_deactivate", channel.getChannelTypeUID().getId());
+        assertEquals("heating.dhw.oneTimeCharge", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), OnOffType.ON);
+        verify(vicareService).sendCommand(URI.create("https://api.viessmann.com/iot/v1/equipment/installations/123456/gateways/00/devices/0/features/heating.dhw.oneTimeCharge/commands/deactivate"), emptyMap());
     }
 
     @Test

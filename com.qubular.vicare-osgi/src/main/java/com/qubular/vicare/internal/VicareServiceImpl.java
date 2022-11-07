@@ -419,8 +419,6 @@ public class VicareServiceImpl implements VicareService {
                                                             null);
                         }
                     }
-                } else if (featureName.endsWith(".statistics")) {
-                    return createMultiValueFeature(featureName, properties, commands);
                 } else if (featureName.contains(".consumption.summary")) {
                     Map<String, DimensionalValue> stats = properties.entrySet().stream()
                             .filter(e -> e.getValue().isJsonObject())
@@ -477,17 +475,8 @@ public class VicareServiceImpl implements VicareService {
                 } else if (featureName.endsWith(".name") && properties.has("name")) {
                     JsonObject nameProp = properties.get("name").getAsJsonObject();
                     return new TextFeature(featureName, nameProp.get("value").getAsString(), Collections.emptyList());
-                } else if (statusObject != null || activeObject != null) {
-                    StatusValue status = ofNullable(statusObject).map(o -> o.get("value"))
-                            .map(JsonElement::getAsString)
-                            .map(StatusValue::new)
-                            .orElse(NA);
-                    Boolean active = ofNullable(activeObject).map(o -> o.get("value"))
-                            .map(JsonElement::getAsBoolean)
-                            .orElse(null);
-                    return new StatusSensorFeature(featureName, status, active);
                 } else {
-                    return createMultiValueFeature(featureName, properties, commands);
+                    return new StatusSensorFeature(featureName, propertyMap(properties), generateCommands(commands));
                 }
             }
             return null;
@@ -497,7 +486,7 @@ public class VicareServiceImpl implements VicareService {
             return properties.entrySet().stream()
                     .filter(e -> e.getValue().isJsonObject())
                     .map(e -> Map.entry(e.getKey(), e.getValue().getAsJsonObject()))
-                    .filter(e -> Set.of(TYPE_STRING, TYPE_BOOLEAN).contains(e.getValue().get("type").getAsString()))
+                    .filter(e -> Set.of(TYPE_STRING, TYPE_BOOLEAN, TYPE_NUMBER).contains(e.getValue().get("type").getAsString()))
                     .collect(Collectors.toMap(Map.Entry::getKey,
                                               e -> {
                                                   JsonObject propObject = e.getValue().getAsJsonObject();
@@ -507,24 +496,14 @@ public class VicareServiceImpl implements VicareService {
                                                       case TYPE_BOOLEAN:
                                                           return BooleanValue.valueOf(
                                                                   propObject.get("value").getAsBoolean());
+                                                      case TYPE_NUMBER:
+                                                          return new DimensionalValue(new Unit(propObject.get("unit").getAsString()), propObject.get("value").getAsDouble());
                                                       default:
                                                           throw new IllegalStateException(
                                                                   "Unsupported property type " + propObject.get(
                                                                           "type").getAsString());
                                                   }
                                               }));
-        }
-
-        private static MultiValueFeature createMultiValueFeature(String featureName, JsonObject properties, JsonObject commands) {
-            Map<String, DimensionalValue> stats = properties.entrySet().stream()
-                    .filter(e -> e.getValue().isJsonObject())
-                    .filter(e -> TYPE_NUMBER.equals(e.getValue().getAsJsonObject().get("type").getAsString()))
-                    .collect(toMap(Map.Entry::getKey,
-                            e -> {
-                                JsonObject prop = e.getValue().getAsJsonObject();
-                                return dimensionalValueFromUnitValue(prop);
-                            }));
-            return stats.isEmpty() ? null : new MultiValueFeature(featureName, generateCommands(commands), stats);
         }
 
         private static List<CommandDescriptor> generateCommands(JsonObject commands) {

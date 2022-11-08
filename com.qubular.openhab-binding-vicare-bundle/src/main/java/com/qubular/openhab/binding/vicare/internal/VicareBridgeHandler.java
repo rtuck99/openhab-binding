@@ -151,6 +151,10 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
         Thing targetThing = thingRegistry.get(channelUID.getThingUID());
         Channel channel = targetThing.getChannel(channelUID);
         if (command instanceof RefreshType) {
+            if (! channel.getProperties().containsKey(PROPERTY_PROP_NAME)) {
+                // Don't refresh channels that represent commands
+                return empty();
+            }
             return getFeatures(targetThing)
                     .thenApply(features -> {
                         String featureName = channel.getProperties().get(PROPERTY_FEATURE_NAME);

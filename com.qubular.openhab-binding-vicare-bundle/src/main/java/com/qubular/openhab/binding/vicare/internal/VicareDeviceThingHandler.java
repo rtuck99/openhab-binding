@@ -137,6 +137,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                             String id = escapeUIDSegment(f.getName());
                             Map<String, String> props = new HashMap<>();
                             props.put(PROPERTY_FEATURE_NAME, feature.getName());
+                            props.put(PROPERTY_PROP_NAME, f.getPropertyName());
                             maybeAddPropertiesForSetter(f, f.getPropertyName(), props);
                             channelBuilder(new ChannelUID(thing.getUID(), id), id)
                                  .map(c -> c.withProperties(props))
@@ -245,10 +246,12 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
                         @Override
                         public void visit(TextFeature f) {
-                            String id = escapeUIDSegment(f.getName());
+                            String propertyName = f.getProperties().keySet().stream().findFirst().get();
+                            String id = escapeUIDSegment(f.getName() + "_" + propertyName);
                             ChannelUID channelUID = new ChannelUID(thing.getUID(), id);
                             Map<String, String> props = new HashMap<>();
                             props.put(PROPERTY_FEATURE_NAME, f.getName());
+                            props.put(PROPERTY_PROP_NAME, propertyName);
                             if (f.getCommands().size() == 1 &&
                                 f.getCommands().get(0).getParams().size() == 1) {
                                 CommandDescriptor command = feature.getCommands().get(0);
@@ -333,7 +336,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
             return Optional.of(getCallback().createChannelBuilder(channelUID, channelTypeUID));
         } catch (IllegalArgumentException e) {
             // Channel type not found
-            logger.warn("Unable to create channel {}: {}", channelUID, e.getMessage());
+            logger.info("Unable to create channel {}: {}", channelUID, e.getMessage());
             return Optional.empty();
         }
     }

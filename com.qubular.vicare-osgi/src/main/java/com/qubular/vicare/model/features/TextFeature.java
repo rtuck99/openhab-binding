@@ -8,27 +8,28 @@ import com.qubular.vicare.model.Value;
 import java.util.List;
 import java.util.Map;
 
-import static java.util.Collections.emptyList;
+import static java.util.Collections.*;
 
 public class TextFeature extends Feature {
-    private final String value;
+    private final Map<String, StringValue> value;
 
-    public TextFeature(String name, String value) {
-        this(name, value, emptyList());
+    public TextFeature(String name, String propName, String value) {
+        this(name, propName, value, emptyList());
     }
 
-    public TextFeature(String name, String value, List<CommandDescriptor> commands) {
+    public TextFeature(String name, String propName, String value, List<CommandDescriptor> commands) {
         super(name, commands);
-        this.value = value;
+        this.value = value == null ? emptyMap() : singletonMap(propName, new StringValue(value));
     }
 
+    @Deprecated
     public String getValue() {
-        return value;
+        return value.values().stream().findFirst().map(StringValue::getValue).orElse(null);
     }
 
     @Override
     public Map<String, ? extends Value> getProperties() {
-        return Map.of("value", new StringValue(value));
+        return value;
     }
 
     @Override

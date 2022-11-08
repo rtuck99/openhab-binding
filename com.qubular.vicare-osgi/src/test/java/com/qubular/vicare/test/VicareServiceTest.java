@@ -338,6 +338,7 @@ public class VicareServiceTest {
                 .findFirst();
         assertTrue(boilerSerial.isPresent());
         assertEquals("7723181102527121", ((TextFeature) boilerSerial.get()).getValue());
+        assertEquals(new StringValue("7723181102527121"), boilerSerial.get().getProperties().get("value"));
     }
 
     @Test
@@ -393,6 +394,14 @@ public class VicareServiceTest {
                 .findFirst();
         assertTrue(nameFeature.isPresent());
         assertEquals("Fussboden", nameFeature.get().getValue());
+        assertEquals(new StringValue("Fussboden"), nameFeature.get().getProperties().get("name"));
+        assertEquals(1, nameFeature.get().getCommands().size());
+        CommandDescriptor commandDescriptor = nameFeature.get().getCommands().get(0);
+        assertEquals("setName", commandDescriptor.getName());
+        assertEquals(URI.create("https://api.viessmann.com/iot/v1/equipment/installations/123456/gateways/00/devices/0/features/heating.circuits.1.name/commands/setName"), commandDescriptor.getUri());;
+        assertEquals(1, commandDescriptor.getParams().size());
+        assertEquals("name", commandDescriptor.getParams().get(0).getName());
+        assertEquals(String.class, commandDescriptor.getParams().get(0).getType());
     }
 
     @Test
@@ -577,6 +586,7 @@ public class VicareServiceTest {
 
         assertTrue(modeActive.isPresent());
         assertEquals("dhw", modeActive.get().getValue());
+        assertEquals(new StringValue("dhw"), modeActive.get().getProperties().get("value"));
         assertEquals(1, modeActive.get().getCommands().size());
         assertEquals("setMode", modeActive.get().getCommands().get(0).getName());
         assertEquals(true, modeActive.get().getCommands().get(0).isExecutable());
@@ -1149,5 +1159,16 @@ public class VicareServiceTest {
         assertTrue(status.isPresent());
         assertEquals(true, status.get().isActive());
         assertEquals(StatusValue.NA, status.get().getStatus());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void featuresAreUnique() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+        Map<String, List<Feature>> featuresByName = features.stream()
+                .collect(Collectors.groupingBy(Feature::getName));
+        featuresByName.forEach(
+                (name, featureList) -> assertEquals(1, featureList.size())
+        );
     }
 }

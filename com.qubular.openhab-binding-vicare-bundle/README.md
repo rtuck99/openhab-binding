@@ -15,6 +15,9 @@ basic configuration, however it should support other Viessmann devices.
 Supported Features
 ------------------
 
+Below is an incomplete summary of the main features supported - depending on your boiler model and/or heating
+configuration some or all of these may or may not be present:
+
 * Read and write of active heating circuit operating mode.
 * Temperature sensors
 * Temperature setpoints (read/write)
@@ -25,14 +28,22 @@ Supported Features
 * Circulation pump status
 * Frost protection status
 * Basic text properties: device serial number etc.
-* Consumption statistics
+* DHW, Heating and Total consumption statistics
 * Program mode temperature settings
 * DHW Heating status
 * DHW Hot water storage temperature
 * DHW Primary and Circulation Pump Status
 * DHW target temperature (read/write)
-* Holiday Program settings
+* DHW One time charge mode (read/write)
+* Holiday program settings (read-only)
+* Holiday-at-home program settings (read-only)
 * Heating curve settings
+* Heating circuit names
+* Heating circuit operating mode (read/write)
+* Extended heating mode
+* Solar production statistics
+* Solar collector temperature
+* Solar circuit pump status
 
 Configuring
 -----------
@@ -56,6 +67,10 @@ Changelog
 
 * Fix #21 Support setting for DHW target temperature heating.dhw.temperature.main
 * Fix #9 Add response capture for installations and gateways
+* Support additional features. 
+  Note: Some of the channel names with string values may have changed slightly -
+  heating_circuits_operating_modes_active, device_serial may now have _value suffixes.
+  Please check your Items for missing channel links and relink if upgrading from a previous version. 
 
 #### 3.3.5
 

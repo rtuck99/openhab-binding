@@ -9,6 +9,7 @@ import com.qubular.vicare.model.features.*;
 import com.qubular.vicare.model.params.EnumParamDescriptor;
 import com.qubular.vicare.model.ParamDescriptor;
 import com.qubular.vicare.model.params.NumericParamDescriptor;
+import com.qubular.vicare.model.params.StringParamDescriptor;
 import com.qubular.vicare.model.values.*;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
@@ -400,7 +401,7 @@ public class VicareServiceImpl implements VicareService {
                     List<CommandDescriptor> commandDescriptors = generateCommands(commands);
                     if (TYPE_STRING.equals(valueType)) {
                         String textValue = value.get("value").getAsString();
-                        return new TextFeature(featureName, textValue, commandDescriptors);
+                        return new TextFeature(featureName, "value", textValue, commandDescriptors);
                     } else if (TYPE_NUMBER.equals(valueType)) {
                         if (statusObject != null) {
                             String status = statusObject.get("value").getAsString();
@@ -475,7 +476,7 @@ public class VicareServiceImpl implements VicareService {
                     return new ConsumptionTotalFeature(featureName, arrayProperties);
                 } else if (featureName.endsWith(".name") && properties.has("name")) {
                     JsonObject nameProp = properties.get("name").getAsJsonObject();
-                    return new TextFeature(featureName, nameProp.get("value").getAsString(), Collections.emptyList());
+                    return new TextFeature(featureName, "name", nameProp.get("value").getAsString(), generateCommands(commands));
                 } else {
                     return new StatusSensorFeature(featureName, propertyMap(properties), generateCommands(commands));
                 }
@@ -539,8 +540,9 @@ public class VicareServiceImpl implements VicareService {
                                 .map(JsonElement::getAsString)
                                 .collect(Collectors.toCollection(LinkedHashSet::new));
                         return new EnumParamDescriptor(jsonObject.get("required").getAsBoolean(), name, enumValues);
+                    } else {
+                        return new StringParamDescriptor(jsonObject.get("required").getAsBoolean(), name);
                     }
-                    break;
                 case TYPE_NUMBER:
                     return new NumericParamDescriptor(jsonObject.get("required").getAsBoolean(),
                                                       name,

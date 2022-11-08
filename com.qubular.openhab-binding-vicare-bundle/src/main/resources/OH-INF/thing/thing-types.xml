@@ -27,7 +27,7 @@
   </thing-type>
 
   <!-- The following channel types are defined in the Data Point definitions as per Viessmann API documentation -->
-  <channel-type id="device_serial">
+  <channel-type id="device_serial_value">
     <item-type>String</item-type>
     <label>Device Serial Number</label>
     <description>Serial number of the connected device</description>
@@ -42,7 +42,7 @@
     <state pattern="%.1f °C" readOnly="true"/>
   </channel-type>
 
-  <channel-type id="heating_boiler_serial">
+  <channel-type id="heating_boiler_serial_value">
     <item-type>String</item-type>
     <label>Boiler Serial Number</label>
     <description>=Shows the serial number of the boiler</description>
@@ -99,6 +99,13 @@
     <category>Text</category>
     <state readOnly="true"/>
   </channel-type>
+  <channel-type id="heating_circuits_name_name">
+    <item-type>String</item-type>
+    <label>Heating Circuit Name</label>
+    <description>Shows the name given for the heating circuit N</description>
+    <category>Text</category>
+    <state readOnly="true"/>
+  </channel-type>
   <channel-type id="heating_circuits_sensors_temperature_supply">
     <item-type>Number:Temperature</item-type>
     <label>Heating Circuit Supply Temperature</label>
@@ -130,7 +137,7 @@
     <label>DHW Hygiene Enabled</label>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_dhw_oneTimeCharge">
+  <channel-type id="heating_dhw_oneTimeCharge_active">
     <item-type>Switch</item-type>
     <label>DHW One Time Charge</label>
     <description>Shows whether the one-time charge of domestic hot water is active.</description>
@@ -176,6 +183,12 @@
     <category>Temperature</category>
     <state readOnly="true" pattern="%.1f °C"/>
   </channel-type>
+  <channel-type id="heating_dhw_sensors_temperature_outlet_status">
+    <item-type>String</item-type>
+    <label>DHW Outlet Temperature Sensor Status</label>
+    <description>Shows the status of the temperature sensor located in the hot water storage at the outlet</description>
+    <state readOnly="true"/>
+  </channel-type>
   <channel-type id="heating_dhw_sensors_temperature_hotWaterStorage">
     <item-type>Number:Temperature</item-type>
     <label>DHW Storage Temperature</label>
@@ -215,7 +228,7 @@
     <description>Shows the values for slope and shift of the heating curve</description>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_operating_modes_active">
+  <channel-type id="heating_circuits_operating_modes_active_value">
     <item-type>String</item-type>
     <label>Heating Circuit Active Operating Mode</label>
     <description>Shows the current active operating mode on the device.</description>
@@ -243,7 +256,7 @@
     <category>Heating</category>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_operating_programs_active">
+  <channel-type id="heating_circuits_operating_programs_active_value">
     <item-type>String</item-type>
     <label>Active Operating Program</label>
     <description>Shows the current active operating program on the device</description>
@@ -271,24 +284,6 @@
     <item-type>DateTime</item-type>
     <label>Holiday Operating Program End</label>
     <description>Shows the end date of the holiday program</description>
-    <state readOnly="true"/>
-  </channel-type>
-  <channel-type id="heating_circuits_operating_programs_holidayAtHome_active">
-    <item-type>Switch</item-type>
-    <label>Holiday At Home Operating Program Active</label>
-    <description>Shows whether the holiday at home program is active</description>
-    <state readOnly="true"/>
-  </channel-type>
-  <channel-type id="heating_circuits_operating_programs_holidayAtHome_start">
-    <item-type>DateTime</item-type>
-    <label>Holiday At Home Operating Program Start</label>
-    <description>Shows the start date of the holiday at home program</description>
-    <state readOnly="true"/>
-  </channel-type>
-  <channel-type id="heating_circuits_operating_programs_holidayAtHome_end">
-    <item-type>DateTime</item-type>
-    <label>Holiday At Home Operating Program End</label>
-    <description>Shows the end date of the holiday at home program</description>
     <state readOnly="true"/>
   </channel-type>
   <channel-type id="heating_circuits_operating_programs_comfort_active">
@@ -346,12 +341,12 @@
     <label>Reduced Energy Saving Program Demand</label>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_operating_programs_standby">
+  <channel-type id="heating_circuits_operating_programs_standby_active">
     <item-type>Switch</item-type>
     <label>Standby Program Active</label>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_operating_programs_summerEco">
+  <channel-type id="heating_circuits_operating_programs_summerEco_active">
     <item-type>Switch</item-type>
     <label>Summer Eco Program Active</label>
     <state readOnly="true"/>
@@ -502,6 +497,24 @@
     <label>DHW Gas Consumption Current Year</label>
     <description>Shows statistics of gas usage for heating up the DHW for the current year</description>
     <state readOnly="true" pattern="%.1f m³"/>
+  </channel-type>
+  <channel-type id="heating_operating_programs_holidayAtHome_active">
+    <item-type>Switch</item-type>
+    <label>Holiday At Home Operating Program Active</label>
+    <description>Shows whether the holiday at home program is active</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_operating_programs_holidayAtHome_start">
+    <item-type>DateTime</item-type>
+    <label>Holiday At Home Operating Program Start</label>
+    <description>Shows the start date of the holiday at home program</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_operating_programs_holidayAtHome_end">
+    <item-type>DateTime</item-type>
+    <label>Holiday At Home Operating Program End</label>
+    <description>Shows the end date of the holiday at home program</description>
+    <state readOnly="true"/>
   </channel-type>
   <channel-type id="heating_power_consumption_summary_dhw_currentDay">
     <item-type>Number:Energy</item-type>

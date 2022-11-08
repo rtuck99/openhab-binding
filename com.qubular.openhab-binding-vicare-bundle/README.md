@@ -57,11 +57,12 @@ In order to use the binding, you will need to have a Viessmann API account and
 configure it with the redirect URL for your OpenHAB installation and then authorise 
 the binding. Follow the instructions in openhab at `http://<Your OpenHAB>/vicare/setup`
 
-Configure it with your Client ID which you should obtain from the Viessmann Developer
-portal.
-After authorising the binding, you should be able to add the Viessmann API Bridge item.
+Create an instance of the Viessmann API Bridge thing, and configure it with your Client ID 
+which you should obtain from the Viessmann Developer portal. The developer portal should be 
+configured with the redirect URI shown on the setup page. Then you should be able to 
+authorise the Viessmann binding by clicking on the Authorise button on the setup page.
 
-Once configured, then it should automatically discover any heating devices you have
+After authorising the binding, then it should automatically discover any heating devices you have
 and they will appear in your Inbox.
 
 

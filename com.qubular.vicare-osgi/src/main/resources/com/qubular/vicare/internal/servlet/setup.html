@@ -8,10 +8,17 @@
 <h2>Authorisation</h2>
 <p>The binding is ${authorisationStatus}.</p>
 
-<p>In order to authorise the binding, go to the <a href="https://developer.viessmann.com">Viessmann Developer Portal</a>
-and register for a developer account then add a client with the following redirect URI: ${redirectUri}</p>
-
+<p>In order to authorise the binding:</p>
+<ol>
+    <li>Create an instance of the Viessmann API Bridge Thing</li>
+    <li>Go to the <a href="https://developer.viessmann.com">Viessmann Developer Portal</a>
+        and register for a developer account then add a client with the following redirect URI: ${redirectUri}</p></li>
+    <li>Configure the Viessmann API Bridge with the client ID from the Viessmann Developer Portal</li>
+</ol>
 <p>Once this is done, then click here <form action="${authServerUri}" method="get"><button type="submit">Authorise ViCare Binding</button></form></p>
+
+<p>If authorisation is successful then the binding should automatically discover any attached heating devices and
+    they will appear in your OpenHAB Inbox</p>
 
 <h2>Devices</h2>
 <table>

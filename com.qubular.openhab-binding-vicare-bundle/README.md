@@ -6,6 +6,11 @@ It provides information similar to what you can get through the ViCare mobile ap
 
 Please note this binding is unofficial and not endorsed by Viessmann in any way.
 
+Requirements
+------------
+
+This binding requires OpenHAB 3.3
+
 Supported Devices
 ----------------
 
@@ -52,9 +57,9 @@ In order to use the binding, you will need to have a Viessmann API account and
 configure it with the redirect URL for your OpenHAB installation and then authorise 
 the binding. Follow the instructions in openhab at `http://<Your OpenHAB>/vicare/setup`
 
-After authorising the binding, you should be able to add the Viessmann API Bridge item.
 Configure it with your Client ID which you should obtain from the Viessmann Developer
 portal.
+After authorising the binding, you should be able to add the Viessmann API Bridge item.
 
 Once configured, then it should automatically discover any heating devices you have
 and they will appear in your Inbox.

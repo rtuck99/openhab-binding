@@ -24,7 +24,8 @@ target/index.xml;name="app"
 -runvm.debug: '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000'
 
 -runproperties.logging: org.ops4j.pax.logging.property.file=${project.basedir}/log4j2.xml,\
-	org.ops4j.pax.logging.DefaultServiceLog.level=INFO
+	org.ops4j.pax.logging.DefaultServiceLog.level=INFO,\
+	tester.dir=target/test-reports
 
 # We would like to use the slf4j-api and implementation provided by pax-logging
 -runblacklist.slf4j: \
@@ -69,4 +70,5 @@ target/index.xml;name="app"
 	com.qubular.glowmarkt-osgi;version='[3.3.6,3.3.7)',\
 	com.qubular.glowmarkt-osgi-tests;version='[3.3.6,3.3.7)',\
 	com.qubular.vicare-osgi;version='[3.3.6,3.3.7)',\
-	com.qubular.vicare-osgi-tests;version='[3.3.6,3.3.7)'
+	com.qubular.vicare-osgi-tests;version='[3.3.6,3.3.7)',\
+	junit-jupiter-params;version='[5.8.1,5.8.2)'

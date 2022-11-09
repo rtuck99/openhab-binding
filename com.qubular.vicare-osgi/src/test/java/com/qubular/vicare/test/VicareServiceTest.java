@@ -17,6 +17,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.opentest4j.AssertionFailedError;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
@@ -46,6 +49,7 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.qubular.vicare.model.values.StatusValue.OFF;
 import static java.util.Optional.ofNullable;
@@ -85,7 +89,7 @@ public class VicareServiceTest {
         tokenStore = (SimpleTokenStore) getService(TokenStore.class);
     }
 
-    boolean realConnection() {
+    static boolean realConnection() {
         return Boolean.getBoolean("com.qubular.vicare.tester.realConnection");
     }
 
@@ -626,46 +630,36 @@ public class VicareServiceTest {
         assertEquals("{\"mode\":\"dhwAndHeating\"}", requestContent.get(1, TimeUnit.SECONDS));
     }
 
-    @Test
-    @DisabledIf("realConnection")
-    public void supports_heating_circuits_N_operating_modes_dhw() throws ServletException, AuthenticationException, NamespaceException, IOException {
-        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
-
-        Optional<StatusSensorFeature> feature = features.stream()
-                .filter(f -> f.getName().equals("heating.circuits.1.operating.modes.dhw"))
-                .map(StatusSensorFeature.class::cast)
-                .findFirst();
-
-        assertTrue(feature.isPresent());
-        assertEquals(Boolean.FALSE, feature.get().isActive());
+    static Stream<Arguments> source_heating_circuits_operating_modes() {
+        return Stream.of(
+                Arguments.of("deviceFeaturesResponse4.json", 1, "dhw", false),
+                Arguments.of("deviceFeaturesResponse4.json", 1, "dhwAndHeating", true),
+                Arguments.of("deviceFeaturesResponse5.json", 1, "dhwAndHeating", true),
+                Arguments.of("deviceFeaturesResponse4.json", 1, "standby", false),
+//                Arguments.of("deviceFeaturesResponse5.json", 1, "cooling", false), // not enabled
+//                Arguments.of("deviceFeaturesResponse5.json", 1, "dhwAndHeatingCooling", false), // not enabled
+                Arguments.of("deviceFeaturesResponse5.json", 1, "heating", false)
+//                Arguments.of("deviceFeaturesResponse5.json", 1, "heatingCooling", false) // not enabled
+        );
     }
 
-    @Test
+    @ParameterizedTest()
+    @MethodSource("source_heating_circuits_operating_modes")
     @DisabledIf("realConnection")
-    public void supports_heating_circuits_N_operating_modes_dhwAndHeating() throws ServletException, AuthenticationException, NamespaceException, IOException {
-        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+    public void supports_heating_circuits_N_operating_modes(String fileName,
+                                                            int circuit,
+                                                            String featureSuffix,
+                                                            Boolean expectedActive) throws ServletException, AuthenticationException, NamespaceException, IOException {
+        logger.info("supports_heating_circuits_N_operating_modes({}, {}, {}, {})", fileName, circuit, featureSuffix, expectedActive);
+        List<Feature> features = getFeatures(fileName);
 
         Optional<StatusSensorFeature> feature = features.stream()
-                .filter(f -> f.getName().equals("heating.circuits.1.operating.modes.dhwAndHeating"))
+                .filter(f -> f.getName().equals("heating.circuits." + circuit + ".operating.modes." + featureSuffix))
                 .map(StatusSensorFeature.class::cast)
                 .findFirst();
 
         assertTrue(feature.isPresent());
-        assertEquals(Boolean.TRUE, feature.get().isActive());
-    }
-
-    @Test
-    @DisabledIf("realConnection")
-    public void supports_heating_circuits_N_operating_modes_standby() throws ServletException, AuthenticationException, NamespaceException, IOException {
-        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
-
-        Optional<StatusSensorFeature> feature = features.stream()
-                .filter(f -> f.getName().equals("heating.circuits.1.operating.modes.standby"))
-                .map(StatusSensorFeature.class::cast)
-                .findFirst();
-
-        assertTrue(feature.isPresent());
-        assertEquals(Boolean.FALSE, feature.get().isActive());
+        assertEquals(expectedActive, feature.get().isActive());
     }
 
     @Test

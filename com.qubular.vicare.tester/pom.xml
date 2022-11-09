@@ -138,6 +138,10 @@
     <groupId>org.junit.jupiter</groupId>
     <artifactId>junit-jupiter-engine</artifactId>
   </dependency>
+  <dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter-params</artifactId>
+  </dependency>
   <!-- JUnit launcher -->
   <dependency>
     <groupId>org.junit.platform</groupId>
@@ -192,6 +196,24 @@
         <execution>
           <goals>
             <goal>index</goal>
+          </goals>
+        </execution>
+      </executions>
+    </plugin>
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-antrun-plugin</artifactId>
+      <version>1.8</version>
+      <executions>
+        <execution>
+          <phase>generate-test-resources</phase>
+          <configuration>
+            <tasks>
+              <mkdir dir="target/test-reports"/>
+            </tasks>
+          </configuration>
+          <goals>
+            <goal>run</goal>
           </goals>
         </execution>
       </executions>

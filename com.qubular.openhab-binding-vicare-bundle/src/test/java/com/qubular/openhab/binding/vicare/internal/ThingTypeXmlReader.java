@@ -3,6 +3,7 @@ package com.qubular.openhab.binding.vicare.internal;
 import org.openhab.core.thing.type.ChannelType;
 import org.openhab.core.thing.type.ChannelTypeBuilder;
 import org.openhab.core.thing.type.ChannelTypeUID;
+import org.openhab.core.thing.type.StateChannelTypeBuilder;
 
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
@@ -65,6 +66,7 @@ public class ThingTypeXmlReader {
         }
         String itemType = null;
         String label = null;
+        String description = null;
         while (reader.hasNext()) {
             switch (reader.next()) {
                 case START_ELEMENT:
@@ -75,6 +77,9 @@ public class ThingTypeXmlReader {
                         case "label":
                             label = reader.getElementText();
                             break;
+                        case "description":
+                            description = reader.getElementText();
+                            break;
                     }
                     break;
                 case END_ELEMENT:
@@ -83,9 +88,11 @@ public class ThingTypeXmlReader {
                         if (itemType == null) {
                             throw new XMLStreamException(String.format("Channel Type %s does not have an item-type", channelId));
                         }
-                        ChannelType replaced = channelTypes.put(channelTypeUID,
-                                                           ChannelTypeBuilder.state(channelTypeUID, label, itemType)
-                                                                   .build());
+                        StateChannelTypeBuilder builder = ChannelTypeBuilder.state(channelTypeUID, label, itemType);
+                        if (description != null) {
+                            builder = builder.withDescription(description);
+                        }
+                        ChannelType replaced = channelTypes.put(channelTypeUID, builder.build());
                         if (replaced != null) {
                             throw new XMLStreamException(String.format("Duplicate channel-type name %s", channelId));
                         }

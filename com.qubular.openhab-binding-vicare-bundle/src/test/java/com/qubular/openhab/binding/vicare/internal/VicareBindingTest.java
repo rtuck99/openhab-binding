@@ -16,6 +16,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
@@ -49,6 +52,7 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.encodeThingId;
@@ -85,8 +89,9 @@ public class VicareBindingTest {
     private ConfigurationAdmin configurationAdmin;
     @Mock
     private VicareServiceProvider vicareServiceProvider;
+    private MyChannelTypeRegistry channelTypeRegistry;
     @Mock
-    private ChannelTypeRegistry channelTypeRegistry;
+    private ChannelTypeProvider xmlChannelTypeProvider;
 
     private ComponentContext componentContext;
     private BundleContext bundleContext;
@@ -94,6 +99,7 @@ public class VicareBindingTest {
     private ThingHandler bridgeHandler;
 
     private static Map<ChannelTypeUID, ChannelType> channelTypes;
+
 
     private void simpleHeatingInstallation() throws AuthenticationException, IOException {
         Installation installation = mock(Installation.class);
@@ -202,6 +208,9 @@ public class VicareBindingTest {
         Feature operatingModesDHWAndHeating = new StatusSensorFeature("heating.circuits.1.operating.modes.dhwAndHeating",
                                                                       StatusValue.NA,
                                                                       true);
+        Feature operatingModesHeating = new StatusSensorFeature("heating.circuits.1.operating.modes.heating",
+                                                                StatusValue.NA,
+                                                                false);
         Feature operatingModesStandby = new StatusSensorFeature("heating.circuits.1.operating.modes.standby",
                                                                 StatusValue.NA,
                                                                 false);
@@ -249,6 +258,7 @@ public class VicareBindingTest {
                         heatingCircuitName,
                         operatingModesDHW,
                         operatingModesDHWAndHeating,
+                        operatingModesHeating,
                         operatingModesStandby,
                         heatingCircuitsOperatingProgramsForcedLastFromSchedule,
                         heatingCircuitsOperatingProgramsReducedEnergySaving,
@@ -309,6 +319,8 @@ public class VicareBindingTest {
         componentContext = mock(ComponentContext.class);
         bundleContext = mock(BundleContext.class);
         configuration = new SimpleConfiguration(bundleContext);
+        var myChannelTypeRegistry = new MyChannelTypeRegistry();
+        this.channelTypeRegistry = myChannelTypeRegistry;
         doReturn(bundleContext).when(componentContext).getBundleContext();
         Bundle bundle = mock(Bundle.class);
         doReturn(bundle).when(bundleContext).getBundle();
@@ -318,14 +330,17 @@ public class VicareBindingTest {
         doReturn(persistedTokenStoreConfig).when(configurationAdmin).getConfiguration(PersistedTokenStore.TOKEN_STORE_PID);
         Dictionary<String, Object> ptsProps = new Hashtable<>();
         doReturn(ptsProps).when(persistedTokenStoreConfig).getProperties();
-        doAnswer(i -> ChannelTypeBuilder.state(i.getArgument(0), "Label", "Number:Temperature").build()).when(channelTypeRegistry).getChannelType(any(ChannelTypeUID.class));
+//        doAnswer(i -> ChannelTypeBuilder.state(i.getArgument(0), "Label", "Number:Temperature").build()).when(channelTypeRegistry).getChannelType(any(ChannelTypeUID.class));
         when(vicareServiceProvider.getVicareConfiguration()).thenReturn(configuration);
         when(vicareServiceProvider.getVicareService()).thenReturn(vicareService);
         when(vicareServiceProvider.getBindingVersion()).thenReturn("3.3.0");
         when(vicareServiceProvider.getThingRegistry()).thenReturn(thingRegistry);
         when(vicareServiceProvider.getBundleContext()).thenReturn(bundleContext);
         when(vicareServiceProvider.getConfigurationAdmin()).thenReturn(configurationAdmin);
-        when(vicareServiceProvider.getChannelTypeRegistry()).thenReturn(channelTypeRegistry);
+        when(vicareServiceProvider.getChannelTypeRegistry()).thenReturn(myChannelTypeRegistry);
+        doReturn(channelTypes.values()).when(xmlChannelTypeProvider).getChannelTypes(any(Locale.class));
+        doAnswer(i -> channelTypes.get(i.getArgument(0))).when(xmlChannelTypeProvider).getChannelType(any(ChannelTypeUID.class), nullable(Locale.class));
+        myChannelTypeRegistry.addChannelTypeProvider(xmlChannelTypeProvider);
     }
 
     @AfterEach
@@ -473,8 +488,8 @@ public class VicareBindingTest {
         simpleHandlerCallback(bridge, handler);
         doThrow(new RuntimeException("Unexpected exception")).when(vicareService).getFeatures(anyLong(), anyString(), anyString());
 
-        bridgeHandler.initialize();
-        handler.initialize();
+        registerAndInitialize(bridgeHandler);
+        registerAndInitialize(handler);
         verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
 
         assertTrue(((VicareBridgeHandler)bridgeHandler).isFeatureScanRunning());
@@ -492,7 +507,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -547,7 +562,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -584,7 +599,7 @@ public class VicareBindingTest {
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
 
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -633,7 +648,7 @@ public class VicareBindingTest {
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
 
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -661,7 +676,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -684,7 +699,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -758,7 +773,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -796,7 +811,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -857,7 +872,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -885,7 +900,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -903,36 +918,21 @@ public class VicareBindingTest {
         assertEquals(StringType.valueOf("circuitNameName"), stateCaptor.getValue());
     }
 
-    @Test
-    public void supportsHeatingCircuitOperatingModesDHW() throws AuthenticationException, IOException {
-        simpleHeatingInstallation();
-        Bridge bridge = vicareBridge();
-        createBridgeHandler(bridge);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
-                                                                             vicareServiceProvider);
-        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
-        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
-        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
-        InOrder inOrder = inOrder(vicareService);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
-        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
-        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
-
-        Channel channel = findChannel(thingCaptor, "heating_circuits_1_operating_modes_dhw_active");
-        assertNotNull(channel);
-        assertEquals("heating_circuits_operating_modes_dhw_active", channel.getChannelTypeUID().getId());
-        assertEquals("heating.circuits.1.operating.modes.dhw", channel.getProperties().get(PROPERTY_FEATURE_NAME));
-
-        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
-        ArgumentCaptor<State> stateCaptor = forClass(State.class);
-        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(OnOffType.OFF, stateCaptor.getValue());
+    public static Stream<Arguments> source_heatingCircuitsOperatingModes() {
+        return Stream.of(
+                Arguments.of("dhw", OnOffType.OFF, "Heating Circuit DHW Operating Mode Active", "Shows whether the domestic hot water (DHW) only operating mode is active."),
+                Arguments.of("dhwAndHeating", OnOffType.ON, "Heating Circuit DHW And Heating Operating Mode Active", "Shows whether the domestic hot water (DHW) and heating operating mode is active."),
+                Arguments.of("standby", OnOffType.OFF, "Heating Circuit Standby Operating Mode Active", "Shows whether the Standby operating mode is active now. In this mode, the device will only start heating to protect installation from frost. Other commands, e.g. charging of DHW (oneTimeCharge), are still executable while this operating mode is active."),
+                Arguments.of("heating", OnOffType.OFF, "Heating Circuit heating Operating Mode Active", "Shows whether the heating operating mode is active.")
+        );
     }
 
-    @Test
-    public void supportsHeatingCircuitOperatingModesDHWAndHeating() throws AuthenticationException, IOException {
+    @ParameterizedTest()
+    @MethodSource("source_heatingCircuitsOperatingModes")
+    public void supportsHeatingCircuitOperatingMode(String suffix,
+                                                    OnOffType expectedActive,
+                                                    String expectedLabel,
+                                                    String expectedDescription) throws AuthenticationException, IOException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
         createBridgeHandler(bridge);
@@ -941,50 +941,44 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
 
-        Channel channel = findChannel(thingCaptor, "heating_circuits_1_operating_modes_dhwAndHeating_active");
+        Channel channel = findChannelNoVerify(thingCaptor, String.format("heating_circuits_1_operating_modes_%s_active", suffix));
         assertNotNull(channel);
-        assertEquals("heating_circuits_operating_modes_dhwAndHeating_active", channel.getChannelTypeUID().getId());
-        assertEquals("heating.circuits.1.operating.modes.dhwAndHeating", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+        assertEquals(String.format("heating.circuits.1.operating.modes.%s", suffix), channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals(expectedLabel, channelType.getLabel());
+        assertEquals(expectedDescription, channelType.getDescription());
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
         verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(OnOffType.ON, stateCaptor.getValue());
+        assertEquals(expectedActive, stateCaptor.getValue());
     }
 
-    @Test
-    public void supportsHeatingCircuitOperatingModesStandby() throws AuthenticationException, IOException {
-        simpleHeatingInstallation();
-        Bridge bridge = vicareBridge();
-        createBridgeHandler(bridge);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
-                                                                             vicareServiceProvider);
-        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
-        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
-        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+    private void registerAndInitialize(ThingHandler handler) {
+        handler.getServices().forEach(
+                c -> {
+                    try {
+                        if (ChannelTypeProvider.class.isAssignableFrom(c)) {
+                            ThingHandlerService thingHandlerService = c.getConstructor().newInstance();
+                            thingHandlerService.setThingHandler(handler);
+                            thingHandlerService.activate();
+                            channelTypeRegistry.addChannelTypeProvider((ChannelTypeProvider) thingHandlerService);
+                        }
+                    } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
+                             NoSuchMethodException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+        );
         handler.initialize();
-        InOrder inOrder = inOrder(vicareService);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
-        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
-        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
-
-        Channel channel = findChannel(thingCaptor, "heating_circuits_1_operating_modes_standby_active");
-        assertNotNull(channel);
-        assertEquals("heating_circuits_operating_modes_standby_active", channel.getChannelTypeUID().getId());
-        assertEquals("heating.circuits.1.operating.modes.standby", channel.getProperties().get(PROPERTY_FEATURE_NAME));
-
-        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
-        ArgumentCaptor<State> stateCaptor = forClass(State.class);
-        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(OnOffType.OFF, stateCaptor.getValue());
     }
 
     @Test
@@ -997,7 +991,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -1025,7 +1019,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -1071,7 +1065,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -1099,7 +1093,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -1127,7 +1121,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -1164,7 +1158,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -1192,7 +1186,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -1230,7 +1224,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -1258,7 +1252,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -1302,7 +1296,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -1330,7 +1324,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -1353,6 +1347,12 @@ public class VicareBindingTest {
     }
 
     private static Channel findChannel(ArgumentCaptor<Thing> thingCaptor, String channelId) {
+        Channel channel = findChannelNoVerify(thingCaptor, channelId);
+        verifyChannel(channel);
+        return channel;
+    }
+
+    private static Channel findChannelNoVerify(ArgumentCaptor<Thing> thingCaptor, String channelId) {
         List<Channel> matched = thingCaptor.getAllValues().stream()
                 .flatMap(t -> t.getChannels().stream())
                 .filter(c -> c.getUID().getId().equals(channelId))
@@ -1361,7 +1361,6 @@ public class VicareBindingTest {
         if (matched.isEmpty()) return null;
 
         Channel channel = matched.get(0);
-        verifyChannel(channel);
         return channel;
     }
 
@@ -1375,7 +1374,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -1446,10 +1445,10 @@ public class VicareBindingTest {
         ThingHandlerCallback thingHandlerCallback2 = simpleHandlerCallback(bridge, boilerHandler2);
         boilerHandler2.setCallback(thingHandlerCallback2);
 
-        boilerHandler1.initialize();
+        registerAndInitialize(boilerHandler1);
         verify(thingHandlerCallback1, timeout(1000)).statusUpdated(any(Thing.class), argThat(tsi -> tsi.getStatus() == ThingStatus.ONLINE));
 
-        boilerHandler2.initialize();
+        registerAndInitialize(boilerHandler2);
         verify(thingHandlerCallback2, timeout(1000)).statusUpdated(any(Thing.class), argThat(tsi -> tsi.getStatus() == ThingStatus.ONLINE));
 
         verify(thingHandlerCallback1, timeout(1000)).thingUpdated(any(Thing.class));
@@ -1477,7 +1476,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -1505,7 +1504,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -1571,7 +1570,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -1595,7 +1594,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -1619,7 +1618,7 @@ public class VicareBindingTest {
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        handler.initialize();
+        registerAndInitialize(handler);
         InOrder inOrder = inOrder(vicareService);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
@@ -1677,6 +1676,18 @@ public class VicareBindingTest {
             return thingTypeXmlReader.getChannelTypes();
         } catch (XMLStreamException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private static class MyChannelTypeRegistry extends ChannelTypeRegistry {
+        @Override
+        protected void addChannelTypeProvider(ChannelTypeProvider channelTypeProviders) {
+            super.addChannelTypeProvider(channelTypeProviders);
+        }
+
+        @Override
+        protected void removeChannelTypeProvider(ChannelTypeProvider channelTypeProviders) {
+            super.removeChannelTypeProvider(channelTypeProviders);
         }
     }
 }

@@ -242,6 +242,13 @@
     <category>Heating</category>
     <state readOnly="true"/>
   </channel-type>
+  <channel-type id="template_heating_circuits_operating_modes_active">
+    <item-type>String</item-type>
+    <label>Heating Circuit ${0} Operating Mode Active</label>
+    <description>Shows whether the ${0} operating mode is active.</description>
+    <category>Heating</category>
+    <state readOnly="true"/>
+  </channel-type>
   <channel-type id="heating_circuits_operating_modes_dhwAndHeating_active">
     <item-type>Switch</item-type>
     <label>Heating Circuit DHW And Heating Operating Mode Active</label>
@@ -251,7 +258,7 @@
   </channel-type>
   <channel-type id="heating_circuits_operating_modes_standby_active">
     <item-type>Switch</item-type>
-    <label>Heating Circuit DHW And Heating Operating Mode Active</label>
+    <label>Heating Circuit Standby Operating Mode Active</label>
     <description>Shows whether the Standby operating mode is active now. In this mode, the device will only start heating to protect installation from frost. Other commands, e.g. charging of DHW (oneTimeCharge), are still executable while this operating mode is active.</description>
     <category>Heating</category>
     <state readOnly="true"/>

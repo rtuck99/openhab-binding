@@ -4,6 +4,8 @@ import org.openhab.core.thing.type.ChannelType;
 import org.openhab.core.thing.type.ChannelTypeBuilder;
 import org.openhab.core.thing.type.ChannelTypeUID;
 import org.openhab.core.thing.type.StateChannelTypeBuilder;
+import org.openhab.core.types.StateDescriptionFragment;
+import org.openhab.core.types.StateDescriptionFragmentBuilder;
 
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
@@ -67,6 +69,8 @@ public class ThingTypeXmlReader {
         String itemType = null;
         String label = null;
         String description = null;
+        String category = null;
+        StateDescriptionFragment state = null;
         while (reader.hasNext()) {
             switch (reader.next()) {
                 case START_ELEMENT:
@@ -80,6 +84,12 @@ public class ThingTypeXmlReader {
                         case "description":
                             description = reader.getElementText();
                             break;
+                        case "category":
+                            category = reader.getElementText();
+                            break;
+                        case "state":
+                            state = readState(reader);
+                            break;
                     }
                     break;
                 case END_ELEMENT:
@@ -92,6 +102,12 @@ public class ThingTypeXmlReader {
                         if (description != null) {
                             builder = builder.withDescription(description);
                         }
+                        if (category != null) {
+                            builder = builder.withCategory(category);
+                        }
+                        if (state != null) {
+                            builder = builder.withStateDescriptionFragment(state);
+                        }
                         ChannelType replaced = channelTypes.put(channelTypeUID, builder.build());
                         if (replaced != null) {
                             throw new XMLStreamException(String.format("Duplicate channel-type name %s", channelId));
@@ -101,6 +117,22 @@ public class ThingTypeXmlReader {
                     break;
             }
         }
+    }
+
+    private StateDescriptionFragment readState(XMLStreamReader reader) {
+        Boolean readOnly = null;
+        for (int i = 0; i < reader.getAttributeCount(); ++i) {
+            switch (reader.getAttributeLocalName(i)) {
+                case "readOnly":
+                    readOnly = Boolean.valueOf(reader.getAttributeValue(i));
+                    break;
+            }
+        }
+        StateDescriptionFragmentBuilder builder = StateDescriptionFragmentBuilder.create();
+        if (readOnly != null) {
+            builder = builder.withReadOnly(readOnly);
+        }
+        return builder.build();
     }
 
     public Map<ChannelTypeUID, ChannelType> getChannelTypes() {

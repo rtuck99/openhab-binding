@@ -269,9 +269,9 @@
     <description>Shows the current active operating program on the device</description>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_operating_programs_forcedLastFromSchedule_active">
+  <channel-type id="template_heating_circuits_operating_programs_forcedLastFromSchedule_active">
     <item-type>Switch</item-type>
-    <label>Extended Heating</label>
+    <label>Heating Circuit ${heatingCircuit} Extended Heating Active</label>
     <description>If activated, the last program activated by the schedule will be sustained until this feature is deactivated.</description>
     <state readOnly="true"/>
   </channel-type>
@@ -293,83 +293,34 @@
     <description>Shows the end date of the holiday program</description>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_operating_programs_comfort_active">
-    <item-type>Switch</item-type>
-    <label>Comfort Operating Program Active</label>
-    <description>Shows whether the comfort program is active</description>
-    <state readOnly="true"/>
-  </channel-type>
-  <channel-type id="heating_circuits_operating_programs_comfort">
+  <channel-type id="template_heating_circuits_operating_programs_temperature">
     <item-type>Number:Temperature</item-type>
-    <label>Comfort Operating Program Temperature</label>
-    <description>Shows the comfort program target temperature</description>
+    <label>Heating Circuit ${heatingCircuit} ${pretty:0} Operating Program Temperature</label>
+    <description>Shows the ${pretty:0} operating program target temperature for heating circuit ${heatingCircuit}</description>
     <category>Heating</category>
     <state pattern="%d °C"/>
   </channel-type>
-  <channel-type id="heating_circuits_operating_programs_eco_active">
+  <channel-type id="template_heating_circuits_operating_programs_active">
     <item-type>Switch</item-type>
-    <label>Eco Operating Program Active</label>
-    <description>Shows whether the eco program is active</description>
+    <label>Heating Circuit ${heatingCircuit} ${pretty:0} Operating Program Active</label>
+    <description>Shows whether the ${pretty:0} operating program is active for heating circuit ${heatingCircuit}</description>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_operating_programs_eco">
-    <item-type>Number:Temperature</item-type>
-    <label>Eco Operating Program Temperature</label>
-    <description>Shows the eco program target temperature</description>
-    <category>Heating</category>
-    <state readOnly="true" pattern="%d °C"/>
-  </channel-type>
-  <channel-type id="heating_circuits_operating_programs_reduced_active">
+  <channel-type id="template_heating_circuits_operating_programs_energySaving_active">
     <item-type>Switch</item-type>
-    <label>Setback Operating Program Active</label>
-    <description>Shows whether the reduced temperature program is active</description>
+    <label>Heating Circuit ${heatingCircuit} ${pretty:0} Operating Program Active</label>
+    <description>Shows whether the device is currently in the Energy Saving operating mode while the ${pretty:operatingProgram} operating program is scheduled on heating circuit ${heatingCircuit}</description>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_operating_programs_reduced">
-    <item-type>Number:Temperature</item-type>
-    <label>Setback Operating Program Temperature</label>
-    <description>Shows the reduced temperature program target temperature</description>
-    <category>Heating</category>
-    <state pattern="%d °C"/>
-  </channel-type>
-  <channel-type id="heating_circuits_operating_programs_reducedEnergySaving_active">
-    <item-type>Switch</item-type>
-    <label>Reduced Energy Saving Program Active</label>
-    <description>Shows whether the device is currently heating in the Energy Saving operating mode while the reduced temperature is scheduled</description>
-    <state readOnly="true"/>
-  </channel-type>
-  <channel-type id="heating_circuits_operating_programs_reducedEnergySaving_reason">
+  <channel-type id="template_heating_circuits_operating_programs_energySaving_reason">
     <item-type>String</item-type>
-    <label>Reduced Energy Saving Program Reason</label>
+    <label>Heating Circuit ${heatingCircuit} ${pretty:0} Operating Program Reason</label>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_operating_programs_reducedEnergySaving_demand">
+  <channel-type id="template_heating_circuits_operating_programs_energySaving_demand">
     <item-type>String</item-type>
-    <label>Reduced Energy Saving Program Demand</label>
+    <label>Heating Circuit ${heatingCircuit} ${pretty:0} Operating Program Demand</label>
     <state readOnly="true"/>
-  </channel-type>
-  <channel-type id="heating_circuits_operating_programs_standby_active">
-    <item-type>Switch</item-type>
-    <label>Standby Program Active</label>
-    <state readOnly="true"/>
-  </channel-type>
-  <channel-type id="heating_circuits_operating_programs_summerEco_active">
-    <item-type>Switch</item-type>
-    <label>Summer Eco Program Active</label>
-    <state readOnly="true"/>
-  </channel-type>
-  <channel-type id="heating_circuits_operating_programs_normal_active">
-    <item-type>Switch</item-type>
-    <label>Normal Operating Program Active</label>
-    <description>Shows whether the normal program is active</description>
-    <state readOnly="true"/>
-  </channel-type>
-  <channel-type id="heating_circuits_operating_programs_normal">
-    <item-type>Number:Temperature</item-type>
-    <label>Normal Operating Program Temperature</label>
-    <description>Shows the normal program target temperature</description>
-    <category>Heating</category>
-    <state pattern="%d °C"/>
   </channel-type>
   <channel-type id="heating_circuits_temperature_levels_min">
     <item-type>Number:Temperature</item-type>

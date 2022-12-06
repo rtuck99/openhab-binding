@@ -343,7 +343,7 @@
       },
       "commands": {
         "setTemperature": {
-          "uri": "https://api.viessmann.com/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.operating.programs.comfortHeating/commands/setTemperature",
+          "uri": "http://localhost:9000/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.operating.programs.comfortHeating/commands/setTemperature",
           "name": "setTemperature",
           "isExecutable": true,
           "params": {
@@ -1986,7 +1986,7 @@
       },
       "commands": {
         "setTemperature": {
-          "uri": "https://api.viessmann.com/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.operating.programs.reducedHeating/commands/setTemperature",
+          "uri": "http://localhost:9000/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.operating.programs.reducedHeating/commands/setTemperature",
           "name": "setTemperature",
           "isExecutable": true,
           "params": {
@@ -3248,7 +3248,7 @@
       },
       "commands": {
         "setTemperature": {
-          "uri": "https://api.viessmann.com/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.operating.programs.normalHeating/commands/setTemperature",
+          "uri": "http://localhost:9000/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.operating.programs.normalHeating/commands/setTemperature",
           "name": "setTemperature",
           "isExecutable": true,
           "params": {

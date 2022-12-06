@@ -63,9 +63,8 @@ public class VicareServiceTest {
 
     private HttpService httpService;
 
-    private Servlet accessServlet;
+    private final List<String> servlets = new CopyOnWriteArrayList<>();
 
-    private Servlet iotServlet;
     private SimpleTokenStore tokenStore;
 
     private <T> T getService(Class<T> clazz) {
@@ -96,22 +95,23 @@ public class VicareServiceTest {
     @AfterEach
     public void tearDown() throws Exception {
         httpClient.stop();
-        if (accessServlet != null) {
-            httpService.unregister("/grantAccess");
-            accessServlet = null;
+        for (String servlet : servlets) {
+            httpService.unregister(servlet);
         }
-        if (iotServlet != null) {
-            httpService.unregister("/iot");
-            iotServlet = null;
-        }
+        servlets.clear();
         tokenStore.reset();
+    }
+
+    private void registerServlet(String path, Servlet servlet) throws ServletException, NamespaceException {
+        httpService.registerServlet(path, servlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+        servlets.add(path);
     }
 
     @Test
     @DisabledIf("realConnection")
     public void setupPageRendersAndIncludesRedirectURI() throws Exception {
         tokenStore.storeAccessToken("mytoken", Instant.now().plus(1, ChronoUnit.DAYS));
-        iotServlet = new HttpServlet() {
+        Servlet iotServlet = new HttpServlet() {
             @Override
             protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
                 String jsonResponse = new String(getClass().getResourceAsStream("installationsResponse.json").readAllBytes(), StandardCharsets.UTF_8);
@@ -122,7 +122,7 @@ public class VicareServiceTest {
                 }
             }
         };
-        httpService.registerServlet("/iot", iotServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+        registerServlet("/iot", iotServlet);
 
         String contentAsString = httpClient.GET("http://localhost:9000/vicare/setup")
                 .getContentAsString();
@@ -159,7 +159,7 @@ public class VicareServiceTest {
                 .getContentAsString();
         AtomicBoolean requested = new AtomicBoolean();
         AtomicReference<Map<String,String[]>> parameterMap = new AtomicReference<>();
-        accessServlet = new SimpleAccessServer(
+        Servlet accessServlet = new SimpleAccessServer(
                 (req, resp) -> {
                     parameterMap.set(req.getParameterMap());
                     requested.set(true);
@@ -178,7 +178,7 @@ public class VicareServiceTest {
 
                 }
         );
-        httpService.registerServlet("/grantAccess", accessServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+        registerServlet("/grantAccess", accessServlet);
 
         SimpleChallengeStore challengeStore = (SimpleChallengeStore) getService(ChallengeStore.class);
 
@@ -233,7 +233,7 @@ public class VicareServiceTest {
         tokenStore.storeAccessToken("mytoken", Instant.now().minus(1, ChronoUnit.SECONDS));
         tokenStore.storeRefreshToken("myrefresh");
         Map<String, String> parameters = new HashMap<>();
-        accessServlet = new SimpleAccessServer(
+        Servlet accessServlet = new SimpleAccessServer(
                 (req, resp) -> {
                     parameters.put("grant_type", req.getParameter("grant_type"));
                     parameters.put("client_id", req.getParameter("client_id"));
@@ -251,10 +251,10 @@ public class VicareServiceTest {
                     }
                 }
         );
-        httpService.registerServlet("/grantAccess", accessServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
-        iotServlet = new HttpServlet() {
+        registerServlet("/grantAccess", accessServlet);
+        Servlet iotServlet = new HttpServlet() {
             @Override
-            protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+            protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
                 String jsonResponse = new String(getClass().getResourceAsStream("installationsResponse.json").readAllBytes(), StandardCharsets.UTF_8);
 
                 resp.setContentType("application/json");
@@ -264,7 +264,7 @@ public class VicareServiceTest {
                 }
             }
         };
-        httpService.registerServlet("/iot", iotServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+        registerServlet("/iot", iotServlet);
 
         vicareService.getInstallations();
 
@@ -279,9 +279,9 @@ public class VicareServiceTest {
     public void getInstallations() throws ServletException, NamespaceException {
         tokenStore.storeAccessToken("mytoken", Instant.now().plus(1, ChronoUnit.DAYS));
         CompletableFuture<Void> servletTestResult = new CompletableFuture<>();
-        iotServlet = new HttpServlet() {
+        Servlet iotServlet = new HttpServlet() {
             @Override
-            protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+            protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 
                 try {
                     assertEquals("/iot/equipment/installations", URI.create(req.getRequestURI()).getPath());
@@ -301,7 +301,7 @@ public class VicareServiceTest {
                 }
             }
         };
-        httpService.registerServlet("/iot", iotServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+        registerServlet("/iot", iotServlet);
 
         List<Installation> installations = assertDoesNotThrow(() -> vicareService.getInstallations());
 
@@ -452,7 +452,7 @@ public class VicareServiceTest {
 
         CompletableFuture<String> requestContent = new CompletableFuture<>();
 
-        iotServlet = new HttpServlet() {
+        Servlet iotServlet = new HttpServlet() {
             @Override
             protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
                 try {
@@ -470,7 +470,7 @@ public class VicareServiceTest {
                 }
             }
         };
-        httpService.registerServlet("/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.temperature.levels/commands/setMax", iotServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+        registerServlet("/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.temperature.levels/commands/setMax", iotServlet);
 
         vicareService.sendCommand(URI.create("http://localhost:9000/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.temperature.levels/commands/setMax"),
                                   Map.of("temperature", 46));
@@ -605,7 +605,7 @@ public class VicareServiceTest {
 
         CompletableFuture<String> requestContent = new CompletableFuture<>();
 
-        iotServlet = new HttpServlet() {
+        Servlet iotServlet = new HttpServlet() {
             @Override
             protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
                 try {
@@ -623,7 +623,7 @@ public class VicareServiceTest {
                 }
             }
         };
-        httpService.registerServlet("/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.modes.active/commands/setMode", iotServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+        registerServlet("/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.modes.active/commands/setMode", iotServlet);
 
         vicareService.sendCommand(URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.modes.active/commands/setMode"),
                                   Map.of("mode", "dhwAndHeating"));
@@ -676,97 +676,118 @@ public class VicareServiceTest {
         assertEquals(Boolean.FALSE, feature.get().isActive());
     }
 
-    @Test
-    @DisabledIf("realConnection")
-    public void supports_heating_circuits_0_operating_programs_normal() throws ServletException, NamespaceException, AuthenticationException, IOException, CommandFailureException, ExecutionException, InterruptedException, TimeoutException {
-        List<Feature> features = getFeatures("deviceFeaturesResponse.json");
+    static Stream<Arguments> source_heating_circuits_operating_programs() {
+        return Stream.of(
+                Arguments.of("deviceFeaturesResponse.json", "normal", false, 20, "celsius", 3, 37, 1, 23.0,
+                             "/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normal/commands/setTemperature"),
+                Arguments.of("deviceFeaturesResponse.json", "reduced", false, 12, "celsius", 3, 37, 1, 23.0,
+                             "/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.reduced/commands/setTemperature"),
+                Arguments.of("deviceFeaturesResponse.json", "comfort", false, 22, "celsius", 3, 37, 1, 23.0,
+                             "/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.comfort/commands/setTemperature"),
+                Arguments.of("deviceFeaturesResponse5.json", "reducedHeating", false, 18, "celsius", 3, 37, 1, 23.0,
+                             "/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.operating.programs.reducedHeating/commands/setTemperature"),
+                Arguments.of("deviceFeaturesResponse5.json", "normalHeating", true, 21, "celsius", 3, 37, 1, 23.0,
+                             "/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.operating.programs.normalHeating/commands/setTemperature"),
+                Arguments.of("deviceFeaturesResponse5.json", "comfortHeating", false, 22, "celsius", 3, 37, 1, 23.0,
+                             "/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.operating.programs.comfortHeating/commands/setTemperature"),
+                Arguments.of("deviceFeaturesResponse2.json", "eco", false, 21, "", 0, 0, 1, 23.0,
+                             null),
+                Arguments.of("deviceFeaturesResponse2.json", "external", false, 0, "", 0, 0, 1, 23.0,
+                             null)
+        );
+    }
 
-        Optional<NumericSensorFeature> normalMode = features.stream()
-                .filter(f -> f.getName().equals("heating.circuits.0.operating.programs.normal"))
+    @ParameterizedTest
+    @MethodSource("source_heating_circuits_operating_programs")
+    @DisabledIf("realConnection")
+    public void supports_heating_circuits_N_operating_programs(String fileName, String programName, boolean expectedActive, int expectedTemp, String expectedUnit, int expectedMin, int expectedMax, int expectedStep, double setValue, String uriPath) throws ServletException, NamespaceException, CommandFailureException, AuthenticationException, IOException, ExecutionException, InterruptedException, TimeoutException {
+        List<Feature> features = getFeatures(fileName);
+
+        Optional<NumericSensorFeature> programMode = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.0.operating.programs." + programName))
                 .map(NumericSensorFeature.class::cast)
                 .findFirst();
-        assertTrue(normalMode.isPresent());
-        assertEquals(false, normalMode.get().isActive());
-        assertEquals(20, normalMode.get().getValue().getValue(), 0.001);
-        assertEquals("celsius", normalMode.get().getValue().getUnit().getName());
-        assertEquals(1, normalMode.get().getCommands().size());
-        assertEquals(URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normal/commands/setTemperature"), normalMode.get().getCommands().get(0).getUri());
-        assertEquals("setTemperature", normalMode.get().getCommands().get(0).getName());
-        assertEquals(1, normalMode.get().getCommands().get(0).getParams().size());
-        assertEquals("targetTemperature", normalMode.get().getCommands().get(0).getParams().get(0).getName());
-        assertEquals(true, normalMode.get().getCommands().get(0).getParams().get(0).isRequired());
-        assertEquals(3, ((NumericParamDescriptor) normalMode.get().getCommands().get(0).getParams().get(0)).getMin());
-        assertEquals(37, ((NumericParamDescriptor) normalMode.get().getCommands().get(0).getParams().get(0)).getMax());
-        assertEquals(1, ((NumericParamDescriptor) normalMode.get().getCommands().get(0).getParams().get(0)).getStepping());
+        assertTrue(programMode.isPresent());
+        assertEquals(expectedActive, programMode.get().isActive());
+        assertEquals(expectedTemp, programMode.get().getValue().getValue(), 0.001);
+        assertEquals(expectedUnit, programMode.get().getValue().getUnit().getName());
+        if (uriPath != null) {
+            CommandDescriptor commandDescriptor = programMode.get().getCommands().stream().filter(c -> c.getName().equals("setTemperature")).findFirst().get();
+            assertEquals(URI.create("http://localhost:9000" + uriPath), commandDescriptor.getUri());
+            assertEquals(1, commandDescriptor.getParams().size());
+            assertEquals("targetTemperature", commandDescriptor.getParams().get(0).getName());
+            assertEquals(true, commandDescriptor.getParams().get(0).isRequired());
+            assertEquals(expectedMin, ((NumericParamDescriptor) commandDescriptor.getParams().get(0)).getMin());
+            assertEquals(expectedMax, ((NumericParamDescriptor) commandDescriptor.getParams().get(0)).getMax());
+            assertEquals(expectedStep, ((NumericParamDescriptor) commandDescriptor.getParams().get(0)).getStepping());
 
-        CompletableFuture<String> requestContent = new CompletableFuture<>();
-        iotServlet = new HttpServlet() {
-            @Override
-            protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-                try {
-                    assertEquals("application/json", req.getHeader(HttpHeader.CONTENT_TYPE.asString()));
-                    assertEquals("application/json", req.getHeader(HttpHeader.ACCEPT.asString()));
-                } catch (AssertionFailedError e) {
-                    requestContent.completeExceptionally(e);
+            CompletableFuture<String> requestContent = new CompletableFuture<>();
+            Servlet iotServlet = new HttpServlet() {
+                @Override
+                protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+                    try {
+                        assertEquals("application/json", req.getHeader(HttpHeader.CONTENT_TYPE.asString()));
+                        assertEquals("application/json", req.getHeader(HttpHeader.ACCEPT.asString()));
+                    } catch (AssertionFailedError e) {
+                        requestContent.completeExceptionally(e);
+                    }
+                    requestContent.complete(new String(req.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+                    String jsonResponse = "{\"data\":{\"success\":true,\"reason\":\"COMMAND_EXECUTION_SUCCESS\"}}";
+                    resp.setContentType("application/json");
+                    resp.setStatus(200);
+                    try (ServletOutputStream outputStream = resp.getOutputStream()) {
+                        outputStream.print(jsonResponse);
+                    }
                 }
-                requestContent.complete(new String(req.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
-                String jsonResponse = "{\"data\":{\"success\":true,\"reason\":\"COMMAND_EXECUTION_SUCCESS\"}}";
-                resp.setContentType("application/json");
-                resp.setStatus(200);
-                try (ServletOutputStream outputStream = resp.getOutputStream()) {
-                    outputStream.print(jsonResponse);
-                }
-            }
-        };
-        httpService.registerServlet("/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normal/commands/setTemperature", iotServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+            };
+            registerServlet(uriPath, iotServlet);
 
-        vicareService.sendCommand(URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normal/commands/setTemperature"),
-                                  Map.of("targetTemperature", 23.0));
-        assertEquals("{\"targetTemperature\":23.0}", requestContent.get(1, TimeUnit.SECONDS));
+            vicareService.sendCommand(URI.create("http://localhost:9000" + uriPath),
+                                      Map.of("targetTemperature", setValue));
+            assertEquals("{\"targetTemperature\":" + setValue + "}", requestContent.get(1, TimeUnit.SECONDS));
+        }
     }
 
-    @Test
-    @DisabledIf("realConnection")
-    public void supports_heating_circuits_N_operating_programs_reducedEnergySaving() throws ServletException, AuthenticationException, NamespaceException, IOException {
-        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
-
-        Optional<Feature> feature = features.stream()
-                .filter(f -> f.getName().equals("heating.circuits.1.operating.programs.reducedEnergySaving"))
-                .map(Feature.class::cast)
-                .findFirst();
-
-        assertTrue(feature.isPresent());
-        assertEquals(BooleanValue.FALSE, feature.get().getProperties().get("active"));
-        assertEquals(new StringValue("unknown"), feature.get().getProperties().get("reason"));
-        assertEquals(new StringValue("heating"), feature.get().getProperties().get("demand"));
+    public static Stream<Arguments> source_heating_circuits_operating_programs_StatusSensorFeature() {
+        return Stream.of(
+                Arguments.of("deviceFeaturesResponse4.json", 1, "standby", BooleanValue.FALSE, null, null),
+                Arguments.of("deviceFeaturesResponse4.json", 1, "summerEco", BooleanValue.FALSE, null, null),
+                Arguments.of("deviceFeaturesResponse5.json", 1, "fixed", BooleanValue.FALSE, null, null),
+                Arguments.of("deviceFeaturesResponse5.json", 1, "normalEnergySaving", BooleanValue.FALSE, "summerEco", "heating"),
+                Arguments.of("deviceFeaturesResponse4.json", 1, "reducedEnergySaving", BooleanValue.FALSE, "unknown", "heating"),
+                Arguments.of("deviceFeaturesResponse5.json", 1, "comfortEnergySaving", BooleanValue.FALSE, "summerEco", "heating"),
+                Arguments.of("deviceFeaturesResponse5.json", 1, "normalCoolingEnergySaving", BooleanValue.FALSE, "summerEco", "cooling"),
+                Arguments.of("deviceFeaturesResponse5.json", 1, "reducedCoolingEnergySaving", BooleanValue.FALSE, "summerEco", "cooling"),
+                Arguments.of("deviceFeaturesResponse5.json", 1, "comfortCoolingEnergySaving", BooleanValue.FALSE, "summerEco", "cooling")
+        );
     }
 
-    @Test
-    @DisabledIf("realConnection")
-    public void suppports_heating_circuits_N_operating_programs_standby() throws ServletException, AuthenticationException, NamespaceException, IOException {
-        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+    @ParameterizedTest
+    @MethodSource("source_heating_circuits_operating_programs_StatusSensorFeature")
+    public void suppports_heating_circuits_N_operating_programs_StatusSensorFeature(String fileName,
+                                                                                    int circuitNum,
+                                                                                    String suffix,
+                                                                                    BooleanValue expectedActive,
+                                                                                    String expectedReason,
+                                                                                    String expectedDemand) throws ServletException, AuthenticationException, NamespaceException, IOException {
+        logger.info("supports_heating_circuits_N_operating_programs_StatusSensorFeature({}, {}, {}, {}, {}, {})",
+                    fileName, circuitNum, suffix, expectedActive, expectedReason, expectedDemand);
+        List<Feature> features = getFeatures(fileName);
 
         Optional<StatusSensorFeature> feature = features.stream()
-                .filter(f -> f.getName().equals("heating.circuits.1.operating.programs.standby"))
+                .filter(f -> f.getName().equals("heating.circuits." + circuitNum + ".operating.programs." + suffix))
                 .map(StatusSensorFeature.class::cast)
                 .findFirst();
 
         assertTrue(feature.isPresent());
-        assertEquals(BooleanValue.FALSE, feature.get().getProperties().get("active"));
-    }
+        assertEquals(expectedActive, feature.get().getProperties().get("active"));
 
-    @Test
-    @DisabledIf("realConnection")
-    public void suppports_heating_circuits_N_operating_programs_summerEco() throws ServletException, AuthenticationException, NamespaceException, IOException {
-        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
-
-        Optional<StatusSensorFeature> feature = features.stream()
-                .filter(f -> f.getName().equals("heating.circuits.1.operating.programs.summerEco"))
-                .map(StatusSensorFeature.class::cast)
-                .findFirst();
-
-        assertTrue(feature.isPresent());
-        assertEquals(BooleanValue.FALSE, feature.get().getProperties().get("active"));
+        if (expectedReason != null) {
+            assertEquals(new StringValue(expectedReason), feature.get().getProperties().get("reason"));
+        }
+        if (expectedDemand != null) {
+            assertEquals(new StringValue(expectedDemand), feature.get().getProperties().get("demand"));
+        }
     }
 
     @Test
@@ -859,7 +880,7 @@ public class VicareServiceTest {
     private List<Feature> getFeatures(final String fileName) throws ServletException, NamespaceException, AuthenticationException, IOException {
         CompletableFuture<Void> servletTestResult = new CompletableFuture<>();
         tokenStore.storeAccessToken("mytoken", Instant.now().plus(1, ChronoUnit.DAYS));
-        iotServlet = new HttpServlet() {
+        Servlet iotServlet = new HttpServlet() {
             @Override
             protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
@@ -880,7 +901,7 @@ public class VicareServiceTest {
                 }
             }
         };
-        httpService.registerServlet("/iot", iotServlet, new Hashtable<>(), httpService.createDefaultHttpContext());
+        registerServlet("/iot", iotServlet);
         List<Feature> features = vicareService.getFeatures(2012616, "7633107093013212", "0");
 
         servletTestResult.orTimeout(10, TimeUnit.SECONDS).join();

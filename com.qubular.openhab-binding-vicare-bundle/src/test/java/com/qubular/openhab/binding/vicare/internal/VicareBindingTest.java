@@ -46,6 +46,7 @@ import javax.xml.stream.XMLStreamReader;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
@@ -126,9 +127,38 @@ public class VicareBindingTest {
         );
         Feature textFeature = new TextFeature("device.serial", "value", "7723181102527121");
         Feature statusFeature = new StatusSensorFeature("heating.circuits.0.circulation.pump", new StatusValue("on"), null);
-        Feature normalProgramFeature = new NumericSensorFeature("heating.circuits.0.operating.programs.normal",
+        List<ParamDescriptor> params = List.of(new NumericParamDescriptor(true, "targetTemperature", 3.0, 37.0, 1.0));
+        List<Feature> programFeatures = List.of(new NumericSensorFeature("heating.circuits.0.operating.programs.normal",
                                                                 "temperature",
-                                                                new DimensionalValue(new Unit("celcius"), 21), StatusValue.NA, true
+                                                                List.of(new CommandDescriptor("setTemperature", true, params, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normal/commands/setTemperature"))),
+                                                                new DimensionalValue(new Unit("celsius"), 21), StatusValue.NA, true),
+                                                new NumericSensorFeature("heating.circuits.0.operating.programs.reduced",
+                                                                "temperature",
+                                                                List.of(new CommandDescriptor("setTemperature", true, params, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.reduced/commands/setTemperature"))),
+                                                                new DimensionalValue(new Unit("celsius"), 12), StatusValue.NA, false),
+                                                new NumericSensorFeature("heating.circuits.0.operating.programs.comfort",
+                                                                "temperature",
+                                                                List.of(new CommandDescriptor("setTemperature", true, params, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.comfort/commands/setTemperature"))),
+                                                                new DimensionalValue(new Unit("celsius"), 22), StatusValue.NA, false),
+                                                new NumericSensorFeature("heating.circuits.0.operating.programs.reducedHeating",
+                                                                "temperature",
+                                                                List.of(new CommandDescriptor("setTemperature", true, params, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.reducedHeating/commands/setTemperature"))),
+                                                                new DimensionalValue(new Unit("celsius"), 18), StatusValue.NA, false),
+                                                new NumericSensorFeature("heating.circuits.0.operating.programs.normalHeating",
+                                                                "temperature",
+                                                                List.of(new CommandDescriptor("setTemperature", true, params, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normalHeating/commands/setTemperature"))),
+                                                                new DimensionalValue(new Unit("celsius"), 21), StatusValue.NA, true),
+                                                new NumericSensorFeature("heating.circuits.0.operating.programs.comfortHeating",
+                                                                "temperature",
+                                                                List.of(new CommandDescriptor("setTemperature", true, params, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.comfortHeating/commands/setTemperature"))),
+                                                                new DimensionalValue(new Unit("celsius"), 22), StatusValue.NA, false),
+                                                new NumericSensorFeature("heating.circuits.0.operating.programs.eco",
+                                                                "temperature",
+                                                                new DimensionalValue(new Unit("celsius"), 21), StatusValue.NA, false),
+                                                new NumericSensorFeature("heating.circuits.0.operating.programs.external",
+                                                                "temperature",
+                                                                new DimensionalValue(new Unit("celsius"), 0), StatusValue.NA, false)
+
         );
         Feature consumptionFeature = new ConsumptionSummaryFeature("heating.gas.consumption.summary.dhw",
                 new DimensionalValue(new Unit("cubicMeter"), 0.2),
@@ -217,16 +247,41 @@ public class VicareBindingTest {
         Feature heatingCircuitsOperatingProgramsForcedLastFromSchedule = new StatusSensorFeature("heating.circuits.1.operating.programs.forcedLastFromSchedule",
                                                                                                  StatusValue.NA,
                                                                                                  false);
-        Feature heatingCircuitsOperatingProgramsReducedEnergySaving = new StatusSensorFeature("heating.circuits.1.operating.programs.reducedEnergySaving",
+        List<Feature> operatingProgramsStatusSensorFeatures = List.of(
+            new StatusSensorFeature("heating.circuits.1.operating.programs.standby",
+                                                                                          StatusValue.NA,
+                                                                                          false),
+            new StatusSensorFeature("heating.circuits.1.operating.programs.summerEco",
+                                                                                        StatusValue.NA,
+                                                                                        false),
+            new StatusSensorFeature("heating.circuits.1.operating.programs.fixed",
+                                                                                        StatusValue.NA,
+                                                                                        false),
+            new StatusSensorFeature("heating.circuits.1.operating.programs.normalEnergySaving",
+                                                                                              Map.of("active", BooleanValue.valueOf(false),
+                                                                                                     "reason", new StringValue("summerEco"),
+                                                                                                     "demand", new StringValue("heating"))),
+            new StatusSensorFeature("heating.circuits.1.operating.programs.reducedEnergySaving",
                                                                                               Map.of("active", BooleanValue.valueOf(false),
                                                                                                      "reason", new StringValue("unknown"),
-                                                                                                     "demand", new StringValue("heating")));
-        Feature heatingCircuitsOperatingProgramsStandby = new StatusSensorFeature("heating.circuits.1.operating.programs.standby",
-                                                                                  StatusValue.NA,
-                                                                                  false);
-        Feature heatingCircuitsOperatingProgramsSummerEco = new StatusSensorFeature("heating.circuits.1.operating.programs.summerEco",
-                                                                                    StatusValue.NA,
-                                                                                    false);
+                                                                                                     "demand", new StringValue("heating"))),
+            new StatusSensorFeature("heating.circuits.1.operating.programs.comfortEnergySaving",
+                                                                                              Map.of("active", BooleanValue.valueOf(false),
+                                                                                                     "reason", new StringValue("summerEco"),
+                                                                                                     "demand", new StringValue("heating"))),
+            new StatusSensorFeature("heating.circuits.1.operating.programs.normalCoolingEnergySaving",
+                                                                                              Map.of("active", BooleanValue.valueOf(false),
+                                                                                                     "reason", new StringValue("summerEco"),
+                                                                                                     "demand", new StringValue("cooling"))),
+            new StatusSensorFeature("heating.circuits.1.operating.programs.reducedCoolingEnergySaving",
+                                                                                              Map.of("active", BooleanValue.valueOf(false),
+                                                                                                     "reason", new StringValue("summerEco"),
+                                                                                                     "demand", new StringValue("cooling"))),
+            new StatusSensorFeature("heating.circuits.1.operating.programs.comfortCoolingEnergySaving",
+                                                                                              Map.of("active", BooleanValue.valueOf(false),
+                                                                                                     "reason", new StringValue("summerEco"),
+                                                                                                     "demand", new StringValue("cooling")))
+        );
         Feature heatingCircuitsSensorsTemperatureSupply = new NumericSensorFeature("heating.circuits.1.sensors.temperature.supply",
                                                                                    "value",
                                                                                    new DimensionalValue(Unit.CELSIUS, 24.6),
@@ -244,31 +299,34 @@ public class VicareBindingTest {
         Feature heatingDHWOperatingModesOff = new StatusSensorFeature("heating.dhw.operating.modes.off",
                 StatusValue.NA,
                 false);
+        List<Feature> features = new ArrayList<>();
+        features.addAll(programFeatures);
+        features.addAll(operatingProgramsStatusSensorFeatures);
+        features.addAll(List.of(temperatureSensor, statisticsFeature, textFeature, statusFeature,
+                                                  consumptionFeature, burnerFeature, curveFeature, holidayFeature,
+                                                  heatingDhw,
+                                                  heatingDhwTemperatureHotWaterStorage, operatingModesActive,
+                                                  heatingCircuitTemperatureLevels,
+                                                  heatingDhwTemperatureMain,
+                                                  solarSensorsTemperatureCollector,
+                                                  solarPowerProduction,
+                                                  solarSensorsTemperatureDHW,
+                                                  solarPumpsCircuit,
+                                                  heatingSolar,
+                                                  heatingCircuit,
+                                                  heatingCircuitName,
+                                                  operatingModesDHW,
+                                                  operatingModesDHWAndHeating,
+                                                  operatingModesHeating,
+                                                  operatingModesStandby,
+                                                  heatingCircuitsOperatingProgramsForcedLastFromSchedule,
+                                                  heatingCircuitsSensorsTemperatureSupply,
+                                                  heatingCircuitsZoneMode,
+                                                  heatingDHWHygiene,
+                                                  heatingDHWOneTimeCharge,
+                                                  heatingDHWOperatingModesOff));
         doReturn(
-                List.of(temperatureSensor, statisticsFeature, textFeature, statusFeature, normalProgramFeature,
-                        consumptionFeature, burnerFeature, curveFeature, holidayFeature, heatingDhw,
-                        heatingDhwTemperatureHotWaterStorage, operatingModesActive, heatingCircuitTemperatureLevels,
-                        heatingDhwTemperatureMain,
-                        solarSensorsTemperatureCollector,
-                        solarPowerProduction,
-                        solarSensorsTemperatureDHW,
-                        solarPumpsCircuit,
-                        heatingSolar,
-                        heatingCircuit,
-                        heatingCircuitName,
-                        operatingModesDHW,
-                        operatingModesDHWAndHeating,
-                        operatingModesHeating,
-                        operatingModesStandby,
-                        heatingCircuitsOperatingProgramsForcedLastFromSchedule,
-                        heatingCircuitsOperatingProgramsReducedEnergySaving,
-                        heatingCircuitsOperatingProgramsStandby,
-                        heatingCircuitsOperatingProgramsSummerEco,
-                        heatingCircuitsSensorsTemperatureSupply,
-                        heatingCircuitsZoneMode,
-                        heatingDHWHygiene,
-                        heatingDHWOneTimeCharge,
-                        heatingDHWOperatingModesOff))
+                features)
                 .when(vicareService)
                 .getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
     }
@@ -550,8 +608,31 @@ public class VicareBindingTest {
         assertEquals(new StringType("connected"), stateCaptor.getValue());
     }
 
-    @Test
-    public void initializeDeviceHandlerCreatesOperatingProgramTemperatureSetting() throws AuthenticationException, IOException {
+    static Stream<Arguments> source_heatingCircuitsOperatingPrograms() {
+        return Stream.of(
+                Arguments.of("normal", 21, OnOffType.ON, "Heating Circuit 0 Normal Operating Program Temperature", "Shows the Normal operating program target temperature for heating circuit 0", "Heating Circuit 0 Normal Operating Program Active", "Shows whether the Normal operating program is active for heating circuit 0", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normal/commands/setTemperature") ),
+                Arguments.of("reduced", 12, OnOffType.OFF, "Heating Circuit 0 Reduced Operating Program Temperature", "Shows the Reduced operating program target temperature for heating circuit 0", "Heating Circuit 0 Reduced Operating Program Active", "Shows whether the Reduced operating program is active for heating circuit 0", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.reduced/commands/setTemperature")),
+                Arguments.of("comfort", 22, OnOffType.OFF, "Heating Circuit 0 Comfort Operating Program Temperature", "Shows the Comfort operating program target temperature for heating circuit 0", "Heating Circuit 0 Comfort Operating Program Active", "Shows whether the Comfort operating program is active for heating circuit 0", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.comfort/commands/setTemperature")),
+                Arguments.of("reducedHeating", 18, OnOffType.OFF, "Heating Circuit 0 Reduced Heating Operating Program Temperature", "Shows the Reduced Heating operating program target temperature for heating circuit 0", "Heating Circuit 0 Reduced Heating Operating Program Active", "Shows whether the Reduced Heating operating program is active for heating circuit 0", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.reducedHeating/commands/setTemperature")),
+                Arguments.of("normalHeating", 21, OnOffType.ON, "Heating Circuit 0 Normal Heating Operating Program Temperature", "Shows the Normal Heating operating program target temperature for heating circuit 0", "Heating Circuit 0 Normal Heating Operating Program Active", "Shows whether the Normal Heating operating program is active for heating circuit 0", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normalHeating/commands/setTemperature")),
+                Arguments.of("comfortHeating", 22, OnOffType.OFF, "Heating Circuit 0 Comfort Heating Operating Program Temperature", "Shows the Comfort Heating operating program target temperature for heating circuit 0", "Heating Circuit 0 Comfort Heating Operating Program Active", "Shows whether the Comfort Heating operating program is active for heating circuit 0", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.comfortHeating/commands/setTemperature")),
+                Arguments.of("eco", 21, OnOffType.OFF, "Heating Circuit 0 Eco Operating Program Temperature", "Shows the Eco operating program target temperature for heating circuit 0", "Heating Circuit 0 Eco Operating Program Active", "Shows whether the Eco operating program is active for heating circuit 0", null, null, null),
+                Arguments.of("external", 0, OnOffType.OFF, "Heating Circuit 0 External Operating Program Temperature", "Shows the External operating program target temperature for heating circuit 0", "Heating Circuit 0 External Operating Program Active", "Shows whether the External operating program is active for heating circuit 0", null, null, null)
+                         );
+    }
+
+    @MethodSource("source_heatingCircuitsOperatingPrograms")
+    @ParameterizedTest
+    public void supportsHeatingCircuitOperatingPrograms(String featureSuffix,
+                                                        int expectedTemperature,
+                                                        OnOffType expectedActive,
+                                                        String expectedTemperatureLabel,
+                                                        String expectedTemperatureDescription,
+                                                        String expectedActiveLabel,
+                                                        String expectedActiveDescription,
+                                                        Double expectedMin,
+                                                        Double expectedMax,
+                                                        URI expectedURI) throws AuthenticationException, IOException, CommandFailureException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
         bridgeHandler = new VicareBridgeHandler(vicareServiceProvider, bridge);
@@ -567,23 +648,41 @@ public class VicareBindingTest {
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
-        Channel channel = findChannel(thingCaptor, "heating_circuits_0_operating_programs_normal");
-        assertEquals("heating_circuits_operating_programs_normal", channel.getChannelTypeUID().getId());
-        assertEquals("heating.circuits.0.operating.programs.normal", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+        Channel channel = findChannelNoVerify(thingCaptor, "heating_circuits_0_operating_programs_" + featureSuffix);
+        assertEquals("heating.circuits.0.operating.programs." + featureSuffix, channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
-        Channel activeChannel = findChannel(thingCaptor, "heating_circuits_0_operating_programs_normal_active");
-        assertEquals("heating_circuits_operating_programs_normal_active", activeChannel.getChannelTypeUID().getId());
-        assertEquals("heating.circuits.0.operating.programs.normal", activeChannel.getProperties().get(PROPERTY_FEATURE_NAME));
+        ChannelType opProgramChannelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals(expectedTemperatureLabel, opProgramChannelType.getLabel());
+        assertEquals(expectedTemperatureDescription, opProgramChannelType.getDescription());
+        assertEquals("Heating", opProgramChannelType.getCategory());
+        assertEquals("Number:Temperature", opProgramChannelType.getItemType());
+
+        Channel activeChannel = findChannelNoVerify(thingCaptor, "heating_circuits_0_operating_programs_" + featureSuffix + "_active");
+        assertEquals("heating.circuits.0.operating.programs." + featureSuffix, activeChannel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        ChannelType opProgramActiveChannelType = channelTypeRegistry.getChannelType(activeChannel.getChannelTypeUID());
+        assertEquals(expectedActiveLabel, opProgramActiveChannelType.getLabel());
+        assertEquals(expectedActiveDescription, opProgramActiveChannelType.getDescription());
+        assertEquals("Switch", opProgramActiveChannelType.getItemType());
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
         verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(21, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
+        assertEquals(expectedTemperature, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
 
         handler.handleCommand(activeChannel.getUID(), RefreshType.REFRESH);
         verify(callback, timeout(1000)).stateUpdated(eq(activeChannel.getUID()), stateCaptor.capture());
-        assertEquals(OnOffType.ON, stateCaptor.getValue());
+        assertEquals(expectedActive, stateCaptor.getValue());
+
+        if (expectedURI != null) {
+            assertEquals(BigDecimal.valueOf(expectedMin), opProgramChannelType.getState().getMinimum());
+            assertEquals(BigDecimal.valueOf(expectedMax), opProgramChannelType.getState().getMaximum());
+            assertEquals(BigDecimal.valueOf(1.0), opProgramChannelType.getState().getStep());
+            assertFalse(opProgramChannelType.getState().isReadOnly());
+            handler.handleCommand(channel.getUID(), QuantityType.valueOf("15  °C"));
+            verify(vicareService, timeout(1000)).sendCommand(expectedURI, Map.of("targetTemperature", 15.0));
+        }
     }
 
     @Test
@@ -997,11 +1096,14 @@ public class VicareBindingTest {
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
 
-        Channel channel = findChannel(thingCaptor, "heating_circuits_1_operating_programs_forcedLastFromSchedule_active");
+        Channel channel = findChannelNoVerify(thingCaptor, "heating_circuits_1_operating_programs_forcedLastFromSchedule_active");
         assertNotNull(channel);
-        assertEquals("heating_circuits_operating_programs_forcedLastFromSchedule_active", channel.getChannelTypeUID().getId());
         assertEquals("heating.circuits.1.operating.programs.forcedLastFromSchedule", channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals("Heating Circuit 1 Extended Heating Active", channelType.getLabel());
+        assertEquals("If activated, the last program activated by the schedule will be sustained until this feature is deactivated.", channelType.getDescription());
+
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
@@ -1009,8 +1111,43 @@ public class VicareBindingTest {
         assertEquals(OnOffType.OFF, stateCaptor.getValue());
     }
 
-    @Test
-    public void supportsHeatingCircuitOperatingProgramsReducedEnergySaving() throws AuthenticationException, IOException {
+    public static Stream<Arguments> source_heatingCircuitsOperatingProgramsStatusSensorFeatures() {
+        return Stream.of(
+                Arguments.of("standby", 1, OnOffType.OFF, "Heating Circuit 1 Standby Operating Program Active", "Shows whether the Standby operating program is active for heating circuit 1", null, null, null, null),
+                Arguments.of("summerEco", 1, OnOffType.OFF, "Heating Circuit 1 Summer Eco Operating Program Active", "Shows whether the Summer Eco operating program is active for heating circuit 1", null, null, null, null),
+                Arguments.of("fixed", 1, OnOffType.OFF, "Heating Circuit 1 Fixed Operating Program Active", "Shows whether the Fixed operating program is active for heating circuit 1", null, null, null, null),
+                Arguments.of("normalEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Normal Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Normal operating program is scheduled on heating circuit 1",
+                             "Heating Circuit 1 Normal Energy Saving Operating Program Reason", "summerEco",
+                             "Heating Circuit 1 Normal Energy Saving Operating Program Demand", "heating"),
+                Arguments.of("reducedEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Reduced Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Reduced operating program is scheduled on heating circuit 1",
+                             "Heating Circuit 1 Reduced Energy Saving Operating Program Reason", "unknown",
+                             "Heating Circuit 1 Reduced Energy Saving Operating Program Demand", "heating"),
+                Arguments.of("comfortEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Comfort Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Comfort operating program is scheduled on heating circuit 1",
+                             "Heating Circuit 1 Comfort Energy Saving Operating Program Reason", "summerEco",
+                             "Heating Circuit 1 Comfort Energy Saving Operating Program Demand", "heating"),
+                Arguments.of("normalCoolingEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Normal Cooling Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Normal Cooling operating program is scheduled on heating circuit 1",
+                             "Heating Circuit 1 Normal Cooling Energy Saving Operating Program Reason", "summerEco",
+                             "Heating Circuit 1 Normal Cooling Energy Saving Operating Program Demand", "cooling"),
+                Arguments.of("reducedCoolingEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Reduced Cooling Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Reduced Cooling operating program is scheduled on heating circuit 1",
+                             "Heating Circuit 1 Reduced Cooling Energy Saving Operating Program Reason", "summerEco",
+                             "Heating Circuit 1 Reduced Cooling Energy Saving Operating Program Demand", "cooling"),
+                Arguments.of("comfortCoolingEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Comfort Cooling Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Comfort Cooling operating program is scheduled on heating circuit 1",
+                             "Heating Circuit 1 Comfort Cooling Energy Saving Operating Program Reason", "summerEco",
+                             "Heating Circuit 1 Comfort Cooling Energy Saving Operating Program Demand", "cooling")
+                         );
+    }
+
+    @MethodSource("source_heatingCircuitsOperatingProgramsStatusSensorFeatures")
+    @ParameterizedTest
+    public void supportsHeatingCircuitOperatingProgramsStatusSensorFeatures(String suffix,
+                                                                            int heatingCircuit,
+                                                                            OnOffType expectedActive,
+                                                                            String expectedLabel,
+                                                                            String expectedDescription,
+                                                                            String expectedReasonLabel,
+                                                                            String expectedReason,
+                                                                            String expectedDemandLabel,
+                                                                            String expectedDemand) throws AuthenticationException, IOException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
         createBridgeHandler(bridge);
@@ -1025,90 +1162,47 @@ public class VicareBindingTest {
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
 
-        Channel channel = findChannel(thingCaptor, "heating_circuits_1_operating_programs_reducedEnergySaving_active");
+        Channel channel = findChannelNoVerify(thingCaptor, "heating_circuits_" + heatingCircuit + "_operating_programs_" + suffix + "_active");
         assertNotNull(channel);
-        assertEquals("heating_circuits_operating_programs_reducedEnergySaving_active", channel.getChannelTypeUID().getId());
-        assertEquals("heating.circuits.1.operating.programs.reducedEnergySaving", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+        assertEquals("heating.circuits." + heatingCircuit + ".operating.programs." + suffix, channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals(expectedLabel, channelType.getLabel());
+        assertEquals(expectedDescription, channelType.getDescription());
+        assertTrue(channelType.getState().isReadOnly());
+        assertEquals("Switch", channelType.getItemType());
+
+        if (expectedReason != null) {
+            Channel reasonChannel = findChannelNoVerify(thingCaptor, String.format("heating_circuits_%s_operating_programs_%s_reason", heatingCircuit, suffix));
+            ChannelType reasonChannelType = channelTypeRegistry.getChannelType(reasonChannel.getChannelTypeUID());
+            assertEquals(expectedReasonLabel, reasonChannelType.getLabel());
+            assertEquals("String", reasonChannelType.getItemType());
+
+            handler.handleCommand(reasonChannel.getUID(), RefreshType.REFRESH);
+            ArgumentCaptor<State> reasonCaptor = ArgumentCaptor.forClass(State.class);
+            verify(callback, timeout(1000)).stateUpdated(eq(reasonChannel.getUID()), reasonCaptor.capture());
+            assertEquals(StringType.valueOf(expectedReason), reasonCaptor.getValue());
+            assertTrue(reasonChannelType.getState().isReadOnly());
+        }
+
+        if (expectedDemand != null) {
+            Channel demandChannel = findChannelNoVerify(thingCaptor, String.format("heating_circuits_%s_operating_programs_%s_demand", heatingCircuit, suffix));
+            ChannelType demandChannelType = channelTypeRegistry.getChannelType(demandChannel.getChannelTypeUID());
+            assertEquals(expectedDemandLabel, demandChannelType.getLabel());
+            assertEquals("String", demandChannelType.getItemType());
+
+            handler.handleCommand(demandChannel.getUID(), RefreshType.REFRESH);
+            ArgumentCaptor<State> demandCaptor = ArgumentCaptor.forClass(State.class);
+            verify(callback, timeout(1000)).stateUpdated(eq(demandChannel.getUID()), demandCaptor.capture());
+            assertEquals(StringType.valueOf(expectedDemand), demandCaptor.getValue());
+            assertTrue(demandChannelType.getState().isReadOnly());
+        }
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
         verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(OnOffType.OFF, stateCaptor.getValue());
-
-        channel = findChannel(thingCaptor, "heating_circuits_1_operating_programs_reducedEnergySaving_reason");
-        assertNotNull(channel);
-        assertEquals("heating_circuits_operating_programs_reducedEnergySaving_reason", channel.getChannelTypeUID().getId());
-        assertEquals("heating.circuits.1.operating.programs.reducedEnergySaving", channel.getProperties().get(PROPERTY_FEATURE_NAME));
-
-        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new StringType("unknown"), stateCaptor.getValue());
-
-        channel = findChannel(thingCaptor, "heating_circuits_1_operating_programs_reducedEnergySaving_demand");
-        assertNotNull(channel);
-        assertEquals("heating_circuits_operating_programs_reducedEnergySaving_demand", channel.getChannelTypeUID().getId());
-        assertEquals("heating.circuits.1.operating.programs.reducedEnergySaving", channel.getProperties().get(PROPERTY_FEATURE_NAME));
-
-        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new StringType("heating"), stateCaptor.getValue());
-    }
-
-    @Test
-    public void supportsHeatingCircuitOperatingProgramsStandby() throws AuthenticationException, IOException {
-        simpleHeatingInstallation();
-        Bridge bridge = vicareBridge();
-        createBridgeHandler(bridge);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
-                                                                             vicareServiceProvider);
-        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
-        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
-        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        registerAndInitialize(handler);
-        InOrder inOrder = inOrder(vicareService);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
-        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
-        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
-
-        Channel channel = findChannel(thingCaptor, "heating_circuits_1_operating_programs_standby_active");
-        assertNotNull(channel);
-        assertEquals("heating_circuits_operating_programs_standby_active", channel.getChannelTypeUID().getId());
-        assertEquals("heating.circuits.1.operating.programs.standby", channel.getProperties().get(PROPERTY_FEATURE_NAME));
-
-        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
-        ArgumentCaptor<State> stateCaptor = forClass(State.class);
-        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(OnOffType.OFF, stateCaptor.getValue());
-    }
-
-    @Test
-    public void supportsHeatingCircuitOperatingProgramsSummerEco() throws AuthenticationException, IOException {
-        simpleHeatingInstallation();
-        Bridge bridge = vicareBridge();
-        createBridgeHandler(bridge);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
-                                                                             vicareServiceProvider);
-        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
-        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
-        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        registerAndInitialize(handler);
-        InOrder inOrder = inOrder(vicareService);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
-        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
-        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
-
-        Channel channel = findChannel(thingCaptor, "heating_circuits_1_operating_programs_summerEco_active");
-        assertNotNull(channel);
-        assertEquals("heating_circuits_operating_programs_summerEco_active", channel.getChannelTypeUID().getId());
-        assertEquals("heating.circuits.1.operating.programs.summerEco", channel.getProperties().get(PROPERTY_FEATURE_NAME));
-
-        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
-        ArgumentCaptor<State> stateCaptor = forClass(State.class);
-        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(OnOffType.OFF, stateCaptor.getValue());
+        assertEquals(expectedActive, stateCaptor.getValue());
     }
 
     @Test

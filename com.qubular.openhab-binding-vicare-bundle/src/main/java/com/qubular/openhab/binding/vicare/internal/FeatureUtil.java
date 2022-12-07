@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class FeatureUtil {
-    private static final Pattern PATTERN_HEATING_CIRCUIT = Pattern.compile("heating\\.circuits\\.([\\d+])\\..*");
+    private static final Pattern PATTERN_HEATING_CIRCUIT = Pattern.compile("heating\\.circuits\\.([\\d+])(\\..*)?");
 
     private static final Pattern PATTERN_ENERGY_SAVING_OPERATING_PROGRAM = Pattern.compile("(heating\\.circuits\\.[\\d+]\\.operating\\.programs\\.)(.+)EnergySaving");
 
@@ -35,21 +35,25 @@ public class FeatureUtil {
         return words.stream().collect(Collectors.joining(" "));
     }
 
-    static String templateId(Feature f, String propertyNameSuffix) {
+    static String templateId(Feature f, String propertyNameSuffix, int truncation) {
         Matcher energySavingOperatingProgramMatcher = PATTERN_ENERGY_SAVING_OPERATING_PROGRAM.matcher(f.getName());
         String parentRoot;
         if (energySavingOperatingProgramMatcher.matches()) {
             parentRoot = "template_" + energySavingOperatingProgramMatcher.group(1) + "energySaving";
+            parentRoot = parentRoot.replaceAll("\\.\\d+", "");
         } else {
             Matcher forcedLastFromScheduleMatcher = PATTERN_FORCED_LAST_FROM_SCHEDULE_OPERATING_PROGRAM.matcher(f.getName());
             if (forcedLastFromScheduleMatcher.matches()) {
-                parentRoot = "template_" + f.getName();
+                parentRoot = "template_" + f.getName().replaceAll("\\.\\d+", "");
             } else {
-                parentRoot = "template_" + f.getName().replaceAll("\\.[^.]+?$","");
+                String truncated = f.getName().replaceAll("\\.\\d+", "");
+                while (truncation-- > 0) {
+                    truncated = truncated.replaceAll("\\.[^.]+?$", ".-");
+                }
+                parentRoot = "template_" + truncated;
             }
         }
         parentRoot = parentRoot
-                .replaceAll("\\d+\\.", "")
                 .replace(".", "_");
         return parentRoot + "_" + propertyNameSuffix;
     }

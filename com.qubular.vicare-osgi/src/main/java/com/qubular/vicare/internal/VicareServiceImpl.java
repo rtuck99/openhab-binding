@@ -63,6 +63,8 @@ public class VicareServiceImpl implements VicareService {
     private final VicareConfiguration config;
     private final VicareServlet vicareServlet;
 
+    private static final String EMPTY_RESPONSE = "{ \"data\": [] }";
+
     @Activate
     public VicareServiceImpl(
             @Reference VicareConfiguration configuration,
@@ -344,6 +346,7 @@ public class VicareServiceImpl implements VicareService {
                 return new String(fis.readAllBytes(), StandardCharsets.UTF_8);
             } catch (IOException e) {
                 logger.warn("Unable to read response injection file {}: {}", config.getResponseInjectionFile(), e.getMessage());
+                return EMPTY_RESPONSE;
             }
         }
         return null;

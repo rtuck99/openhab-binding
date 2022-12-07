@@ -141,23 +141,23 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                             props.put(PROPERTY_PROP_NAME, f.getPropertyName());
                             FeatureUtil.extractTemplatePropertiesFromFeature(f, props);
                             maybeAddPropertiesForSetter(f, f.getPropertyName(), props);
-                            String mainTemplateId = FeatureUtil.templateId(f, f.getPropertyName());
-                            channelBuilder(new ChannelUID(thing.getUID(), id), f, id, mainTemplateId, props, ChannelTypeUtil.getSetterCommandDescriptor(f, f.getPropertyName()).orElse(null))
+                            ChannelType mainTemplate = findTemplate(f, f.getPropertyName());
+                            channelBuilder(new ChannelUID(thing.getUID(), id), f, id, mainTemplate, props, ChannelTypeUtil.getSetterCommandDescriptor(f, f.getPropertyName()).orElse(null))
                                  .map(c -> c.withProperties(props))
                                  .map(ChannelBuilder::build)
                                  .ifPresent(channels::add);
                             if (f.getStatus() != null && !StatusValue.NA.equals(f.getStatus())) {
                                 String statusId = id + "_status";
-                                String statusTemplateId = FeatureUtil.templateId(f, "status");
-                                channelBuilder(new ChannelUID(thing.getUID(), statusId), f, statusId, statusTemplateId, props, null)
+                                ChannelType statusTemplate = findTemplate(f, "status");
+                                channelBuilder(new ChannelUID(thing.getUID(), statusId), f, statusId, statusTemplate, props, null)
                                         .map(c -> c.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                                                           PROPERTY_PROP_NAME, "status")))
                                         .map(ChannelBuilder::build)
                                         .ifPresent(channels::add);
                             } else if (f.isActive() != null) {
                                 String activeId = id + "_active";
-                                String activeTemplateId = FeatureUtil.templateId(f, "active");
-                                channelBuilder(new ChannelUID(thing.getUID(), activeId), f, activeId, activeTemplateId, props, null)
+                                ChannelType activeTemplate = findTemplate(f, "active");
+                                channelBuilder(new ChannelUID(thing.getUID(), activeId), f, activeId, activeTemplate, props, null)
                                         .map(c -> c.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                                                           PROPERTY_PROP_NAME, "active")))
                                         .map(ChannelBuilder::build)
@@ -185,7 +185,9 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                                         switch (k) {
                                             case "status":
                                                 String statusId = escapeUIDSegment(f.getName() + "_status");
-                                                channelBuilder(new ChannelUID(thing.getUID(), statusId), f, statusId, null, emptyMap(), null)
+                                                channelBuilder(new ChannelUID(thing.getUID(), statusId), f, statusId,
+                                                               findTemplate(f, "status"),
+                                                               FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()), null)
                                                         .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                                                                             PROPERTY_PROP_NAME, "status")).build())
                                                         .ifPresent(channels::add);
@@ -200,7 +202,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                                                     @Override
                                                     public void visit(BooleanValue v) {
                                                         String id = escapeUIDSegment(f.getName() + "_" + k);
-                                                        channelBuilder(new ChannelUID(thing.getUID(), id), f, id, FeatureUtil.templateId(f, k),
+                                                        channelBuilder(new ChannelUID(thing.getUID(), id), f, id, findTemplate(f, k),
                                                                        FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()), null)
                                                                 .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                                                                                     PROPERTY_PROP_NAME, k)).build())
@@ -214,7 +216,9 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                                                         props.put(PROPERTY_PROP_NAME, k);
                                                         maybeAddPropertiesForSetter(f, k, props);
                                                         String id = escapeUIDSegment(f.getName() + "_" + k);
-                                                        channelBuilder(new ChannelUID(thing.getUID(), id), f, id, null, props, null)
+                                                        channelBuilder(new ChannelUID(thing.getUID(), id), f, id,
+                                                                       findTemplate(f, k),
+                                                                       FeatureUtil.extractTemplatePropertiesFromFeature(f, props), null)
                                                                 .map(cb -> cb.withProperties(props).build())
                                                                 .ifPresent(channels::add);
                                                     }
@@ -232,7 +236,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                                                     @Override
                                                     public void visit(StringValue v) {
                                                         String id = escapeUIDSegment(f.getName() + "_" + k);
-                                                        channelBuilder(new ChannelUID(thing.getUID(), id), f, id, FeatureUtil.templateId(f, k),
+                                                        channelBuilder(new ChannelUID(thing.getUID(), id), f, id, findTemplate(f, k),
                                                                        FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()), null)
                                                                 .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                                                         PROPERTY_PROP_NAME, k)).build())
@@ -264,7 +268,10 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                                 props.put(PROPERTY_COMMAND_NAME, command.getName());
                                 props.put(PROPERTY_PARAM_NAME, command.getParams().get(0).getName());
                             }
-                            channelBuilder(channelUID, f, id, null, props, command)
+                            channelBuilder(channelUID, f, id,
+                                           findTemplate(f, propertyName),
+                                           FeatureUtil.extractTemplatePropertiesFromFeature(f, props),
+                                           command)
                                     .map(cb -> cb.withProperties(props)
                                             .build())
                                     .ifPresent(channels::add);
@@ -273,12 +280,16 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                         @Override
                         public void visit(CurveFeature f) {
                             String slopeId = escapeUIDSegment(f.getName() + "_slope");
-                            channelBuilder(new ChannelUID(thing.getUID(), slopeId), f, slopeId, null, emptyMap(), null)
+                            channelBuilder(new ChannelUID(thing.getUID(), slopeId), f, slopeId,
+                                           findTemplate(f, "slope"),
+                                           FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()), null)
                                     .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                                                         PROPERTY_PROP_NAME, "slope")).build())
                                     .ifPresent(channels::add);
                             String shiftId = escapeUIDSegment(f.getName() + "_shift");
-                            channelBuilder(new ChannelUID(thing.getUID(), shiftId), f, shiftId, null, emptyMap(), null)
+                            channelBuilder(new ChannelUID(thing.getUID(), shiftId), f, shiftId,
+                                           findTemplate(f, "shift"),
+                                           FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()), null)
                                     .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                                                         PROPERTY_PROP_NAME, "shift")).build())
                                     .ifPresent(channels::add);
@@ -339,10 +350,10 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
     private Optional<ChannelBuilder> channelBuilder(ChannelUID channelUID,
                                                     Feature feature,
                                                     String id,
-                                                    String templateId,
+                                                    ChannelType template,
                                                     Map<String, String> props,
                                                     CommandDescriptor commandDescriptor) {
-        Optional<ChannelTypeUID> channelTypeUID = createChannelType(feature, templateId,
+        Optional<ChannelTypeUID> channelTypeUID = createChannelType(feature, template,
                                                                     id, props, commandDescriptor)
                 .map(ChannelType::getUID);
         try {
@@ -578,19 +589,31 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
         }
     }
 
-    private Optional<ChannelType> createChannelType(Feature feature, String templateId, String channelId,
+    private ChannelType findTemplate(Feature f, String propertyNameSuffix) {
+        int truncation = 0;
+        do {
+            String templateId = FeatureUtil.templateId(f, propertyNameSuffix, truncation);
+            if (templateId != null) {
+                // Get the named template from the thing-types.xml
+                logger.debug("Searching for " + templateId);
+                ChannelType template = vicareServiceProvider.getChannelTypeRegistry().getChannelType(new ChannelTypeUID(BINDING_ID, templateId));
+                if (template != null) {
+                    return template;
+                }
+            }
+        } while (truncation++ < 1);
+        return null;
+    }
+
+    private Optional<ChannelType> createChannelType(Feature feature, ChannelType template, String channelId,
                                    Map<String, String> props, CommandDescriptor commandDescriptor) {
         String candidateChannelTypeId = ChannelTypeUtil.channelIdToChannelType(channelId);
         ChannelTypeUID channelTypeUID = new ChannelTypeUID(BINDING_ID, candidateChannelTypeId);
         ChannelType channelType = vicareServiceProvider.getChannelTypeRegistry().getChannelType(channelTypeUID);
-        if (channelType == null) {
+        if (channelType != null) {
+            logger.info("Found channel type {} for channelId {}", channelTypeUID, channelId);
+        } else {
             // exact ChannelType match not found, create from a template
-            ChannelType template = null;
-            if (templateId != null) {
-                // Get the named template from the thing-types.xml
-                logger.debug("Searching for " + templateId);
-                template = vicareServiceProvider.getChannelTypeRegistry().getChannelType(new ChannelTypeUID(BINDING_ID, templateId));
-            }
             if (template == null) {
                 // No named template found, use a generic fallback template
                 var visitor = new Feature.Visitor() {
@@ -628,10 +651,12 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                 };
                 feature.accept(visitor);
                 template = vicareServiceProvider.getChannelTypeRegistry().getChannelType(new ChannelTypeUID(BINDING_ID, "default_template" + visitor.templateId));
-                if (template == null) {
-                    logger.debug("No fallback template for feature {}", feature.getName());
-                    return Optional.empty();
-                }
+            }
+            if (template == null) {
+                logger.debug("No fallback template for feature {}, channelId {}", feature.getName(), channelId);
+                return Optional.empty();
+            } else {
+                logger.info("Created channel type for channelId {} from template {}", channelId, template.getUID());
             }
             String label = ChannelTypeUtil.substitutePropertyValues(template.getLabel(), props);
 

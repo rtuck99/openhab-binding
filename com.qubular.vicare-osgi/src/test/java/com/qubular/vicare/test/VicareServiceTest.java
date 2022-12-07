@@ -676,6 +676,20 @@ public class VicareServiceTest {
         assertEquals(Boolean.FALSE, feature.get().isActive());
     }
 
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_circuits_operating_programs_active() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse5.json");
+
+        Optional<TextFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.circuits.1.operating.programs.active"))
+                .map(TextFeature.class::cast)
+                .findFirst();
+
+        assertTrue(feature.isPresent());
+        assertEquals(new StringValue("normalHeating"), feature.get().getProperties().get("value"));
+    }
+
     static Stream<Arguments> source_heating_circuits_operating_programs() {
         return Stream.of(
                 Arguments.of("deviceFeaturesResponse.json", "normal", false, 20, "celsius", 3, 37, 1, 23.0,

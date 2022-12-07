@@ -45,7 +45,7 @@
   <channel-type id="heating_boiler_serial_value">
     <item-type>String</item-type>
     <label>Boiler Serial Number</label>
-    <description>=Shows the serial number of the boiler</description>
+    <description>Shows the serial number of the boiler</description>
     <category>Text</category>
     <state readOnly="true"/>
   </channel-type>
@@ -80,50 +80,50 @@
     <description>Shows statistics of burner: hours and times started</description>
     <state pattern="%d" readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_circulation_pump_status">
+  <channel-type id="template_heating_circuits_circulation_pump_status">
     <item-type>String</item-type>
-    <label>Heating Circuit Circulation Pump</label>
-    <description>Shows the state of the circulation pump (on, off) for heating circuit N</description>
+    <label>Heating Circuit ${heatingCircuit} Circulation Pump Status</label>
+    <description>Shows the state of the circulation pump (on, off) for heating circuit ${heatingCircuit}</description>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_frostprotection_status">
+  <channel-type id="template_heating_circuits_frostprotection_status">
     <item-type>String</item-type>
-    <label>Heating Circuit Frost Protection</label>
-    <description>Shows whether frost protection of the installation is turned on for the device</description>
+    <label>Heating Circuit ${heatingCircuit} Frost Protection</label>
+    <description>Shows whether frost protection of the installation is turned on for the device on Heating Circuit ${heatingCircuit}</description>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_name">
+  <channel-type id="template_heating_circuits_name">
     <item-type>String</item-type>
-    <label>Heating Circuit Name</label>
-    <description>Shows the name given for the heating circuit N</description>
+    <label>Heating Circuit ${heatingCircuit} Name</label>
+    <description>Shows the name given for Heating Circuit ${heatingCircuit}</description>
     <category>Text</category>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_name_name">
+  <channel-type id="template_heating_circuits_name_name">
     <item-type>String</item-type>
-    <label>Heating Circuit Name</label>
-    <description>Shows the name given for the heating circuit N</description>
+    <label>Heating Circuit ${heatingCircuit} Name</label>
+    <description>Shows the name given for Heating Circuit ${heatingCircuit}</description>
     <category>Text</category>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_sensors_temperature_supply">
+  <channel-type id="template_heating_circuits_sensors_temperature_supply_value">
     <item-type>Number:Temperature</item-type>
-    <label>Heating Circuit Supply Temperature</label>
-    <description>Shows the value of the supply temperature sensor for circuit N</description>
+    <label>Heating Circuit ${heatingCircuit} Supply Temperature</label>
+    <description>Shows the value of the supply temperature sensor for Heating Circuit ${heatingCircuit}</description>
     <category>Temperature</category>
     <state readOnly="true" pattern="%.1f °C"/>
   </channel-type>
-  <channel-type id="heating_circuits_sensors_temperature_supply_status">
+  <channel-type id="template_heating_circuits_sensors_temperature_supply_status">
     <item-type>String</item-type>
-    <label>Heating Circuit Supply Temperature Sensor Status</label>
-    <description>Shows the status of the supply temperature sensor for circuit N</description>
+    <label>Heating Circuit ${heatingCircuit} Supply Temperature Sensor Status</label>
+    <description>Shows the status of the supply temperature sensor for Heating Circuit ${heatingCircuit}</description>
     <category>Temperature</category>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_zone_mode_active">
+  <channel-type id="template_heating_circuits_zone_mode_active">
     <item-type>Switch</item-type>
-    <label>Heating Circuit Zone Mode Active</label>
-    <description>Shows if a zone is connected to the heating circuit</description>
+    <label>Heating Circuit ${heatingCircuit} Zone Mode Active</label>
+    <description>Shows if a zone is connected to Heating Circuit ${heatingCircuit}</description>
     <state readOnly="true"/>
   </channel-type>
   <channel-type id="heating_dhw_active">
@@ -216,57 +216,57 @@
     <category>Temperature</category>
     <state readOnly="true" pattern="%.1f °C"/>
   </channel-type>
-  <channel-type id="heating_circuits_heating_curve_slope">
+  <channel-type id="template_heating_circuits_heating_curve_slope">
     <item-type>Number</item-type>
-    <label>Heating Circuit Heating Curve Slope</label>
-    <description>Shows the values for slope and shift of the heating curve</description>
+    <label>Heating Circuit ${heatingCircuit} Heating Curve Slope</label>
+    <description>Shows the value for slope of the heating curve for Heating Circuit ${heatingCircuit}</description>
     <state readOnly="true" pattern="%.1f"/>
   </channel-type>
-  <channel-type id="heating_circuits_heating_curve_shift">
+  <channel-type id="template_heating_circuits_heating_curve_shift">
     <item-type>Number</item-type>
-    <label>Heating Circuit Heating Curve Shift</label>
-    <description>Shows the values for slope and shift of the heating curve</description>
+    <label>Heating Circuit ${heatingCircuit} Heating Curve Shift</label>
+    <description>Shows the value for shift of the heating curve for Heating Circuit ${heatingCircuit}</description>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_operating_modes_active_value">
+  <channel-type id="template_heating_circuits_operating_modes_active_value">
     <item-type>String</item-type>
-    <label>Heating Circuit Active Operating Mode</label>
-    <description>Shows the current active operating mode on the device.</description>
-    <category>Heating</category>
-    <state readOnly="false"/>
-  </channel-type>
-  <channel-type id="heating_circuits_operating_modes_dhw_active">
-    <item-type>Switch</item-type>
-    <label>Heating Circuit DHW Operating Mode Active</label>
-    <description>Shows whether the domestic hot water (DHW) only operating mode is active.</description>
+    <label>Heating Circuit ${heatingCircuit} Active Operating Mode</label>
+    <description>Shows the current active operating mode on the device for Heating Circuit ${heatingCircuit}</description>
     <category>Heating</category>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="template_heating_circuits_operating_modes_active">
+  <channel-type id="template_heating_circuits_operating_modes_-_active">
+    <item-type>Switch</item-type>
+    <label>Heating Circuit ${heatingCircuit} ${pretty:0} Operating Mode Active</label>
+    <description>Shows whether the ${pretty:0} operating mode is active for Heating Circuit ${heatingCircuit}.</description>
+    <category>Heating</category>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="template_heating_circuits_operating_modes_dhw_active">
+    <item-type>Switch</item-type>
+    <label>Heating Circuit ${heatingCircuit} DHW Operating Mode Active</label>
+    <description>Shows whether the domestic hot water (DHW) only operating mode is active for Heating Circuit ${heatingCircuit}.</description>
+    <category>Heating</category>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="template_heating_circuits_operating_modes_dhwAndHeating_active">
+    <item-type>Switch</item-type>
+    <label>Heating Circuit ${heatingCircuit} DHW And Heating Operating Mode Active</label>
+    <description>Shows whether the domestic hot water (DHW) and heating operating mode is active for Heating Circuit ${heatingCircuit}.</description>
+    <category>Heating</category>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="template_heating_circuits_operating_modes_standby_active">
+    <item-type>Switch</item-type>
+    <label>Heating Circuit ${heatingCircuit} Standby Operating Mode Active</label>
+    <description>Shows whether the Standby operating mode is active now for Heating Circuit ${heatingCircuit}. In this mode, the device will only start heating to protect installation from frost. Other commands, e.g. charging of DHW (oneTimeCharge), are still executable while this operating mode is active.</description>
+    <category>Heating</category>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="template_heating_circuits_operating_programs_active_value">
     <item-type>String</item-type>
-    <label>Heating Circuit ${0} Operating Mode Active</label>
-    <description>Shows whether the ${0} operating mode is active.</description>
-    <category>Heating</category>
-    <state readOnly="true"/>
-  </channel-type>
-  <channel-type id="heating_circuits_operating_modes_dhwAndHeating_active">
-    <item-type>Switch</item-type>
-    <label>Heating Circuit DHW And Heating Operating Mode Active</label>
-    <description>Shows whether the domestic hot water (DHW) and heating operating mode is active.</description>
-    <category>Heating</category>
-    <state readOnly="true"/>
-  </channel-type>
-  <channel-type id="heating_circuits_operating_modes_standby_active">
-    <item-type>Switch</item-type>
-    <label>Heating Circuit Standby Operating Mode Active</label>
-    <description>Shows whether the Standby operating mode is active now. In this mode, the device will only start heating to protect installation from frost. Other commands, e.g. charging of DHW (oneTimeCharge), are still executable while this operating mode is active.</description>
-    <category>Heating</category>
-    <state readOnly="true"/>
-  </channel-type>
-  <channel-type id="heating_circuits_operating_programs_active_value">
-    <item-type>String</item-type>
-    <label>Active Operating Program</label>
-    <description>Shows the current active operating program on the device</description>
+    <label>Heating Circuit ${heatingCircuit} Active Operating Program</label>
+    <description>Shows the current active operating program on the device for Heating Circuit ${heatingCircuit}</description>
     <state readOnly="true"/>
   </channel-type>
   <channel-type id="template_heating_circuits_operating_programs_forcedLastFromSchedule_active">
@@ -293,14 +293,14 @@
     <description>Shows the end date of the holiday program</description>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="template_heating_circuits_operating_programs_temperature">
+  <channel-type id="template_heating_circuits_operating_programs_-_temperature">
     <item-type>Number:Temperature</item-type>
     <label>Heating Circuit ${heatingCircuit} ${pretty:0} Operating Program Temperature</label>
     <description>Shows the ${pretty:0} operating program target temperature for heating circuit ${heatingCircuit}</description>
     <category>Heating</category>
     <state pattern="%d °C"/>
   </channel-type>
-  <channel-type id="template_heating_circuits_operating_programs_active">
+  <channel-type id="template_heating_circuits_operating_programs_-_active">
     <item-type>Switch</item-type>
     <label>Heating Circuit ${heatingCircuit} ${pretty:0} Operating Program Active</label>
     <description>Shows whether the ${pretty:0} operating program is active for heating circuit ${heatingCircuit}</description>
@@ -322,17 +322,17 @@
     <label>Heating Circuit ${heatingCircuit} ${pretty:0} Operating Program Demand</label>
     <state readOnly="true"/>
   </channel-type>
-  <channel-type id="heating_circuits_temperature_levels_min">
+  <channel-type id="template_heating_circuits_temperature_levels_min">
     <item-type>Number:Temperature</item-type>
-    <label>Heating Circuit Minimum Temperature Level</label>
-    <description>Shows the lower limit of the supply temperature</description>
+    <label>Heating Circuit ${heatingCircuit} Minimum Temperature Level</label>
+    <description>Shows the lower limit of the supply temperature for Heating Circuit ${heatingCircuit}</description>
     <category>Heating</category>
     <state pattern="%d °C"/>
   </channel-type>
-  <channel-type id="heating_circuits_temperature_levels_max">
+  <channel-type id="template_heating_circuits_temperature_levels_max">
     <item-type>Number:Temperature</item-type>
-    <label>Heating Circuit Maximum Temperature Level</label>
-    <description>Shows the upper limit of the supply temperature</description>
+    <label>Heating Circuit ${heatingCircuit} Maximum Temperature Level</label>
+    <description>Shows the upper limit of the supply temperature for Heating Circuit ${heatingCircuit}</description>
     <category>Heating</category>
     <state pattern="%d °C"/>
   </channel-type>

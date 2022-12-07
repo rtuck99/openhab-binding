@@ -160,6 +160,7 @@ public class VicareBindingTest {
                                                                 new DimensionalValue(new Unit("celsius"), 0), StatusValue.NA, false)
 
         );
+        Feature operatingProgramsActive = new TextFeature("heating.circuits.1.operating.programs.active", "value", "normalHeating");
         Feature consumptionFeature = new ConsumptionSummaryFeature("heating.gas.consumption.summary.dhw",
                 new DimensionalValue(new Unit("cubicMeter"), 0.2),
                 new DimensionalValue(new Unit("cubicMeter"), 2.1),
@@ -319,6 +320,7 @@ public class VicareBindingTest {
                                                   operatingModesDHWAndHeating,
                                                   operatingModesHeating,
                                                   operatingModesStandby,
+                                                  operatingProgramsActive,
                                                   heatingCircuitsOperatingProgramsForcedLastFromSchedule,
                                                   heatingCircuitsSensorsTemperatureSupply,
                                                   heatingCircuitsZoneMode,
@@ -608,6 +610,39 @@ public class VicareBindingTest {
         assertEquals(new StringType("connected"), stateCaptor.getValue());
     }
 
+    @Test
+    public void supportsHeatingCircuitOperatingProgramsActive() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        bridgeHandler = new VicareBridgeHandler(vicareServiceProvider, bridge);
+        bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
+        when(bridge.getHandler()).thenReturn((BridgeHandler) bridgeHandler);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        registerAndInitialize(handler);
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+        Channel channel = findChannelNoVerify(thingCaptor, "heating_circuits_1_operating_programs_active_value");
+        assertEquals("heating.circuits.1.operating.programs.active", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        ChannelType opProgramChannelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals("Heating Circuit 1 Active Operating Program", opProgramChannelType.getLabel());
+        assertEquals("Shows the current active operating program on the device for Heating Circuit 1", opProgramChannelType.getDescription());
+        assertEquals("String", opProgramChannelType.getItemType());
+        assertTrue(opProgramChannelType.getState().isReadOnly());
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(StringType.valueOf("normalHeating"), stateCaptor.getValue());
+    }
+
     static Stream<Arguments> source_heatingCircuitsOperatingPrograms() {
         return Stream.of(
                 Arguments.of("normal", 21, OnOffType.ON, "Heating Circuit 0 Normal Operating Program Temperature", "Shows the Normal operating program target temperature for heating circuit 0", "Heating Circuit 0 Normal Operating Program Active", "Shows whether the Normal operating program is active for heating circuit 0", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normal/commands/setTemperature") ),
@@ -804,8 +839,10 @@ public class VicareBindingTest {
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
 
-        Channel enumChannel = findChannel(thingCaptor, "heating_circuits_0_operating_modes_active_value");
-        assertEquals("heating_circuits_operating_modes_active_value", enumChannel.getChannelTypeUID().getId());
+        Channel enumChannel = findChannelNoVerify(thingCaptor, "heating_circuits_0_operating_modes_active_value");
+        ChannelType enumChannelType = channelTypeRegistry.getChannelType(enumChannel.getChannelTypeUID());
+        assertEquals("Heating Circuit 0 Active Operating Mode", enumChannelType.getLabel());
+        assertEquals("Shows the current active operating mode on the device for Heating Circuit 0", enumChannelType.getDescription());
         assertEquals("heating.circuits.0.operating.modes.active", enumChannel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         Optional<Class<? extends ThingHandlerService>> descriptionProviderClass = handler.getServices().stream().filter(
@@ -878,14 +915,18 @@ public class VicareBindingTest {
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
 
-        Channel slopeChannel = findChannel(thingCaptor, "heating_circuits_0_heating_curve_slope");
+        Channel slopeChannel = findChannelNoVerify(thingCaptor, "heating_circuits_0_heating_curve_slope");
         assertNotNull(slopeChannel);
-        assertEquals("heating_circuits_heating_curve_slope", slopeChannel.getChannelTypeUID().getId());
+        ChannelType slopeChannelType = channelTypeRegistry.getChannelType(slopeChannel.getChannelTypeUID());
+        assertEquals("Heating Circuit 0 Heating Curve Slope", slopeChannelType.getLabel());
+        assertEquals("Shows the value for slope of the heating curve for Heating Circuit 0", slopeChannelType.getDescription());
         assertEquals("heating.circuits.0.heating.curve", slopeChannel.getProperties().get(PROPERTY_FEATURE_NAME));
 
-        Channel shiftChannel = findChannel(thingCaptor, "heating_circuits_0_heating_curve_shift");
+        Channel shiftChannel = findChannelNoVerify(thingCaptor, "heating_circuits_0_heating_curve_shift");
         assertNotNull(shiftChannel);
-        assertEquals("heating_circuits_heating_curve_shift", shiftChannel.getChannelTypeUID().getId());
+        ChannelType shiftChannelType = channelTypeRegistry.getChannelType(shiftChannel.getChannelTypeUID());
+        assertEquals("Heating Circuit 0 Heating Curve Shift", shiftChannelType.getLabel());
+        assertEquals("Shows the value for shift of the heating curve for Heating Circuit 0", shiftChannelType.getDescription());
         assertEquals("heating.circuits.0.heating.curve", shiftChannel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(slopeChannel.getUID(), RefreshType.REFRESH);
@@ -916,10 +957,12 @@ public class VicareBindingTest {
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
 
-        Channel channel = findChannel(thingCaptor, "heating_circuits_0_circulation_pump_status");
+        Channel channel = findChannelNoVerify(thingCaptor, "heating_circuits_0_circulation_pump_status");
         assertNotNull(channel);
-        assertEquals("heating_circuits_circulation_pump_status", channel.getChannelTypeUID().getId());
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
         assertEquals("heating.circuits.0.circulation.pump", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+        assertEquals("Heating Circuit 0 Circulation Pump Status", channelType.getLabel());
+        assertEquals("Shows the state of the circulation pump (on, off) for heating circuit 0", channelType.getDescription());
 
         Channel burnerChannel = findChannel(thingCaptor, "heating_burners_0_active");
         assertNotNull(burnerChannel);
@@ -977,9 +1020,11 @@ public class VicareBindingTest {
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
 
-        Channel channel = findChannel(thingCaptor, "heating_circuits_0_name");
+        Channel channel = findChannelNoVerify(thingCaptor, "heating_circuits_0_name");
         assertNotNull(channel);
-        assertEquals("heating_circuits_name", channel.getChannelTypeUID().getId());
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals("Heating Circuit 0 Name", channelType.getLabel());
+        assertEquals("Shows the name given for Heating Circuit 0", channelType.getDescription());
         assertEquals("heating.circuits.0", channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
@@ -1005,9 +1050,11 @@ public class VicareBindingTest {
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
 
-        Channel channel = findChannel(thingCaptor, "heating_circuits_0_name_name");
+        Channel channel = findChannelNoVerify(thingCaptor, "heating_circuits_0_name_name");
         assertNotNull(channel);
-        assertEquals("heating_circuits_name_name", channel.getChannelTypeUID().getId());
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals("Heating Circuit 0 Name", channelType.getLabel());
+        assertEquals("Shows the name given for Heating Circuit 0", channelType.getDescription());
         assertEquals("heating.circuits.0.name", channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
@@ -1019,10 +1066,10 @@ public class VicareBindingTest {
 
     public static Stream<Arguments> source_heatingCircuitsOperatingModes() {
         return Stream.of(
-                Arguments.of("dhw", OnOffType.OFF, "Heating Circuit DHW Operating Mode Active", "Shows whether the domestic hot water (DHW) only operating mode is active."),
-                Arguments.of("dhwAndHeating", OnOffType.ON, "Heating Circuit DHW And Heating Operating Mode Active", "Shows whether the domestic hot water (DHW) and heating operating mode is active."),
-                Arguments.of("standby", OnOffType.OFF, "Heating Circuit Standby Operating Mode Active", "Shows whether the Standby operating mode is active now. In this mode, the device will only start heating to protect installation from frost. Other commands, e.g. charging of DHW (oneTimeCharge), are still executable while this operating mode is active."),
-                Arguments.of("heating", OnOffType.OFF, "Heating Circuit heating Operating Mode Active", "Shows whether the heating operating mode is active.")
+                Arguments.of("dhw", OnOffType.OFF, "Heating Circuit 1 DHW Operating Mode Active", "Shows whether the domestic hot water (DHW) only operating mode is active for Heating Circuit 1."),
+                Arguments.of("dhwAndHeating", OnOffType.ON, "Heating Circuit 1 DHW And Heating Operating Mode Active", "Shows whether the domestic hot water (DHW) and heating operating mode is active for Heating Circuit 1."),
+                Arguments.of("standby", OnOffType.OFF, "Heating Circuit 1 Standby Operating Mode Active", "Shows whether the Standby operating mode is active now for Heating Circuit 1. In this mode, the device will only start heating to protect installation from frost. Other commands, e.g. charging of DHW (oneTimeCharge), are still executable while this operating mode is active."),
+                Arguments.of("heating", OnOffType.OFF, "Heating Circuit 1 Heating Operating Mode Active", "Shows whether the Heating operating mode is active for Heating Circuit 1.")
         );
     }
 
@@ -1221,9 +1268,11 @@ public class VicareBindingTest {
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
 
-        Channel channel = findChannel(thingCaptor, "heating_circuits_1_sensors_temperature_supply");
+        Channel channel = findChannelNoVerify(thingCaptor, "heating_circuits_1_sensors_temperature_supply");
         assertNotNull(channel);
-        assertEquals("heating_circuits_sensors_temperature_supply", channel.getChannelTypeUID().getId());
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals("Heating Circuit 1 Supply Temperature", channelType.getLabel());
+        assertEquals("Shows the value of the supply temperature sensor for Heating Circuit 1", channelType.getDescription());
         assertEquals("heating.circuits.1.sensors.temperature.supply", channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
@@ -1232,9 +1281,11 @@ public class VicareBindingTest {
         verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
         assertEquals(DecimalType.valueOf("24.6"), stateCaptor.getValue());
 
-        channel = findChannel(thingCaptor, "heating_circuits_1_sensors_temperature_supply_status");
+        channel = findChannelNoVerify(thingCaptor, "heating_circuits_1_sensors_temperature_supply_status");
         assertNotNull(channel);
-        assertEquals("heating_circuits_sensors_temperature_supply_status", channel.getChannelTypeUID().getId());
+        channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals("Heating Circuit 1 Supply Temperature Sensor Status", channelType.getLabel());
+        assertEquals("Shows the status of the supply temperature sensor for Heating Circuit 1", channelType.getDescription());
         assertEquals("heating.circuits.1.sensors.temperature.supply", channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
@@ -1258,9 +1309,11 @@ public class VicareBindingTest {
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
 
-        Channel channel = findChannel(thingCaptor, "heating_circuits_1_zone_mode_active");
+        Channel channel = findChannelNoVerify(thingCaptor, "heating_circuits_1_zone_mode_active");
         assertNotNull(channel);
-        assertEquals("heating_circuits_zone_mode_active", channel.getChannelTypeUID().getId());
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals("Heating Circuit 1 Zone Mode Active", channelType.getLabel());
+        assertEquals("Shows if a zone is connected to Heating Circuit 1", channelType.getDescription());
         assertEquals("heating.circuits.1.zone.mode", channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
@@ -1286,14 +1339,19 @@ public class VicareBindingTest {
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
 
-        Channel minChannel = findChannel(thingCaptor, "heating_circuits_0_temperature_levels_min");
+        Channel minChannel = findChannelNoVerify(thingCaptor, "heating_circuits_0_temperature_levels_min");
         assertNotNull(minChannel);
-        assertEquals("heating_circuits_temperature_levels_min", minChannel.getChannelTypeUID().getId());
         assertEquals("heating.circuits.0.temperature.levels", minChannel.getProperties().get(PROPERTY_FEATURE_NAME));
-        Channel maxChannel = findChannel(thingCaptor, "heating_circuits_0_temperature_levels_max");
+        ChannelType minChannelType = channelTypeRegistry.getChannelType(minChannel.getChannelTypeUID());
+        assertEquals("Heating Circuit 0 Minimum Temperature Level", minChannelType.getLabel());
+        assertEquals("Shows the lower limit of the supply temperature for Heating Circuit 0", minChannelType.getDescription());
+
+        Channel maxChannel = findChannelNoVerify(thingCaptor, "heating_circuits_0_temperature_levels_max");
         assertNotNull(maxChannel);
-        assertEquals("heating_circuits_temperature_levels_max", maxChannel.getChannelTypeUID().getId());
         assertEquals("heating.circuits.0.temperature.levels", maxChannel.getProperties().get(PROPERTY_FEATURE_NAME));
+        ChannelType maxChannelType = channelTypeRegistry.getChannelType(maxChannel.getChannelTypeUID());
+        assertEquals("Heating Circuit 0 Maximum Temperature Level", maxChannelType.getLabel());
+        assertEquals("Shows the upper limit of the supply temperature for Heating Circuit 0", maxChannelType.getDescription());
 
         handler.handleCommand(minChannel.getUID(), RefreshType.REFRESH);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);

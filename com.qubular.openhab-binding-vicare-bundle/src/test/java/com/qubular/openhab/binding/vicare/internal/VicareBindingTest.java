@@ -11,7 +11,6 @@ import com.qubular.vicare.model.features.*;
 import com.qubular.vicare.model.params.EnumParamDescriptor;
 import com.qubular.vicare.model.params.NumericParamDescriptor;
 import com.qubular.vicare.model.values.*;
-import org.eclipse.jdt.annotation.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -306,6 +305,12 @@ public class VicareBindingTest {
                 new NumericSensorFeature("heating.sensors.temperature.return", "value", new DimensionalValue(Unit.CELSIUS, 34.1), new StatusValue("connected"), null),
                 new NumericSensorFeature("heating.sensors.volumetricFlow.allengra", "value", new DimensionalValue(Unit.CELSIUS, 274), new StatusValue("connected"), null)
         );
+        Feature heatingCompressors0 = new StatusSensorFeature("heating.compressors.0",
+                                                             Map.of("phase", new StringValue("ready"),
+                                                                    "active", BooleanValue.FALSE));
+        Feature heatingCompressors0Statistics = new StatusSensorFeature("heating.compressors.0.statistics",
+                                                                        Map.of("starts", new DimensionalValue(new Unit(""), 177),
+                                                                               "hours", new DimensionalValue(new Unit("hour"), 29)));
         List<Feature> features = new ArrayList<>();
         features.addAll(programFeatures);
         features.addAll(operatingProgramsStatusSensorFeatures);
@@ -333,7 +338,9 @@ public class VicareBindingTest {
                                                   heatingCircuitsZoneMode,
                                                   heatingDHWHygiene,
                                                   heatingDHWOneTimeCharge,
-                                                  heatingDHWOperatingModesOff));
+                                                  heatingDHWOperatingModesOff,
+                                                  heatingCompressors0,
+                                                  heatingCompressors0Statistics));
         doReturn(
                 features)
                 .when(vicareService)
@@ -777,7 +784,7 @@ public class VicareBindingTest {
 
 
     @Test
-    public void initializeDeviceHandlerCreatesStatisticsSensor() throws AuthenticationException, IOException {
+    public void supportsHeatingBurnersStatistics() throws AuthenticationException, IOException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
         bridgeHandler = new VicareBridgeHandler(vicareServiceProvider, bridge);
@@ -1301,36 +1308,6 @@ public class VicareBindingTest {
     }
 
     @Test
-    public void supportsHeatingCircuitZoneMode() throws AuthenticationException, IOException {
-        simpleHeatingInstallation();
-        Bridge bridge = vicareBridge();
-        createBridgeHandler(bridge);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
-                                                                             vicareServiceProvider);
-        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
-        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
-        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        registerAndInitialize(handler);
-        InOrder inOrder = inOrder(vicareService);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
-        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
-        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
-
-        Channel channel = findChannelNoVerify(thingCaptor, "heating_circuits_1_zone_mode_active");
-        assertNotNull(channel);
-        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
-        assertEquals("Heating Circuit 1 Zone Mode Active", channelType.getLabel());
-        assertEquals("Shows if a zone is connected to Heating Circuit 1", channelType.getDescription());
-        assertEquals("heating.circuits.1.zone.mode", channel.getProperties().get(PROPERTY_FEATURE_NAME));
-
-        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
-        ArgumentCaptor<State> stateCaptor = forClass(State.class);
-        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(OnOffType.OFF, stateCaptor.getValue());
-    }
-
-    @Test
     public void supportsHeatingCircuitTemperatureLevels() throws AuthenticationException, IOException, CommandFailureException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
@@ -1371,6 +1348,124 @@ public class VicareBindingTest {
 
         handler.handleCommand(maxChannel.getUID(), QuantityType.valueOf("46  °C"));
         inOrder.verify(vicareService, timeout(1000)).sendCommand(SET_LEVEL_MAX_URI, Map.of("temperature", 46.0));
+    }
+
+    @Test
+    public void supportsHeatingCircuitZoneMode() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        registerAndInitialize(handler);
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
+
+        Channel channel = findChannelNoVerify(thingCaptor, "heating_circuits_1_zone_mode_active");
+        assertNotNull(channel);
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals("Heating Circuit 1 Zone Mode Active", channelType.getLabel());
+        assertEquals("Shows if a zone is connected to Heating Circuit 1", channelType.getDescription());
+        assertEquals("heating.circuits.1.zone.mode", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.OFF, stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsHeatingCompressors() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        registerAndInitialize(handler);
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
+
+        Channel phaseChannel = findChannelNoVerify(thingCaptor, "heating_compressors_0_phase");
+        assertNotNull(phaseChannel);
+        ChannelType channelType = channelTypeRegistry.getChannelType(phaseChannel.getChannelTypeUID());
+        assertEquals("Heating Compressor 0", channelType.getLabel());
+        assertEquals("Shows whether compressor 0 is active", channelType.getDescription());
+        assertEquals("heating.compressors.0", phaseChannel.getProperties().get(PROPERTY_FEATURE_NAME));
+        assertTrue(channelType.getState().isReadOnly());
+
+        Channel activeChannel = findChannelNoVerify(thingCaptor, "heating_compressors_0_active");
+        assertNotNull(activeChannel);
+        ChannelType activeChannelType = channelTypeRegistry.getChannelType(activeChannel.getChannelTypeUID());
+        assertEquals("Heating Compressor 0 Active", activeChannelType.getLabel());
+        assertEquals("Shows whether compressor 0 is active", activeChannelType.getDescription());
+        assertEquals("Switch", activeChannelType.getItemType());
+        assertTrue(activeChannelType.getState().isReadOnly());
+
+        handler.handleCommand(phaseChannel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(phaseChannel.getUID()), stateCaptor.capture());
+        assertEquals(StringType.valueOf("ready"), stateCaptor.getValue());
+
+        handler.handleCommand(activeChannel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(activeChannel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.OFF, stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsHeatingCompressorsStatistics() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        bridgeHandler = new VicareBridgeHandler(vicareServiceProvider, bridge);
+        bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
+        when(bridge.getHandler()).thenReturn((BridgeHandler) bridgeHandler);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+
+        registerAndInitialize(handler);
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+        Channel channel = findChannelNoVerify(thingCaptor, "heating_compressors_0_statistics_starts");
+        assertEquals("heating.compressors.0.statistics", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals("Heating Compressor 0 Starts", channelType.getLabel());
+        assertEquals("Shows the number of starts of Heating Compressor 0", channelType.getDescription());
+        assertEquals("Number", channelType.getItemType());
+        assertTrue(channelType.getState().isReadOnly());
+
+        Channel hoursChannel = findChannelNoVerify(thingCaptor, "heating_compressors_0_statistics_hours");
+        assertEquals("heating.compressors.0.statistics", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+        ChannelType hoursChannelType = channelTypeRegistry.getChannelType(hoursChannel.getChannelTypeUID());
+        assertEquals("Heating Compressor 0 Hours", hoursChannelType.getLabel());
+        assertEquals("Shows the number of working hours of Heating Compressor 0", hoursChannelType.getDescription());
+        assertEquals("Number", hoursChannelType.getItemType());
+        assertTrue(hoursChannelType.getState().isReadOnly());
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(177.0, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
+
+        handler.handleCommand(hoursChannel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(hoursChannel.getUID()), stateCaptor.capture());
+        assertEquals(29.0, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
     }
 
     @Test

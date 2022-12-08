@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 public class FeatureUtil {
     private static final Pattern PATTERN_HEATING_CIRCUIT = Pattern.compile("heating\\.circuits\\.([\\d+])(\\..*)?");
+    private static final Pattern PATTERN_HEATING_COMPRESSOR = Pattern.compile("heating\\.compressors\\.([\\d+])(\\..*)?");
 
     private static final Pattern PATTERN_ENERGY_SAVING_OPERATING_PROGRAM = Pattern.compile("(heating\\.circuits\\.[\\d+]\\.operating\\.programs\\.)(.+)EnergySaving");
 
@@ -58,8 +59,13 @@ public class FeatureUtil {
         return parentRoot + "_" + propertyNameSuffix;
     }
 
-    static String heatingCircuit(String featureName) {
+     private static String heatingCircuit(String featureName) {
         Matcher matcher = PATTERN_HEATING_CIRCUIT.matcher(featureName);
+        return matcher.matches() ? matcher.group(1) : "?";
+    }
+
+    private static String heatingCompressor(String featureName) {
+        Matcher matcher = PATTERN_HEATING_COMPRESSOR.matcher(featureName);
         return matcher.matches() ? matcher.group(1) : "?";
     }
 
@@ -67,6 +73,7 @@ public class FeatureUtil {
 
         props.put("0", feature.getName().replaceAll(".*\\.([^.]*$)", "$1"));
         props.put("heatingCircuit", FeatureUtil.heatingCircuit(feature.getName()));
+        props.put("heatingCompressor", FeatureUtil.heatingCompressor(feature.getName()));
         Matcher energySavingOPMatcher = PATTERN_ENERGY_SAVING_OPERATING_PROGRAM.matcher(feature.getName());
         if (energySavingOPMatcher.matches()) {
             props.put("operatingProgram", energySavingOPMatcher.group(2));

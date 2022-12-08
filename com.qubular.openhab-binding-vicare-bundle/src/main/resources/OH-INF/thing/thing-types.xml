@@ -126,6 +126,30 @@
     <description>Shows if a zone is connected to Heating Circuit ${heatingCircuit}</description>
     <state readOnly="true"/>
   </channel-type>
+  <channel-type id="template_heating_compressors_phase">
+    <item-type>String</item-type>
+    <label>Heating Compressor ${heatingCompressor}</label>
+    <description>Shows whether compressor ${heatingCompressor} is active</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="template_heating_compressors_active">
+    <item-type>Switch</item-type>
+    <label>Heating Compressor ${heatingCompressor} Active</label>
+    <description>Shows whether compressor ${heatingCompressor} is active</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="template_heating_compressors_statistics_hours">
+    <item-type>Number</item-type>
+    <label>Heating Compressor ${heatingCompressor} Hours</label>
+    <description>Shows the number of working hours of Heating Compressor ${heatingCompressor}</description>
+    <state pattern="%d" readOnly="true"/>
+  </channel-type>
+  <channel-type id="template_heating_compressors_statistics_starts">
+    <item-type>Number</item-type>
+    <label>Heating Compressor ${heatingCompressor} Starts</label>
+    <description>Shows the number of starts of Heating Compressor ${heatingCompressor}</description>
+    <state pattern="%d" readOnly="true"/>
+  </channel-type>
   <channel-type id="heating_dhw_active">
     <item-type>Switch</item-type>
     <label>DHW active</label>

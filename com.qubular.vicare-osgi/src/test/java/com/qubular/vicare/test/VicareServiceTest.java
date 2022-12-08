@@ -863,6 +863,34 @@ public class VicareServiceTest {
 
     @Test
     @DisabledIf("realConnection")
+    public void supports_heating_compressors() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse5.json");
+
+        Optional<Feature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.compressors.0"))
+                .map(Feature.class::cast)
+                .findFirst();
+        assertTrue(feature.isPresent());
+        assertEquals(BooleanValue.FALSE, feature.get().getProperties().get("active"));
+        assertEquals(new StringValue("ready"), feature.get().getProperties().get("phase"));
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_compressors_statistics() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse5.json");
+
+        Optional<Feature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.compressors.0.statistics"))
+                .map(Feature.class::cast)
+                .findFirst();
+        assertTrue(feature.isPresent());
+        assertEquals(new DimensionalValue(new Unit(""), 177), feature.get().getProperties().get("starts"));
+        assertEquals(new DimensionalValue(new Unit("hour"), 29), feature.get().getProperties().get("hours"));
+    }
+
+    @Test
+    @DisabledIf("realConnection")
     public void supports_heating_operating_programs_holiday() throws ServletException, NamespaceException, AuthenticationException, IOException {
         List<Feature> features = getFeatures("deviceFeaturesResponse.json");
 

@@ -216,6 +216,38 @@
     <category>Temperature</category>
     <state readOnly="true" pattern="%.1f °C"/>
   </channel-type>
+  <channel-type id="heating_sensors_temperature_outside_status">
+    <item-type>String</item-type>
+    <label>Outside Temperature Sensor Status</label>
+    <description>Shows the status of the outside temperature sensor</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_sensors_temperature_return">
+    <item-type>Number:Temperature</item-type>
+    <label>Heating Return Temperature</label>
+    <description>Shows the flow return temperature, i.e. water temperature on return to the boiler from the heating installation.</description>
+    <category>Temperature</category>
+    <state readOnly="true" pattern="%.1f °C"/>
+  </channel-type>
+  <channel-type id="heating_sensors_temperature_return_status">
+    <item-type>String</item-type>
+    <label>Heating Return Temperature Sensor Status</label>
+    <description>Shows the flow return temperature sensor status</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_sensors_volumetricFlow_allengra">
+    <item-type>Number:VolumetricFlowRate</item-type>
+    <label>Heating Return Flow</label>
+    <description>Shows the volumetric flow on the return.</description>
+    <category>Flow</category>
+    <state readOnly="true" pattern="%.1f l"/>
+  </channel-type>
+  <channel-type id="heating_sensors_volumetricFlow_allengra_status">
+    <item-type>String</item-type>
+    <label>Heating Return Flow Sensor Status</label>
+    <description>Shows the volumetric flow sensor status</description>
+    <state readOnly="true"/>
+  </channel-type>
   <channel-type id="template_heating_circuits_heating_curve_slope">
     <item-type>Number</item-type>
     <label>Heating Circuit ${heatingCircuit} Heating Curve Slope</label>

@@ -11,6 +11,7 @@ import com.qubular.vicare.model.features.*;
 import com.qubular.vicare.model.params.EnumParamDescriptor;
 import com.qubular.vicare.model.params.NumericParamDescriptor;
 import com.qubular.vicare.model.values.*;
+import org.eclipse.jdt.annotation.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -300,9 +301,15 @@ public class VicareBindingTest {
         Feature heatingDHWOperatingModesOff = new StatusSensorFeature("heating.dhw.operating.modes.off",
                 StatusValue.NA,
                 false);
+        List<Feature> heatingSensors = List.of(
+                new NumericSensorFeature("heating.sensors.temperature.outside", "value", new DimensionalValue(Unit.CELSIUS, 15.8), new StatusValue("connected"), null),
+                new NumericSensorFeature("heating.sensors.temperature.return", "value", new DimensionalValue(Unit.CELSIUS, 34.1), new StatusValue("connected"), null),
+                new NumericSensorFeature("heating.sensors.volumetricFlow.allengra", "value", new DimensionalValue(Unit.CELSIUS, 274), new StatusValue("connected"), null)
+        );
         List<Feature> features = new ArrayList<>();
         features.addAll(programFeatures);
         features.addAll(operatingProgramsStatusSensorFeatures);
+        features.addAll(heatingSensors);
         features.addAll(List.of(temperatureSensor, statisticsFeature, textFeature, statusFeature,
                                                   consumptionFeature, burnerFeature, curveFeature, holidayFeature,
                                                   heatingDhw,
@@ -1618,6 +1625,139 @@ public class VicareBindingTest {
         assertEquals(StringType.valueOf("2222222222222222"), stateCaptor2.getValue());
     }
 
+    public static Stream<Arguments> source_heatingSensorsTemperature() {
+        return Stream.of(
+                Arguments.of("heating_sensors_temperature_outside", "Outside Temperature", "Shows the temperature value of the outside temperature sensor", 15.8, "Outside Temperature Sensor Status", "Shows the status of the outside temperature sensor", "connected"),
+                Arguments.of("heating_sensors_temperature_return", "Heating Return Temperature", "Shows the flow return temperature, i.e. water temperature on return to the boiler from the heating installation.", 34.1, "Heating Return Temperature Sensor Status", "Shows the flow return temperature sensor status", "connected")
+        );
+    }
+
+    @MethodSource("source_heatingSensorsTemperature")
+    @ParameterizedTest
+    public void supportsHeatingSensorsTemperature(String channelId,
+                                                  String expectedLabel,
+                                                  String expectedDescription,
+                                                  double expectedValue,
+                                                  String expectedStatusLabel,
+                                                  String expectedStatusDescription,
+                                                  String expectedStatusValue) throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        registerAndInitialize(handler);
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        Channel channel = findChannelNoVerify(thingCaptor, channelId);
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals(expectedLabel, channelType.getLabel());
+        assertEquals(expectedDescription, channelType.getDescription());
+        assertEquals("Number:Temperature", channelType.getItemType());
+        assertEquals("Temperature", channelType.getCategory());
+        assertTrue(channelType.getState().isReadOnly());
+
+        Channel statusChannel = findChannelNoVerify(thingCaptor, String.format("%s_status", channelId));
+        ChannelType statusChannelType = channelTypeRegistry.getChannelType(statusChannel.getChannelTypeUID());
+        assertEquals(expectedStatusLabel, statusChannelType.getLabel());
+        assertEquals(expectedStatusDescription, statusChannelType.getDescription());
+        assertEquals("String", statusChannelType.getItemType());
+        assertTrue(statusChannelType.getState().isReadOnly());
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(new DecimalType(expectedValue), stateCaptor.getValue());
+
+        handler.handleCommand(statusChannel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(statusChannel.getUID()), stateCaptor.capture());
+        assertEquals(new StringType(expectedStatusValue), stateCaptor.getValue());
+    }
+
+    public static Stream<Arguments> source_heatingSensorsVolumetricFlow() {
+        return Stream.of(
+                Arguments.of("heating_sensors_volumetricFlow_allengra", "Heating Return Flow", "Shows the volumetric flow on the return.", 274, "Heating Return Flow Sensor Status", "Shows the volumetric flow sensor status", "connected")
+        );
+    }
+
+    @MethodSource("source_heatingSensorsVolumetricFlow")
+    @ParameterizedTest
+    public void supportsHeatingSensorsVolumetricFlow(String channelId,
+                                                     String expectedLabel,
+                                                     String expectedDescription,
+                                                     double expectedValue,
+                                                     String expectedStatusLabel,
+                                                     String expectedStatusDescription,
+                                                     String expectedStatusValue) throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        registerAndInitialize(handler);
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        Channel channel = findChannelNoVerify(thingCaptor, channelId);
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals(expectedLabel, channelType.getLabel());
+        assertEquals(expectedDescription, channelType.getDescription());
+        assertEquals("Number:VolumetricFlowRate", channelType.getItemType());
+        assertEquals("Flow", channelType.getCategory());
+        assertTrue(channelType.getState().isReadOnly());
+
+        Channel statusChannel = findChannelNoVerify(thingCaptor, String.format("%s_status", channelId));
+        ChannelType statusChannelType = channelTypeRegistry.getChannelType(statusChannel.getChannelTypeUID());
+        assertEquals(expectedStatusLabel, statusChannelType.getLabel());
+        assertEquals(expectedStatusDescription, statusChannelType.getDescription());
+        assertEquals("String", statusChannelType.getItemType());
+        assertTrue(statusChannelType.getState().isReadOnly());
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(new DecimalType(expectedValue), stateCaptor.getValue());
+
+        handler.handleCommand(statusChannel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(statusChannel.getUID()), stateCaptor.capture());
+        assertEquals(new StringType(expectedStatusValue), stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsHeatingSolar() throws AuthenticationException, IOException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                                                                             vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        registerAndInitialize(handler);
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        Channel channel = findChannel(thingCaptor, "heating_solar_active");
+        assertEquals("heating_solar_active", channel.getChannelTypeUID().getId());
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.ON, stateCaptor.getValue());
+    }
+
     @Test
     public void supportsHeatingSolarSensorsTemperatureCollector() throws AuthenticationException, IOException {
         simpleHeatingInstallation();
@@ -1647,7 +1787,7 @@ public class VicareBindingTest {
     }
 
     @Test
-    public void supportsSolarPowerProduction() throws AuthenticationException, IOException {
+    public void supportsHeatingSolarPowerProduction() throws AuthenticationException, IOException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
         createBridgeHandler(bridge);
@@ -1713,7 +1853,7 @@ public class VicareBindingTest {
     }
 
     @Test
-    public void supportsSolarSensorsTemperatureDHW() throws AuthenticationException, IOException {
+    public void supportsHeatingSolarSensorsTemperatureDHW() throws AuthenticationException, IOException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
         createBridgeHandler(bridge);
@@ -1737,7 +1877,7 @@ public class VicareBindingTest {
     }
 
     @Test
-    public void supportsSolarPumpsCircuit() throws AuthenticationException, IOException {
+    public void supportsHeatingSolarPumpsCircuit() throws AuthenticationException, IOException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
         createBridgeHandler(bridge);
@@ -1758,30 +1898,6 @@ public class VicareBindingTest {
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
         assertEquals(StringType.valueOf("off"), stateCaptor.getValue());
-    }
-
-    @Test
-    public void supportsHeatingSolar() throws AuthenticationException, IOException {
-        simpleHeatingInstallation();
-        Bridge bridge = vicareBridge();
-        createBridgeHandler(bridge);
-        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
-                                                                             vicareServiceProvider);
-        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
-        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
-        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
-        registerAndInitialize(handler);
-        InOrder inOrder = inOrder(vicareService);
-        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
-        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
-        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
-
-        ArgumentCaptor<State> stateCaptor = forClass(State.class);
-        Channel channel = findChannel(thingCaptor, "heating_solar_active");
-        assertEquals("heating_solar_active", channel.getChannelTypeUID().getId());
-        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(OnOffType.ON, stateCaptor.getValue());
     }
 
     private Thing heatingDeviceThing(String deviceId) {

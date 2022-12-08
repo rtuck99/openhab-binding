@@ -376,7 +376,7 @@ public class VicareServiceTest {
 
     @Test
     @DisabledIf("realConnection")
-    public void supports_heating_circuits_n_circuilation_pump() throws ServletException, NamespaceException, AuthenticationException, IOException {
+    public void supports_heating_circuits_n_circulation_pump() throws ServletException, NamespaceException, AuthenticationException, IOException {
         List<Feature> features = getFeatures("deviceFeaturesResponse.json");
 
         Optional<StatusSensorFeature> pumpStatus = features.stream()
@@ -1122,6 +1122,49 @@ public class VicareServiceTest {
         assertEquals(33.5, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_MONTH).get().getValue(), 0.01f);
         assertEquals(733.9, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_YEAR).get().getValue(), 0.01f);
         assertEquals(1547.6, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_YEAR).get().getValue(), 0.01f);
+    }
+
+    public static Stream<Arguments> source_heating_sensors_temperature() {
+        return Stream.of(
+                Arguments.of("deviceFeaturesResponse5.json", "heating.sensors.temperature.outside", 15.8, new StatusValue("connected")),
+                Arguments.of("deviceFeaturesResponse5.json", "heating.sensors.temperature.return", 34.1, new StatusValue("connected"))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("source_heating_sensors_temperature")
+    @DisabledIf("realConnection")
+    public void supports_heating_sensors_temperature_xxx(String filename, String featureName, double expectedValue, StatusValue expectedStatus) throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures(filename);
+
+        Optional<NumericSensorFeature> sensorFeature = features.stream()
+                .filter(f -> f.getName().equals(featureName))
+                .map(NumericSensorFeature.class::cast)
+                .findFirst();
+
+        assertEquals(new DimensionalValue(Unit.CELSIUS, expectedValue), sensorFeature.get().getValue());
+        assertEquals(expectedStatus, sensorFeature.get().getStatus());
+    }
+
+    public static Stream<Arguments> source_heating_sensors_volumetricFlow() {
+        return Stream.of(
+                Arguments.of("deviceFeaturesResponse5.json", "heating.sensors.volumetricFlow.allengra", 274, new StatusValue("connected"))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("source_heating_sensors_volumetricFlow")
+    @DisabledIf("realConnection")
+    public void supports_heating_sensors_volumetricFlow_xxx(String filename, String featureName, double expectedValue, StatusValue expectedStatus) throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures(filename);
+
+        Optional<NumericSensorFeature> sensorFeature = features.stream()
+                .filter(f -> f.getName().equals(featureName))
+                .map(NumericSensorFeature.class::cast)
+                .findFirst();
+
+        assertEquals(new DimensionalValue(Unit.LITER, expectedValue), sensorFeature.get().getValue());
+        assertEquals(expectedStatus, sensorFeature.get().getStatus());
     }
 
     @Test

@@ -283,11 +283,23 @@ public class VicareBindingTest {
                                                                                                      "reason", new StringValue("summerEco"),
                                                                                                      "demand", new StringValue("cooling")))
         );
-        Feature heatingCircuitsSensorsTemperatureSupply = new NumericSensorFeature("heating.circuits.1.sensors.temperature.supply",
-                                                                                   "value",
-                                                                                   new DimensionalValue(Unit.CELSIUS, 24.6),
-                                                                                   new StatusValue("connected"),
-                                                                                   false);
+        List<Feature> heatingCircuitsSensorsTemperatureSupply = List.of(
+                new NumericSensorFeature("heating.circuits.1.sensors.temperature.supply",
+                                         "value",
+                                         new DimensionalValue(Unit.CELSIUS, 24.6),
+                                         new StatusValue("connected"),
+                                         false),
+                new NumericSensorFeature("heating.primaryCircuit.sensors.temperature.supply",
+                                         "value",
+                                         new DimensionalValue(Unit.CELSIUS, 17.4),
+                                         new StatusValue("connected"),
+                                         null),
+                new NumericSensorFeature("heating.secondaryCircuit.sensors.temperature.supply",
+                                         "value",
+                                         new DimensionalValue(Unit.CELSIUS, 34.1),
+                                         new StatusValue("connected"),
+                                         null)
+                );
         Feature heatingCircuitsZoneMode = new StatusSensorFeature("heating.circuits.1.zone.mode",
                                                                   StatusValue.NA,
                                                                   false);
@@ -315,6 +327,7 @@ public class VicareBindingTest {
         features.addAll(programFeatures);
         features.addAll(operatingProgramsStatusSensorFeatures);
         features.addAll(heatingSensors);
+        features.addAll(heatingCircuitsSensorsTemperatureSupply);
         features.addAll(List.of(temperatureSensor, statisticsFeature, textFeature, statusFeature,
                                                   consumptionFeature, burnerFeature, curveFeature, holidayFeature,
                                                   heatingDhw,
@@ -334,7 +347,6 @@ public class VicareBindingTest {
                                                   operatingModesStandby,
                                                   operatingProgramsActive,
                                                   heatingCircuitsOperatingProgramsForcedLastFromSchedule,
-                                                  heatingCircuitsSensorsTemperatureSupply,
                                                   heatingCircuitsZoneMode,
                                                   heatingDHWHygiene,
                                                   heatingDHWOneTimeCharge,
@@ -1266,8 +1278,22 @@ public class VicareBindingTest {
         assertEquals(expectedActive, stateCaptor.getValue());
     }
 
-    @Test
-    public void supportsHeatingCircuitSensorsTemperatureSupply() throws AuthenticationException, IOException {
+    public static Stream<Arguments> source_heatingCircuitsSensorsTemperatureSupply() {
+        return Stream.of(Arguments.of("heating_circuits_1_sensors_temperature_supply", "heating.circuits.1.sensors.temperature.supply",
+                                      "Heating Circuit 1 Supply Temperature", "Shows the value of the supply temperature sensor for Heating Circuit 1", DecimalType.valueOf("24.6"),
+                                      "Heating Circuit 1 Supply Temperature Sensor Status", "Shows the status of the supply temperature sensor for Heating Circuit 1", "connected"),
+                         Arguments.of("heating_primaryCircuit_sensors_temperature_supply", "heating.primaryCircuit.sensors.temperature.supply",
+                                      "Primary Circuit Supply Temperature", "Shows the temperature value of the primary source's supply-temperature sensor of the heat pump", DecimalType.valueOf("17.4"),
+                                      "Primary Circuit Supply Temperature Sensor Status", "Shows the status of the primary source's supply-temperature sensor", "connected"),
+                         Arguments.of("heating_secondaryCircuit_sensors_temperature_supply", "heating.secondaryCircuit.sensors.temperature.supply",
+                                      "Secondary Circuit Supply Temperature", "Shows the temperature value of the secondary source's supply-temperature sensor of the heat pump", DecimalType.valueOf("34.1"),
+                                      "Secondary Circuit Supply Temperature Sensor Status", "Shows the status of the secondary source's supply-temperature sensor", "connected")
+        );
+    }
+
+    @MethodSource("source_heatingCircuitsSensorsTemperatureSupply")
+    @ParameterizedTest
+    public void supportsHeatingCircuitSensorsTemperatureSupply(String channelId, String featureName, String expectedLabel, String expectedDescription, DecimalType expectedTemp, String expectedStatusLabel, String expectedStatusDescription, String expectedStatus) throws AuthenticationException, IOException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
         createBridgeHandler(bridge);
@@ -1282,29 +1308,29 @@ public class VicareBindingTest {
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
 
-        Channel channel = findChannelNoVerify(thingCaptor, "heating_circuits_1_sensors_temperature_supply");
+        Channel channel = findChannelNoVerify(thingCaptor, channelId);
         assertNotNull(channel);
         ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
-        assertEquals("Heating Circuit 1 Supply Temperature", channelType.getLabel());
-        assertEquals("Shows the value of the supply temperature sensor for Heating Circuit 1", channelType.getDescription());
-        assertEquals("heating.circuits.1.sensors.temperature.supply", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+        assertEquals(expectedLabel, channelType.getLabel());
+        assertEquals(expectedDescription, channelType.getDescription());
+        assertEquals(featureName, channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
         verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(DecimalType.valueOf("24.6"), stateCaptor.getValue());
+        assertEquals(expectedTemp, stateCaptor.getValue());
 
-        channel = findChannelNoVerify(thingCaptor, "heating_circuits_1_sensors_temperature_supply_status");
+        channel = findChannelNoVerify(thingCaptor, String.format("%s_status", channelId));
         assertNotNull(channel);
         channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
-        assertEquals("Heating Circuit 1 Supply Temperature Sensor Status", channelType.getLabel());
-        assertEquals("Shows the status of the supply temperature sensor for Heating Circuit 1", channelType.getDescription());
-        assertEquals("heating.circuits.1.sensors.temperature.supply", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+        assertEquals(expectedStatusLabel, channelType.getLabel());
+        assertEquals(expectedStatusDescription, channelType.getDescription());
+        assertEquals(featureName, channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(StringType.valueOf("connected"), stateCaptor.getValue());
+        assertEquals(StringType.valueOf(expectedStatus), stateCaptor.getValue());
     }
 
     @Test

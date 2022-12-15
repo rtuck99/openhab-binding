@@ -534,26 +534,6 @@ public class VicareServiceTest {
 
     @Test
     @DisabledIf("realConnection")
-    public void supports_heating_power_consumption_total() throws ServletException, AuthenticationException, NamespaceException, IOException {
-        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
-
-        Optional<ConsumptionFeature> feature = features.stream()
-                .filter(f -> f.getName().equals("heating.power.consumption.total"))
-                .map(ConsumptionFeature.class::cast)
-                .findFirst();
-
-        assertEquals(0.0, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_DAY).get().getValue(), 0.01f);
-        assertEquals(0.1, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_DAY).get().getValue(), 0.01f);
-        assertEquals(0.3, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_WEEK).get().getValue(), 0.01f);
-        assertEquals(0.8, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_WEEK).get().getValue(), 0.01f);
-        assertEquals(3.5, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_MONTH).get().getValue(), 0.01f);
-        assertEquals(4.6, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_MONTH).get().getValue(), 0.01f);
-        assertEquals(59.1, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_YEAR).get().getValue(), 0.01f);
-        assertEquals(141.2, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_YEAR).get().getValue(), 0.01f);
-    }
-
-    @Test
-    @DisabledIf("realConnection")
     public void supports_heating_power_consumption_summary_dhw() throws ServletException, NamespaceException, AuthenticationException, IOException {
         List<Feature> features = getFeatures("deviceFeaturesResponse.json");
 
@@ -576,6 +556,56 @@ public class VicareServiceTest {
                 ConsumptionFeature.Stat.CURRENT_YEAR).orElse(null).getUnit().getName());
         assertEquals(0.9, ((ConsumptionFeature) dhwConsumption.get()).getConsumption(
                 ConsumptionFeature.Stat.CURRENT_YEAR).orElse(null).getValue(), 0.001);
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_power_consumption_total() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+
+        Optional<ConsumptionFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.power.consumption.total"))
+                .map(ConsumptionFeature.class::cast)
+                .findFirst();
+
+        assertEquals(0.0, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_DAY).get().getValue(), 0.01f);
+        assertEquals(0.1, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_DAY).get().getValue(), 0.01f);
+        assertEquals(0.3, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_WEEK).get().getValue(), 0.01f);
+        assertEquals(0.8, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_WEEK).get().getValue(), 0.01f);
+        assertEquals(3.5, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_MONTH).get().getValue(), 0.01f);
+        assertEquals(4.6, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_MONTH).get().getValue(), 0.01f);
+        assertEquals(59.1, feature.get().getConsumption(ConsumptionFeature.Stat.CURRENT_YEAR).get().getValue(), 0.01f);
+        assertEquals(141.2, feature.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_YEAR).get().getValue(), 0.01f);
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_primaryCircuit_sensors_temperature_supply() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse5.json");
+
+        Optional<NumericSensorFeature> sensorFeature = features.stream()
+                .filter(f -> f.getName().equals("heating.primaryCircuit.sensors.temperature.supply"))
+                .map(NumericSensorFeature.class::cast)
+                .findFirst();
+
+        assertTrue(sensorFeature.isPresent());
+        assertEquals(new DimensionalValue(Unit.CELSIUS, 17.4), sensorFeature.get().getProperties().get("value"));
+        assertEquals(new StatusValue("connected"), sensorFeature.get().getProperties().get("status"));
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_secondaryCircuit_sensors_temperature_supply() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse5.json");
+
+        Optional<NumericSensorFeature> sensorFeature = features.stream()
+                .filter(f -> f.getName().equals("heating.secondaryCircuit.sensors.temperature.supply"))
+                .map(NumericSensorFeature.class::cast)
+                .findFirst();
+
+        assertTrue(sensorFeature.isPresent());
+        assertEquals(new DimensionalValue(Unit.CELSIUS, 34.1), sensorFeature.get().getProperties().get("value"));
+        assertEquals(new StatusValue("connected"), sensorFeature.get().getProperties().get("status"));
     }
 
     @Test

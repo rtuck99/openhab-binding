@@ -117,7 +117,6 @@
     <item-type>String</item-type>
     <label>Heating Circuit ${heatingCircuit} Supply Temperature Sensor Status</label>
     <description>Shows the status of the supply temperature sensor for Heating Circuit ${heatingCircuit}</description>
-    <category>Temperature</category>
     <state readOnly="true"/>
   </channel-type>
   <channel-type id="template_heating_circuits_zone_mode_active">
@@ -794,6 +793,19 @@
     <description>Shows total power consumption statistics for the previous year</description>
     <state readOnly="true" pattern="%.1f kWh"/>
   </channel-type>
+  <channel-type id="heating_primaryCircuit_sensors_temperature_supply">
+    <item-type>Number:Temperature</item-type>
+    <label>Primary Circuit Supply Temperature</label>
+    <description>Shows the temperature value of the primary source's supply-temperature sensor of the heat pump</description>
+    <category>Temperature</category>
+    <state readOnly="true" pattern="%.1f °C"/>
+  </channel-type>
+  <channel-type id="heating_primaryCircuit_sensors_temperature_supply_status">
+    <item-type>String</item-type>
+    <label>Primary Circuit Supply Temperature Sensor Status</label>
+    <description>Shows the status of the primary source's supply-temperature sensor</description>
+    <state readOnly="true"/>
+  </channel-type>
   <channel-type id="heating_operating_programs_holiday_active">
     <item-type>Switch</item-type>
     <label>Holiday Operating Program Active</label>
@@ -810,6 +822,19 @@
     <item-type>DateTime</item-type>
     <label>Holiday Operating Program End</label>
     <description>Shows the end date of the holiday program</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_secondaryCircuit_sensors_temperature_supply">
+    <item-type>Number:Temperature</item-type>
+    <label>Secondary Circuit Supply Temperature</label>
+    <description>Shows the temperature value of the secondary source's supply-temperature sensor of the heat pump</description>
+    <category>Temperature</category>
+    <state readOnly="true" pattern="%.1f °C"/>
+  </channel-type>
+  <channel-type id="heating_secondaryCircuit_sensors_temperature_supply_status">
+    <item-type>String</item-type>
+    <label>Secondary Circuit Supply Temperature Sensor Status</label>
+    <description>Shows the status of the secondary source's supply-temperature sensor</description>
     <state readOnly="true"/>
   </channel-type>
   <channel-type id="heating_solar_active">

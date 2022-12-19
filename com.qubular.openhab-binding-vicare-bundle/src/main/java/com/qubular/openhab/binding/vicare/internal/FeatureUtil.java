@@ -61,19 +61,25 @@ public class FeatureUtil {
 
      private static String heatingCircuit(String featureName) {
         Matcher matcher = PATTERN_HEATING_CIRCUIT.matcher(featureName);
-        return matcher.matches() ? matcher.group(1) : "?";
+        return matcher.matches() ? matcher.group(1) : null;
     }
 
     private static String heatingCompressor(String featureName) {
         Matcher matcher = PATTERN_HEATING_COMPRESSOR.matcher(featureName);
-        return matcher.matches() ? matcher.group(1) : "?";
+        return matcher.matches() ? matcher.group(1) : null;
     }
 
     static Map<String, String> extractTemplatePropertiesFromFeature(Feature feature, Map<String, String> props) {
 
         props.put("0", feature.getName().replaceAll(".*\\.([^.]*$)", "$1"));
-        props.put("heatingCircuit", FeatureUtil.heatingCircuit(feature.getName()));
-        props.put("heatingCompressor", FeatureUtil.heatingCompressor(feature.getName()));
+        String heatingCircuit = FeatureUtil.heatingCircuit(feature.getName());
+        if (heatingCircuit != null) {
+            props.put("heatingCircuit", heatingCircuit);
+        }
+        String heatingCompressor = FeatureUtil.heatingCompressor(feature.getName());
+        if (heatingCompressor != null) {
+            props.put("heatingCompressor", heatingCompressor);
+        }
         Matcher energySavingOPMatcher = PATTERN_ENERGY_SAVING_OPERATING_PROGRAM.matcher(feature.getName());
         if (energySavingOPMatcher.matches()) {
             props.put("operatingProgram", energySavingOPMatcher.group(2));

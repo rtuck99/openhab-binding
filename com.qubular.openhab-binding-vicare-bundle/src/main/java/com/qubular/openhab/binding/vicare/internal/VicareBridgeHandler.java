@@ -38,7 +38,7 @@ import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
 import static java.util.Optional.empty;
 
-public class VicareBridgeHandler extends BaseBridgeHandler {
+public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThingHandler {
     public static final String CONFIG_USE_LIMITED_ENCRYPTION = "useLimitedEncryption";
     private static final Logger logger = LoggerFactory.getLogger(VicareBridgeHandler.class);
     public static final int POLLING_STARTUP_DELAY_SECS = 10;
@@ -239,7 +239,8 @@ public class VicareBridgeHandler extends BaseBridgeHandler {
         return Collections.singleton(VicareDiscoveryService.class);
     }
 
-    VicareService getVicareService() {
+    @Override
+    public VicareService getVicareService() {
         return vicareService;
     }
 

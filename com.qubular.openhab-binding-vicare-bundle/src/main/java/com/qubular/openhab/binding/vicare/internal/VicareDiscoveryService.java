@@ -26,10 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -143,11 +140,17 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
         ThingUID thingUid = new ThingUID(THING_TYPE_HEATING,
                 bridgeId,
                 thingId);
-        Map<String, Object> props = Map.of(PROPERTY_DEVICE_UNIQUE_ID, uniqueId,
-                PROPERTY_BOILER_SERIAL, device.getBoilerSerial(),
-                PROPERTY_GATEWAY_SERIAL, device.getGatewaySerial(),
-                PROPERTY_MODEL_ID, device.getModelId(),
-                PROPERTY_DEVICE_TYPE, device.getDeviceType());
+        Map<String, Object> props = new HashMap<>();
+        // These have to be non-null in order to resolve the device
+        props.put(PROPERTY_DEVICE_UNIQUE_ID, uniqueId);
+        props.put(PROPERTY_GATEWAY_SERIAL, device.getGatewaySerial());
+        props.put(PROPERTY_DEVICE_TYPE, device.getDeviceType());
+        if (device.getBoilerSerial() != null) {
+            props.put(PROPERTY_BOILER_SERIAL, device.getBoilerSerial());
+        }
+        if (device.getModelId() != null) {
+            props.put(PROPERTY_MODEL_ID, device.getModelId());
+        }
         DiscoveryResult result = DiscoveryResultBuilder.create(thingUid)
                 .withBridge(bridgeId)
                 .withProperties(props)

@@ -171,7 +171,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
                         } else {
                             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "Unable to communicate with Viessmann API: " + e.getMessage());
                         }
-                        logger.warn("Unexpected exception refreshing", e);
+                        logger.debug("Unexpected exception refreshing", e);
                         return empty();
                     })
                     .join();

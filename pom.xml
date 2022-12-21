@@ -4,7 +4,7 @@
 
   <groupId>com.qubular</groupId>
   <artifactId>com.qubular.openhab-binding</artifactId>
-  <version>3.3.6-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <licenses>
     <license>
       <name>Eclipse Public License 2.0</name>
@@ -14,7 +14,7 @@
   <packaging>pom</packaging>
   <properties>
     <org.osgi.service.http.port>9000</org.osgi.service.http.port>
-    <openhab.version>3.3.0</openhab.version>
+    <openhab.version>3.4.0</openhab.version>
     <oh.java.version>11</oh.java.version>
     <maven.compiler.source>${oh.java.version}</maven.compiler.source>
     <maven.compiler.target>${oh.java.version}</maven.compiler.target>
@@ -25,7 +25,7 @@
     <bnd.includeresource>-${.}/NOTICE, -${.}/*.xsd</bnd.includeresource>
     <!-- Exclude all the kitchen-sink optional shit in gRPC / netty -->
     <bnd.importpackage>!sun.*,!javax.annotation.*,!lzma.sdk.*,!net.jpountz.*,!com.sun.*,!io.grpc.census.*,com.aayushatharva.brotli4j.*;resolution:=optional,com.github.luben.*;resolution:=optional,com.google.protobuf.nano.*;resolution:=optional,com.jcraft.jzlib.*;resolution:=optional,com.ning.compress.*;resolution:=optional,com.oracle.*;resolution:=optional,io.grpc.*;resolution:=optional,io.perfmark.*;resolution:=optional;org.bouncycastle.*;resolution:=optional,org.conscrypt.*;resolution:=optional,org.eclipse.jetty.*;resolution:=optional,org.jboss.*;resolution:=optional,reactor.blockhound.*;resolution:=optional,com.google.api.client.*;resolution:=optional,!io.opencensus.*,org.apache.http.*;resolution:=optional</bnd.importpackage>
-    <eea.version>2.2.1</eea.version>
+    <eea.version>2.3.0</eea.version>
     <feature.directory>src/main/feature/feature.xml</feature.directory>
     <karaf.version>4.3.4</karaf.version>
     <junit.version>5.8.1</junit.version>

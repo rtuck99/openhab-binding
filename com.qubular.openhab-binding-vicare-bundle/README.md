@@ -6,6 +6,9 @@ It provides information similar to what you can get through the ViCare mobile ap
 
 Please note this binding is unofficial and not endorsed by Viessmann in any way.
 
+This binding has been developed against 3.3.0 stable release and is not 
+supported for 3.4.0 milestone builds.
+
 Requirements
 ------------
 
@@ -45,10 +48,14 @@ configuration some or all of these may or may not be present:
 * Heating curve settings
 * Heating circuit names
 * Heating circuit operating mode (read/write)
+* Heating circuit supply temperature
 * Extended heating mode
 * Solar production statistics
 * Solar collector temperature
 * Solar circuit pump status
+* Heat pump compressor status
+* Heat pump compressor statistics
+* Heat pump primary and secondary supply temperature sensors
 
 Configuring
 -----------
@@ -71,12 +78,19 @@ Changelog
 
 ### 3.3.6
 
+* Fix #29 VicareDiscoveryService fails if some properties are null
+* Fix #25 README + setup instructions are misleading
+* Fix #24 Support for heat pump features
+* Fix #23 Create equipment from Thing fails with "Bad Request"
 * Fix #21 Support setting for DHW target temperature heating.dhw.temperature.main
 * Fix #9 Add response capture for installations and gateways
 * Support additional features. 
   Note: Some of the channel names with string values may have changed slightly -
   heating_circuits_operating_modes_active, device_serial may now have _value suffixes.
-  Please check your Items for missing channel links and relink if upgrading from a previous version. 
+  Please check your Items for missing channel links and relink if upgrading from a previous version.
+* Support for dynamic channel types - channel labels should now clearly identify which heating 
+  circuit they are associated with, and max/min values should be exposed for controllable values.
+
 
 #### 3.3.5
 

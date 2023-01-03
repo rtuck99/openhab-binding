@@ -46,6 +46,12 @@
         <advanced>true</advanced>
         <default>false</default>
       </parameter>
+      <parameter name="maxPastYearsToFetch" type="integer" min="0">
+        <label>Max number of years of past data to fetch</label>
+        <description>Configures the maximum number of years of historic data to fetch.
+          The default is 1 year, set to 0 to fetch unlimited past data (this may cause the fetch to take a long time).</description>
+        <default>1</default>
+      </parameter>
     </config-description>
   </bridge-type>
 </thing:thing-descriptions>

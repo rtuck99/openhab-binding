@@ -110,6 +110,10 @@ Click Add Aggregate series to add an aggregate series
 Changelog
 ---------
 
+#### 3.3.6
+
+Max number of years of data to fetch can now be configured.
+
 #### 3.3.5
 
 Add support for reporting current tariff standing charge and per-unit rates.

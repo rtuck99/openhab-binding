@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
@@ -45,6 +46,7 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
     private static final String CONFIG_PARAM_SECURE_PASSWORD = "securePassword";
     public static final String CONFIG_PARAM_CRON_SCHEDULE = "cronSchedule";
     public static final String CONFIG_USE_LIMITED_ENCRYPTION = "useLimitedEncryption";
+    public static final String CONFIG_PARAM_MAX_PAST_YEARS_TO_FETCH = "maxPastYearsToFetch";
 
     private static final Logger logger = LoggerFactory.getLogger(GlowmarktBridgeHandler.class);
 
@@ -219,4 +221,13 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
     private String getCronSchedule() {
         return (String) ofNullable(getConfig().get(CONFIG_PARAM_CRON_SCHEDULE)).orElse(GlowmarktConstants.DEFAULT_CRON_SCHEDULE);
     }
+
+    int getMaxPastYearsToFetch() {
+        return ofNullable(getConfig().get(CONFIG_PARAM_MAX_PAST_YEARS_TO_FETCH))
+                .map(BigDecimal.class::cast)
+                .map(BigDecimal::intValue)
+                .map(i -> i <= 0 ? 99 : i)
+                .orElse(GlowmarktConstants.DEFAULT_MAX_PAST_YEARS);
+    }
+
 }

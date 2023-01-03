@@ -206,7 +206,8 @@ public class GlowmarktVirtualEntityHandler extends BaseThingHandler {
 
     private void fetchHistoricData(String resourceId, Item item) throws AuthenticationFailedException, IOException {
         FilterCriteria filterCriteria = new FilterCriteria();
-        ZonedDateTime persistenceQueryStartDate = ZonedDateTime.now().minusYears(1);
+        long maxYears = getBridgeHandler().getMaxPastYearsToFetch();
+        ZonedDateTime persistenceQueryStartDate = ZonedDateTime.now().minusYears(maxYears);
         filterCriteria.setBeginDate(persistenceQueryStartDate);
         ZonedDateTime persistenceQueryEndDate = ZonedDateTime.now();
         filterCriteria.setEndDate(persistenceQueryEndDate);

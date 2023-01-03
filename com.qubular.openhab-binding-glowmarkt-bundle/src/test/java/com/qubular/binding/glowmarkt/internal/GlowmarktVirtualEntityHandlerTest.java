@@ -90,7 +90,8 @@ class GlowmarktVirtualEntityHandlerTest {
         when(virtualEntity.getProperties()).thenReturn(Map.of(PROPERTY_VIRTUAL_ENTITY_ID, VIRTUAL_ENTITY_ID));
         AtomicReference<Configuration> configuration = new AtomicReference<>(new Configuration(Map.of("username", "testuser",
                                                                                "password", "testpassword",
-                                                                               "persistenceService", "mysql")));
+                                                                               "persistenceService", "mysql",
+                                                                                    "maxPastYearsToFetch", 0)));
         doAnswer(invocation -> configuration.get()).when(bridge).getConfiguration();
         doAnswer(invocation -> ChannelBuilder.create((ChannelUID)invocation.getArgument(0))).when(thingHandlerCallback).createChannelBuilder(any(ChannelUID.class), any(ChannelTypeUID.class));
         when(persistenceServiceRegistry.get("mysql")).thenReturn(persistenceService);

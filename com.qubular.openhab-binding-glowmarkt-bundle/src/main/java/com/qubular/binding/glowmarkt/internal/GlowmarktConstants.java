@@ -18,4 +18,5 @@ public class GlowmarktConstants {
     public static final String PROPERTY_TIER = "tier";
     public static final String PROPERTY_VIRTUAL_ENTITY_ID = "virtualEntityId";
     public static final String DEFAULT_CRON_SCHEDULE = "0 0 2 * * *";
+    public static final int DEFAULT_MAX_PAST_YEARS = 1;
 }

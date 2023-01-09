@@ -377,6 +377,18 @@
     <label>Heating Circuit ${heatingCircuit} ${pretty:0} Operating Program Demand</label>
     <state readOnly="true"/>
   </channel-type>
+  <channel-type id="template_heating_circuits_sensors_temperature_room_value">
+    <item-type>Number:Temperature</item-type>
+    <label>Heating Circuit ${heatingCircuit} Room Temperature</label>
+    <description>Shows the temperature value of the room temperature sensor for Heating Circuit ${heatingCircuit}</description>
+    <state pattern="%.1f °C" readOnly="true"/>
+  </channel-type>
+  <channel-type id="template_heating_circuits_sensors_temperature_room_status">
+    <item-type>String</item-type>
+    <label>Heating Circuit ${heatingCircuit} Room Temperature Sensor Status</label>
+    <description>Shows the status of the room temperature sensor for Heating Circuit ${heatingCircuit}</description>
+    <state readOnly="true"/>
+  </channel-type>
   <channel-type id="template_heating_circuits_temperature_levels_min">
     <item-type>Number:Temperature</item-type>
     <label>Heating Circuit ${heatingCircuit} Minimum Temperature Level</label>

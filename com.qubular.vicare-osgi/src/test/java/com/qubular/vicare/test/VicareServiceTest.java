@@ -1185,7 +1185,8 @@ public class VicareServiceTest {
     public static Stream<Arguments> source_heating_sensors_temperature() {
         return Stream.of(
                 Arguments.of("deviceFeaturesResponse5.json", "heating.sensors.temperature.outside", 15.8, new StatusValue("connected")),
-                Arguments.of("deviceFeaturesResponse5.json", "heating.sensors.temperature.return", 34.1, new StatusValue("connected"))
+                Arguments.of("deviceFeaturesResponse5.json", "heating.sensors.temperature.return", 34.1, new StatusValue("connected")),
+                Arguments.of("deviceFeaturesResponse6.json", "heating.circuits.0.sensors.temperature.room", 24.1, new StatusValue("connected"))
         );
     }
 
@@ -1193,6 +1194,7 @@ public class VicareServiceTest {
     @MethodSource("source_heating_sensors_temperature")
     @DisabledIf("realConnection")
     public void supports_heating_sensors_temperature_xxx(String filename, String featureName, double expectedValue, StatusValue expectedStatus) throws ServletException, AuthenticationException, NamespaceException, IOException {
+        logger.info("supports_heating_sensors_temperature({}, {}, {}, {})", filename, featureName, expectedValue, expectedStatus);
         List<Feature> features = getFeatures(filename);
 
         Optional<NumericSensorFeature> sensorFeature = features.stream()

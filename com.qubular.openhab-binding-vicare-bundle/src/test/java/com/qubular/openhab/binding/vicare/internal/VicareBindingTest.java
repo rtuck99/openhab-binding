@@ -298,6 +298,11 @@ public class VicareBindingTest {
                                          "value",
                                          new DimensionalValue(Unit.CELSIUS, 34.1),
                                          new StatusValue("connected"),
+                                         null),
+                new NumericSensorFeature("heating.circuits.0.sensors.temperature.room",
+                                         "value",
+                                         new DimensionalValue(Unit.CELSIUS, 24.1),
+                                         new StatusValue("connected"),
                                          null)
                 );
         Feature heatingCircuitsZoneMode = new StatusSensorFeature("heating.circuits.1.zone.mode",
@@ -1287,7 +1292,11 @@ public class VicareBindingTest {
                                       "Primary Circuit Supply Temperature Sensor Status", "Shows the status of the primary source's supply-temperature sensor", "connected"),
                          Arguments.of("heating_secondaryCircuit_sensors_temperature_supply", "heating.secondaryCircuit.sensors.temperature.supply",
                                       "Secondary Circuit Supply Temperature", "Shows the temperature value of the secondary source's supply-temperature sensor of the heat pump", DecimalType.valueOf("34.1"),
-                                      "Secondary Circuit Supply Temperature Sensor Status", "Shows the status of the secondary source's supply-temperature sensor", "connected")
+                                      "Secondary Circuit Supply Temperature Sensor Status", "Shows the status of the secondary source's supply-temperature sensor", "connected"),
+                         Arguments.of("heating_circuits_0_sensors_temperature_room", "heating.circuits.0.sensors.temperature.room",
+                                      "Heating Circuit 0 Room Temperature", "Shows the temperature value of the room temperature sensor for Heating Circuit 0", DecimalType.valueOf("24.1"),
+                                      "Heating Circuit 0 Room Temperature Sensor Status", "Shows the status of the room temperature sensor for Heating Circuit 0", "connected")
+
         );
     }
 

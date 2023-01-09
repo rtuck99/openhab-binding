@@ -65,7 +65,7 @@ public interface OAuthService {
 
         /** Base time from which expiry is measured. */
         public Instant getBaseTime() {
-            return accessTokenResponse.getCreatedOn().toInstant(OffsetDateTime.now().getOffset());
+            return accessTokenResponse.getCreatedOn();
         }
 
         /** Remaining lifetime of token in seconds. */

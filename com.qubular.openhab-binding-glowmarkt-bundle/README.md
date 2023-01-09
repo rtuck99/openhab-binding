@@ -15,7 +15,7 @@ the Glowmarkt API, and agree for them to import your Smart Meter data from DCC.
 
 You will also need to install and configure an OpenHAB persistence service
 that supports updating of past Item data via `ModifiablePersistenceService`.
-As of OpenHAB 3.3.0 the default RRD4J persistence service doesn't support this,
+The default RRD4J persistence service doesn't support this,
 so you will need to use one of the other persistence services such as JDBC.
 
 Once you have added the Glowmarkt API Bridge Thing, configure the User name and 
@@ -110,19 +110,6 @@ Click Add Aggregate series to add an aggregate series
 Changelog
 ---------
 
-#### 3.3.6
+#### 3.4.0
 
-Max number of years of data to fetch can now be configured.
-
-#### 3.3.5
-
-Add support for reporting current tariff standing charge and per-unit rates.
-Fix #19 Using openhab in Docker prevents authentication - Illegal key size - CRYPTO_POLICY ==> limited
-
-#### 3.3.3
-
-Stored credentials are now encrypted for better security
-
-#### 3.3.1
-
-This is the initial release.
+* Add official support for OpenHAB 3.4

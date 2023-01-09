@@ -6,13 +6,10 @@ It provides information similar to what you can get through the ViCare mobile ap
 
 Please note this binding is unofficial and not endorsed by Viessmann in any way.
 
-This binding has been developed against 3.3.0 stable release and is not 
-supported for 3.4.0 milestone builds.
-
 Requirements
 ------------
 
-This binding requires OpenHAB 3.3
+This binding requires OpenHAB 3.4
 
 Supported Devices
 ----------------
@@ -76,60 +73,6 @@ and they will appear in your Inbox.
 Changelog
 ---------
 
-### 3.3.6
+### 3.4.0
 
-* Fix #29 VicareDiscoveryService fails if some properties are null
-* Fix #25 README + setup instructions are misleading
-* Fix #24 Support for heat pump features
-* Fix #23 Create equipment from Thing fails with "Bad Request"
-* Fix #21 Support setting for DHW target temperature heating.dhw.temperature.main
-* Fix #9 Add response capture for installations and gateways
-* Support additional features. 
-  Note: Some of the channel names with string values may have changed slightly -
-  heating_circuits_operating_modes_active, device_serial may now have _value suffixes.
-  Please check your Items for missing channel links and relink if upgrading from a previous version.
-* Support for dynamic channel types - channel labels should now clearly identify which heating 
-  circuit they are associated with, and max/min values should be exposed for controllable values.
-
-
-#### 3.3.5
-
-* Fix #19 Using openhab in Docker prevents authentication - Illegal key size - CRYPTO_POLICY ==> limited
-* Fix #18 Binding makes excessive calls during power outage
-* Fix #17 Text features missing from boiler channels
-* Additional device properties available on Thing 
-
-#### 3.3.4
-
-* Add read/write support for heating.circuits.N.temperature.levels
-* Add write support for operating program temperature setpoints
-* Fix #16 Cannot start binding from new install - token store not initialized
-
-#### 3.3.3
-
-* Stored tokens are now encrypted
-* Support for read and write of heating.circuits.N.operating.modes.active
-* Channels are now sorted
-* Fix #5 The binding should automatically discover devices after OAuth access token is granted the first time.
-* Fix #7 If binding throws unhandled exception, things are no longer updated
-
-#### 3.3.2 
-Polling interval is now configurable.
-
-Read-only support for additional features:
-* Burner status
-* DHW Heating status
-* DHW Hot water storage temperature
-* DHW Primary and Circulation Pump Status
-* Holiday Program settings
-* Heating curve settings
-
-Note that the names of some channels may have changed slightly in order to
-distinguish between "active" and "status". Status channels are now of String type
-and not Switch - you may need to either change your linked item type accordingly or
-apply a transformation to the value. 
-
-Fix #2 If more than one boiler is configured, the binding doesn't work correctly
-
-#### 3.3.1
-This is the initial release
+* Add official support for OpenHAB 3.4

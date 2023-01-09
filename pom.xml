@@ -40,7 +40,7 @@
   <scm>
     <connection>scm:git:ssh://git@github.com/rtuck99/openhab-binding.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/rtuck99/openhab-binding.git</developerConnection>
-    <tag>com.qubular.openhab-binding-3.3.0</tag>
+    <tag>com.qubular.openhab-binding-3.3.6</tag>
     <url>https://github.com/rtuck99/openhab-binding</url>
   </scm>
   <repositories>

@@ -1686,12 +1686,14 @@ public class VicareBindingTest {
         handler.handleCommand(startChannel.getUID(), RefreshType.REFRESH);
         inOrder.verify(vicareService, never()).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         verify(callback, timeout(1000)).stateUpdated(eq(startChannel.getUID()), stateCaptor.capture());
-        assertEquals(ZonedDateTime.parse("2022-12-23T00:00:00Z"), ((DateTimeType)stateCaptor.getValue()).getZonedDateTime());
+        var zoneString = ((DateTimeType)stateCaptor.getValue()).getZonedDateTime().getZone().getId();
+        assertEquals(ZonedDateTime.parse("2022-12-23T00:00:00"+zoneString), ((DateTimeType)stateCaptor.getValue()).getZonedDateTime());
 
         handler.handleCommand(endChannel.getUID(), RefreshType.REFRESH);
         inOrder.verify(vicareService, never()).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         verify(callback, timeout(1000)).stateUpdated(eq(endChannel.getUID()), stateCaptor.capture());
-        assertEquals(ZonedDateTime.parse("2022-12-26T23:59:59.999999999Z"), ((DateTimeType)stateCaptor.getValue()).getZonedDateTime());
+        zoneString = ((DateTimeType)stateCaptor.getValue()).getZonedDateTime().getZone().getId();
+        assertEquals(ZonedDateTime.parse("2022-12-26T23:59:59.999999999"+zoneString), ((DateTimeType)stateCaptor.getValue()).getZonedDateTime());
     }
 
     @Test

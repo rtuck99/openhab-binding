@@ -1,6 +1,8 @@
 package com.qubular.openhab.binding.vicare.internal;
 
+import com.qubular.vicare.model.CommandDescriptor;
 import com.qubular.vicare.model.Feature;
+import com.qubular.vicare.model.features.NumericSensorFeature;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -85,5 +87,10 @@ public class FeatureUtil {
             props.put("operatingProgram", energySavingOPMatcher.group(2));
         }
         return props;
+    }
+
+    static List<CommandDescriptor> activateCommands(Feature f) {
+        return f.getCommands().stream().filter(
+                c -> c.getName().equals("activate") || c.getName().equals("deactivate")).collect(Collectors.toList());
     }
 }

@@ -138,7 +138,9 @@ public class VicareBindingTest {
                                                                 new DimensionalValue(new Unit("celsius"), 12), StatusValue.NA, false),
                                                 new NumericSensorFeature("heating.circuits.0.operating.programs.comfort",
                                                                 "temperature",
-                                                                List.of(new CommandDescriptor("setTemperature", true, params, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.comfort/commands/setTemperature"))),
+                                                                List.of(new CommandDescriptor("setTemperature", true, params, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.comfort/commands/setTemperature")),
+                                                                        new CommandDescriptor("activate", true, emptyList(), URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.comfort/commands/activate")),
+                                                                        new CommandDescriptor("deactivate", false, emptyList(), URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.comfort/commands/deactivate"))),
                                                                 new DimensionalValue(new Unit("celsius"), 22), StatusValue.NA, false),
                                                 new NumericSensorFeature("heating.circuits.0.operating.programs.reducedHeating",
                                                                 "temperature",
@@ -663,7 +665,7 @@ public class VicareBindingTest {
 
         ChannelType opProgramChannelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
         assertEquals("Heating Circuit 1 Active Operating Program", opProgramChannelType.getLabel());
-        assertEquals("Shows the current active operating program on the device for Heating Circuit 1", opProgramChannelType.getDescription());
+        assertEquals("Shows the current active operating program on the device for Heating Circuit 1 (read-only)", opProgramChannelType.getDescription());
         assertEquals("String", opProgramChannelType.getItemType());
         assertTrue(opProgramChannelType.getState().isReadOnly());
 
@@ -676,14 +678,14 @@ public class VicareBindingTest {
 
     static Stream<Arguments> source_heatingCircuitsOperatingPrograms() {
         return Stream.of(
-                Arguments.of("normal", 21, OnOffType.ON, "Heating Circuit 0 Normal Operating Program Temperature", "Shows the Normal operating program target temperature for heating circuit 0", "Heating Circuit 0 Normal Operating Program Active", "Shows whether the Normal operating program is active for heating circuit 0", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normal/commands/setTemperature") ),
-                Arguments.of("reduced", 12, OnOffType.OFF, "Heating Circuit 0 Reduced Operating Program Temperature", "Shows the Reduced operating program target temperature for heating circuit 0", "Heating Circuit 0 Reduced Operating Program Active", "Shows whether the Reduced operating program is active for heating circuit 0", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.reduced/commands/setTemperature")),
-                Arguments.of("comfort", 22, OnOffType.OFF, "Heating Circuit 0 Comfort Operating Program Temperature", "Shows the Comfort operating program target temperature for heating circuit 0", "Heating Circuit 0 Comfort Operating Program Active", "Shows whether the Comfort operating program is active for heating circuit 0", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.comfort/commands/setTemperature")),
-                Arguments.of("reducedHeating", 18, OnOffType.OFF, "Heating Circuit 0 Reduced Heating Operating Program Temperature", "Shows the Reduced Heating operating program target temperature for heating circuit 0", "Heating Circuit 0 Reduced Heating Operating Program Active", "Shows whether the Reduced Heating operating program is active for heating circuit 0", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.reducedHeating/commands/setTemperature")),
-                Arguments.of("normalHeating", 21, OnOffType.ON, "Heating Circuit 0 Normal Heating Operating Program Temperature", "Shows the Normal Heating operating program target temperature for heating circuit 0", "Heating Circuit 0 Normal Heating Operating Program Active", "Shows whether the Normal Heating operating program is active for heating circuit 0", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normalHeating/commands/setTemperature")),
-                Arguments.of("comfortHeating", 22, OnOffType.OFF, "Heating Circuit 0 Comfort Heating Operating Program Temperature", "Shows the Comfort Heating operating program target temperature for heating circuit 0", "Heating Circuit 0 Comfort Heating Operating Program Active", "Shows whether the Comfort Heating operating program is active for heating circuit 0", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.comfortHeating/commands/setTemperature")),
-                Arguments.of("eco", 21, OnOffType.OFF, "Heating Circuit 0 Eco Operating Program Temperature", "Shows the Eco operating program target temperature for heating circuit 0", "Heating Circuit 0 Eco Operating Program Active", "Shows whether the Eco operating program is active for heating circuit 0", null, null, null),
-                Arguments.of("external", 0, OnOffType.OFF, "Heating Circuit 0 External Operating Program Temperature", "Shows the External operating program target temperature for heating circuit 0", "Heating Circuit 0 External Operating Program Active", "Shows whether the External operating program is active for heating circuit 0", null, null, null)
+                Arguments.of("normal", 21, OnOffType.ON, "Heating Circuit 0 Normal Operating Program Temperature", "Shows the Normal operating program target temperature for heating circuit 0 (read/write)", "Heating Circuit 0 Normal Operating Program Active", "Shows whether the Normal operating program is active for heating circuit 0 (read-only)", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normal/commands/setTemperature"), false, false),
+                Arguments.of("reduced", 12, OnOffType.OFF, "Heating Circuit 0 Reduced Operating Program Temperature", "Shows the Reduced operating program target temperature for heating circuit 0 (read/write)", "Heating Circuit 0 Reduced Operating Program Active", "Shows whether the Reduced operating program is active for heating circuit 0 (read-only)", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.reduced/commands/setTemperature"), false, false),
+                Arguments.of("comfort", 22, OnOffType.OFF, "Heating Circuit 0 Comfort Operating Program Temperature", "Shows the Comfort operating program target temperature for heating circuit 0 (read/write)", "Heating Circuit 0 Comfort Operating Program Active", "Shows whether the Comfort operating program is active for heating circuit 0 (read/write)", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.comfort/commands/setTemperature"), true, false),
+                Arguments.of("reducedHeating", 18, OnOffType.OFF, "Heating Circuit 0 Reduced Heating Operating Program Temperature", "Shows the Reduced Heating operating program target temperature for heating circuit 0 (read/write)", "Heating Circuit 0 Reduced Heating Operating Program Active", "Shows whether the Reduced Heating operating program is active for heating circuit 0 (read-only)", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.reducedHeating/commands/setTemperature"), false, false),
+                Arguments.of("normalHeating", 21, OnOffType.ON, "Heating Circuit 0 Normal Heating Operating Program Temperature", "Shows the Normal Heating operating program target temperature for heating circuit 0 (read/write)", "Heating Circuit 0 Normal Heating Operating Program Active", "Shows whether the Normal Heating operating program is active for heating circuit 0 (read-only)", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normalHeating/commands/setTemperature"), false, false),
+                Arguments.of("comfortHeating", 22, OnOffType.OFF, "Heating Circuit 0 Comfort Heating Operating Program Temperature", "Shows the Comfort Heating operating program target temperature for heating circuit 0 (read/write)", "Heating Circuit 0 Comfort Heating Operating Program Active", "Shows whether the Comfort Heating operating program is active for heating circuit 0 (read-only)", 3.0, 37.0, URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.comfortHeating/commands/setTemperature"), false, false),
+                Arguments.of("eco", 21, OnOffType.OFF, "Heating Circuit 0 Eco Operating Program Temperature", "Shows the Eco operating program target temperature for heating circuit 0 (read-only)", "Heating Circuit 0 Eco Operating Program Active", "Shows whether the Eco operating program is active for heating circuit 0 (read-only)", null, null, null, false, false),
+                Arguments.of("external", 0, OnOffType.OFF, "Heating Circuit 0 External Operating Program Temperature", "Shows the External operating program target temperature for heating circuit 0 (read-only)", "Heating Circuit 0 External Operating Program Active", "Shows whether the External operating program is active for heating circuit 0 (read-only)", null, null, null, false, false)
                          );
     }
 
@@ -698,7 +700,9 @@ public class VicareBindingTest {
                                                         String expectedActiveDescription,
                                                         Double expectedMin,
                                                         Double expectedMax,
-                                                        URI expectedURI) throws AuthenticationException, IOException, CommandFailureException {
+                                                        URI expectedURI,
+                                                        boolean activateEnabled,
+                                                        boolean deactivateEnabled) throws AuthenticationException, IOException, CommandFailureException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
         bridgeHandler = new VicareBridgeHandler(vicareServiceProvider, bridge);
@@ -710,10 +714,10 @@ public class VicareBindingTest {
         ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
         ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
         registerAndInitialize(handler);
-        InOrder inOrder = inOrder(vicareService);
+        InOrder inOrder = inOrder(vicareService, callback);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
-        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+        inOrder.verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
         Channel channel = findChannelNoVerify(thingCaptor, "heating_circuits_0_operating_programs_" + featureSuffix);
         assertEquals("heating.circuits.0.operating.programs." + featureSuffix, channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
@@ -730,15 +734,16 @@ public class VicareBindingTest {
         assertEquals(expectedActiveLabel, opProgramActiveChannelType.getLabel());
         assertEquals(expectedActiveDescription, opProgramActiveChannelType.getDescription());
         assertEquals("Switch", opProgramActiveChannelType.getItemType());
+        assertEquals(!(activateEnabled || deactivateEnabled), opProgramActiveChannelType.getState().isReadOnly());
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
-        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        inOrder.verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
         assertEquals(expectedTemperature, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
 
         handler.handleCommand(activeChannel.getUID(), RefreshType.REFRESH);
-        verify(callback, timeout(1000)).stateUpdated(eq(activeChannel.getUID()), stateCaptor.capture());
+        inOrder.verify(callback, timeout(1000)).stateUpdated(eq(activeChannel.getUID()), stateCaptor.capture());
         assertEquals(expectedActive, stateCaptor.getValue());
 
         if (expectedURI != null) {
@@ -747,7 +752,15 @@ public class VicareBindingTest {
             assertEquals(BigDecimal.valueOf(1.0), opProgramChannelType.getState().getStep());
             assertFalse(opProgramChannelType.getState().isReadOnly());
             handler.handleCommand(channel.getUID(), QuantityType.valueOf("15  °C"));
-            verify(vicareService, timeout(1000)).sendCommand(expectedURI, Map.of("targetTemperature", 15.0));
+            inOrder.verify(vicareService, timeout(1000)).sendCommand(expectedURI, Map.of("targetTemperature", 15.0));
+        }
+
+        if (activateEnabled) {
+            assertEquals(AutoUpdatePolicy.VETO, opProgramActiveChannelType.getAutoUpdatePolicy());
+            handler.handleCommand(activeChannel.getUID(), OnOffType.ON);
+            inOrder.verify(vicareService, timeout(1000)).sendCommand(expectedURI.resolve("activate"), emptyMap());
+            inOrder.verify(callback, timeout(1000)).stateUpdated(eq(activeChannel.getUID()), stateCaptor.capture());
+            assertEquals(OnOffType.ON, stateCaptor.getValue());
         }
     }
 
@@ -873,7 +886,7 @@ public class VicareBindingTest {
         Channel enumChannel = findChannelNoVerify(thingCaptor, "heating_circuits_0_operating_modes_active_value");
         ChannelType enumChannelType = channelTypeRegistry.getChannelType(enumChannel.getChannelTypeUID());
         assertEquals("Heating Circuit 0 Active Operating Mode", enumChannelType.getLabel());
-        assertEquals("Shows the current active operating mode on the device for Heating Circuit 0", enumChannelType.getDescription());
+        assertEquals("Shows the current active operating mode on the device for Heating Circuit 0 (read/write)", enumChannelType.getDescription());
         assertEquals("heating.circuits.0.operating.modes.active", enumChannel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         Optional<Class<? extends ThingHandlerService>> descriptionProviderClass = handler.getServices().stream().filter(
@@ -950,14 +963,14 @@ public class VicareBindingTest {
         assertNotNull(slopeChannel);
         ChannelType slopeChannelType = channelTypeRegistry.getChannelType(slopeChannel.getChannelTypeUID());
         assertEquals("Heating Circuit 0 Heating Curve Slope", slopeChannelType.getLabel());
-        assertEquals("Shows the value for slope of the heating curve for Heating Circuit 0", slopeChannelType.getDescription());
+        assertEquals("Shows the value for slope of the heating curve for Heating Circuit 0 (read-only)", slopeChannelType.getDescription());
         assertEquals("heating.circuits.0.heating.curve", slopeChannel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         Channel shiftChannel = findChannelNoVerify(thingCaptor, "heating_circuits_0_heating_curve_shift");
         assertNotNull(shiftChannel);
         ChannelType shiftChannelType = channelTypeRegistry.getChannelType(shiftChannel.getChannelTypeUID());
         assertEquals("Heating Circuit 0 Heating Curve Shift", shiftChannelType.getLabel());
-        assertEquals("Shows the value for shift of the heating curve for Heating Circuit 0", shiftChannelType.getDescription());
+        assertEquals("Shows the value for shift of the heating curve for Heating Circuit 0 (read-only)", shiftChannelType.getDescription());
         assertEquals("heating.circuits.0.heating.curve", shiftChannel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(slopeChannel.getUID(), RefreshType.REFRESH);
@@ -993,7 +1006,7 @@ public class VicareBindingTest {
         ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
         assertEquals("heating.circuits.0.circulation.pump", channel.getProperties().get(PROPERTY_FEATURE_NAME));
         assertEquals("Heating Circuit 0 Circulation Pump Status", channelType.getLabel());
-        assertEquals("Shows the state of the circulation pump (on, off) for heating circuit 0", channelType.getDescription());
+        assertEquals("Shows the state of the circulation pump (on, off) for heating circuit 0 (read-only)", channelType.getDescription());
 
         Channel burnerChannel = findChannel(thingCaptor, "heating_burners_0_active");
         assertNotNull(burnerChannel);
@@ -1055,7 +1068,7 @@ public class VicareBindingTest {
         assertNotNull(channel);
         ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
         assertEquals("Heating Circuit 0 Name", channelType.getLabel());
-        assertEquals("Shows the name given for Heating Circuit 0", channelType.getDescription());
+        assertEquals("Shows the name given for Heating Circuit 0 (read-only)", channelType.getDescription());
         assertEquals("heating.circuits.0", channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
@@ -1085,7 +1098,7 @@ public class VicareBindingTest {
         assertNotNull(channel);
         ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
         assertEquals("Heating Circuit 0 Name", channelType.getLabel());
-        assertEquals("Shows the name given for Heating Circuit 0", channelType.getDescription());
+        assertEquals("Shows the name given for Heating Circuit 0 (read-only)", channelType.getDescription());
         assertEquals("heating.circuits.0.name", channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
@@ -1097,10 +1110,10 @@ public class VicareBindingTest {
 
     public static Stream<Arguments> source_heatingCircuitsOperatingModes() {
         return Stream.of(
-                Arguments.of("dhw", OnOffType.OFF, "Heating Circuit 1 DHW Operating Mode Active", "Shows whether the domestic hot water (DHW) only operating mode is active for Heating Circuit 1."),
-                Arguments.of("dhwAndHeating", OnOffType.ON, "Heating Circuit 1 DHW And Heating Operating Mode Active", "Shows whether the domestic hot water (DHW) and heating operating mode is active for Heating Circuit 1."),
-                Arguments.of("standby", OnOffType.OFF, "Heating Circuit 1 Standby Operating Mode Active", "Shows whether the Standby operating mode is active now for Heating Circuit 1. In this mode, the device will only start heating to protect installation from frost. Other commands, e.g. charging of DHW (oneTimeCharge), are still executable while this operating mode is active."),
-                Arguments.of("heating", OnOffType.OFF, "Heating Circuit 1 Heating Operating Mode Active", "Shows whether the Heating operating mode is active for Heating Circuit 1.")
+                Arguments.of("dhw", OnOffType.OFF, "Heating Circuit 1 DHW Operating Mode Active", "Shows whether the domestic hot water (DHW) only operating mode is active for Heating Circuit 1. (read-only)"),
+                Arguments.of("dhwAndHeating", OnOffType.ON, "Heating Circuit 1 DHW And Heating Operating Mode Active", "Shows whether the domestic hot water (DHW) and heating operating mode is active for Heating Circuit 1. (read-only)"),
+                Arguments.of("standby", OnOffType.OFF, "Heating Circuit 1 Standby Operating Mode Active", "Shows whether the Standby operating mode is active now for Heating Circuit 1. In this mode, the device will only start heating to protect installation from frost. Other commands, e.g. charging of DHW (oneTimeCharge), are still executable while this operating mode is active. (read-only)"),
+                Arguments.of("heating", OnOffType.OFF, "Heating Circuit 1 Heating Operating Mode Active", "Shows whether the Heating operating mode is active for Heating Circuit 1. (read-only)")
         );
     }
 
@@ -1180,7 +1193,7 @@ public class VicareBindingTest {
 
         ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
         assertEquals("Heating Circuit 1 Extended Heating Active", channelType.getLabel());
-        assertEquals("If activated, the last program activated by the schedule will be sustained until this feature is deactivated.", channelType.getDescription());
+        assertEquals("If activated, the last program activated by the schedule will be sustained until this feature is deactivated. (read-only)", channelType.getDescription());
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
@@ -1191,25 +1204,25 @@ public class VicareBindingTest {
 
     public static Stream<Arguments> source_heatingCircuitsOperatingProgramsStatusSensorFeatures() {
         return Stream.of(
-                Arguments.of("standby", 1, OnOffType.OFF, "Heating Circuit 1 Standby Operating Program Active", "Shows whether the Standby operating program is active for heating circuit 1", null, null, null, null),
-                Arguments.of("summerEco", 1, OnOffType.OFF, "Heating Circuit 1 Summer Eco Operating Program Active", "Shows whether the Summer Eco operating program is active for heating circuit 1", null, null, null, null),
-                Arguments.of("fixed", 1, OnOffType.OFF, "Heating Circuit 1 Fixed Operating Program Active", "Shows whether the Fixed operating program is active for heating circuit 1", null, null, null, null),
-                Arguments.of("normalEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Normal Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Normal operating program is scheduled on heating circuit 1",
+                Arguments.of("standby", 1, OnOffType.OFF, "Heating Circuit 1 Standby Operating Program Active", "Shows whether the Standby operating program is active for heating circuit 1 (read-only)", null, null, null, null),
+                Arguments.of("summerEco", 1, OnOffType.OFF, "Heating Circuit 1 Summer Eco Operating Program Active", "Shows whether the Summer Eco operating program is active for heating circuit 1 (read-only)", null, null, null, null),
+                Arguments.of("fixed", 1, OnOffType.OFF, "Heating Circuit 1 Fixed Operating Program Active", "Shows whether the Fixed operating program is active for heating circuit 1 (read-only)", null, null, null, null),
+                Arguments.of("normalEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Normal Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Normal operating program is scheduled on heating circuit 1 (read-only)",
                              "Heating Circuit 1 Normal Energy Saving Operating Program Reason", "summerEco",
                              "Heating Circuit 1 Normal Energy Saving Operating Program Demand", "heating"),
-                Arguments.of("reducedEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Reduced Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Reduced operating program is scheduled on heating circuit 1",
+                Arguments.of("reducedEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Reduced Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Reduced operating program is scheduled on heating circuit 1 (read-only)",
                              "Heating Circuit 1 Reduced Energy Saving Operating Program Reason", "unknown",
                              "Heating Circuit 1 Reduced Energy Saving Operating Program Demand", "heating"),
-                Arguments.of("comfortEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Comfort Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Comfort operating program is scheduled on heating circuit 1",
+                Arguments.of("comfortEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Comfort Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Comfort operating program is scheduled on heating circuit 1 (read-only)",
                              "Heating Circuit 1 Comfort Energy Saving Operating Program Reason", "summerEco",
                              "Heating Circuit 1 Comfort Energy Saving Operating Program Demand", "heating"),
-                Arguments.of("normalCoolingEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Normal Cooling Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Normal Cooling operating program is scheduled on heating circuit 1",
+                Arguments.of("normalCoolingEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Normal Cooling Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Normal Cooling operating program is scheduled on heating circuit 1 (read-only)",
                              "Heating Circuit 1 Normal Cooling Energy Saving Operating Program Reason", "summerEco",
                              "Heating Circuit 1 Normal Cooling Energy Saving Operating Program Demand", "cooling"),
-                Arguments.of("reducedCoolingEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Reduced Cooling Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Reduced Cooling operating program is scheduled on heating circuit 1",
+                Arguments.of("reducedCoolingEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Reduced Cooling Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Reduced Cooling operating program is scheduled on heating circuit 1 (read-only)",
                              "Heating Circuit 1 Reduced Cooling Energy Saving Operating Program Reason", "summerEco",
                              "Heating Circuit 1 Reduced Cooling Energy Saving Operating Program Demand", "cooling"),
-                Arguments.of("comfortCoolingEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Comfort Cooling Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Comfort Cooling operating program is scheduled on heating circuit 1",
+                Arguments.of("comfortCoolingEnergySaving", 1, OnOffType.OFF, "Heating Circuit 1 Comfort Cooling Energy Saving Operating Program Active", "Shows whether the device is currently in the Energy Saving operating mode while the Comfort Cooling operating program is scheduled on heating circuit 1 (read-only)",
                              "Heating Circuit 1 Comfort Cooling Energy Saving Operating Program Reason", "summerEco",
                              "Heating Circuit 1 Comfort Cooling Energy Saving Operating Program Demand", "cooling")
                          );
@@ -1285,8 +1298,8 @@ public class VicareBindingTest {
 
     public static Stream<Arguments> source_heatingCircuitsSensorsTemperatureSupply() {
         return Stream.of(Arguments.of("heating_circuits_1_sensors_temperature_supply", "heating.circuits.1.sensors.temperature.supply",
-                                      "Heating Circuit 1 Supply Temperature", "Shows the value of the supply temperature sensor for Heating Circuit 1", DecimalType.valueOf("24.6"),
-                                      "Heating Circuit 1 Supply Temperature Sensor Status", "Shows the status of the supply temperature sensor for Heating Circuit 1", "connected"),
+                                      "Heating Circuit 1 Supply Temperature", "Shows the value of the supply temperature sensor for Heating Circuit 1 (read-only)", DecimalType.valueOf("24.6"),
+                                      "Heating Circuit 1 Supply Temperature Sensor Status", "Shows the status of the supply temperature sensor for Heating Circuit 1 (read-only)", "connected"),
                          Arguments.of("heating_primaryCircuit_sensors_temperature_supply", "heating.primaryCircuit.sensors.temperature.supply",
                                       "Primary Circuit Supply Temperature", "Shows the temperature value of the primary source's supply-temperature sensor of the heat pump", DecimalType.valueOf("17.4"),
                                       "Primary Circuit Supply Temperature Sensor Status", "Shows the status of the primary source's supply-temperature sensor", "connected"),
@@ -1294,8 +1307,8 @@ public class VicareBindingTest {
                                       "Secondary Circuit Supply Temperature", "Shows the temperature value of the secondary source's supply-temperature sensor of the heat pump", DecimalType.valueOf("34.1"),
                                       "Secondary Circuit Supply Temperature Sensor Status", "Shows the status of the secondary source's supply-temperature sensor", "connected"),
                          Arguments.of("heating_circuits_0_sensors_temperature_room", "heating.circuits.0.sensors.temperature.room",
-                                      "Heating Circuit 0 Room Temperature", "Shows the temperature value of the room temperature sensor for Heating Circuit 0", DecimalType.valueOf("24.1"),
-                                      "Heating Circuit 0 Room Temperature Sensor Status", "Shows the status of the room temperature sensor for Heating Circuit 0", "connected")
+                                      "Heating Circuit 0 Room Temperature", "Shows the temperature value of the room temperature sensor for Heating Circuit 0 (read-only)", DecimalType.valueOf("24.1"),
+                                      "Heating Circuit 0 Room Temperature Sensor Status", "Shows the status of the room temperature sensor for Heating Circuit 0 (read-only)", "connected")
 
         );
     }
@@ -1363,14 +1376,14 @@ public class VicareBindingTest {
         assertEquals("heating.circuits.0.temperature.levels", minChannel.getProperties().get(PROPERTY_FEATURE_NAME));
         ChannelType minChannelType = channelTypeRegistry.getChannelType(minChannel.getChannelTypeUID());
         assertEquals("Heating Circuit 0 Minimum Temperature Level", minChannelType.getLabel());
-        assertEquals("Shows the lower limit of the supply temperature for Heating Circuit 0", minChannelType.getDescription());
+        assertEquals("Shows the lower limit of the supply temperature for Heating Circuit 0 (read/write)", minChannelType.getDescription());
 
         Channel maxChannel = findChannelNoVerify(thingCaptor, "heating_circuits_0_temperature_levels_max");
         assertNotNull(maxChannel);
         assertEquals("heating.circuits.0.temperature.levels", maxChannel.getProperties().get(PROPERTY_FEATURE_NAME));
         ChannelType maxChannelType = channelTypeRegistry.getChannelType(maxChannel.getChannelTypeUID());
         assertEquals("Heating Circuit 0 Maximum Temperature Level", maxChannelType.getLabel());
-        assertEquals("Shows the upper limit of the supply temperature for Heating Circuit 0", maxChannelType.getDescription());
+        assertEquals("Shows the upper limit of the supply temperature for Heating Circuit 0 (read/write)", maxChannelType.getDescription());
 
         handler.handleCommand(minChannel.getUID(), RefreshType.REFRESH);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
@@ -1405,7 +1418,7 @@ public class VicareBindingTest {
         assertNotNull(channel);
         ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
         assertEquals("Heating Circuit 1 Zone Mode Active", channelType.getLabel());
-        assertEquals("Shows if a zone is connected to Heating Circuit 1", channelType.getDescription());
+        assertEquals("Shows if a zone is connected to Heating Circuit 1 (read-only)", channelType.getDescription());
         assertEquals("heating.circuits.1.zone.mode", channel.getProperties().get(PROPERTY_FEATURE_NAME));
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
@@ -1435,7 +1448,7 @@ public class VicareBindingTest {
         assertNotNull(phaseChannel);
         ChannelType channelType = channelTypeRegistry.getChannelType(phaseChannel.getChannelTypeUID());
         assertEquals("Heating Compressor 0", channelType.getLabel());
-        assertEquals("Shows whether compressor 0 is active", channelType.getDescription());
+        assertEquals("Shows whether compressor 0 is active (read-only)", channelType.getDescription());
         assertEquals("heating.compressors.0", phaseChannel.getProperties().get(PROPERTY_FEATURE_NAME));
         assertTrue(channelType.getState().isReadOnly());
 
@@ -1443,7 +1456,7 @@ public class VicareBindingTest {
         assertNotNull(activeChannel);
         ChannelType activeChannelType = channelTypeRegistry.getChannelType(activeChannel.getChannelTypeUID());
         assertEquals("Heating Compressor 0 Active", activeChannelType.getLabel());
-        assertEquals("Shows whether compressor 0 is active", activeChannelType.getDescription());
+        assertEquals("Shows whether compressor 0 is active (read-only)", activeChannelType.getDescription());
         assertEquals("Switch", activeChannelType.getItemType());
         assertTrue(activeChannelType.getState().isReadOnly());
 
@@ -1480,7 +1493,7 @@ public class VicareBindingTest {
         assertEquals("heating.compressors.0.statistics", channel.getProperties().get(PROPERTY_FEATURE_NAME));
         ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
         assertEquals("Heating Compressor 0 Starts", channelType.getLabel());
-        assertEquals("Shows the number of starts of Heating Compressor 0", channelType.getDescription());
+        assertEquals("Shows the number of starts of Heating Compressor 0 (read-only)", channelType.getDescription());
         assertEquals("Number", channelType.getItemType());
         assertTrue(channelType.getState().isReadOnly());
 
@@ -1488,7 +1501,7 @@ public class VicareBindingTest {
         assertEquals("heating.compressors.0.statistics", channel.getProperties().get(PROPERTY_FEATURE_NAME));
         ChannelType hoursChannelType = channelTypeRegistry.getChannelType(hoursChannel.getChannelTypeUID());
         assertEquals("Heating Compressor 0 Hours", hoursChannelType.getLabel());
-        assertEquals("Shows the number of working hours of Heating Compressor 0", hoursChannelType.getDescription());
+        assertEquals("Shows the number of working hours of Heating Compressor 0 (read-only)", hoursChannelType.getDescription());
         assertEquals("Number", hoursChannelType.getItemType());
         assertTrue(hoursChannelType.getState().isReadOnly());
 

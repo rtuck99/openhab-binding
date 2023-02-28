@@ -417,6 +417,7 @@ public class VicareServiceTest {
                 .filter(f -> f.getName().equals("heating.circuits.0.temperature.levels"))
                 .map(Feature.class::cast)
                 .findFirst();
+        assertTrue(temperatureLevels.get() instanceof StatusSensorFeature);
         assertTrue(temperatureLevels.isPresent());
         assertEquals(20, ((DimensionalValue)temperatureLevels.get().getProperties().get("min")).getValue(), 1e-6);
         assertEquals("celsius", ((DimensionalValue)temperatureLevels.get().getProperties().get("min")).getUnit().getName());

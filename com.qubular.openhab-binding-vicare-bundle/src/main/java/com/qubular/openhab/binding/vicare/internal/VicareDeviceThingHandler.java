@@ -43,7 +43,8 @@ import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThingUniqueId;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.escapeUIDSegment;
 import static java.lang.String.format;
-import static java.util.Collections.emptyMap;
+import static java.lang.String.join;
+import static java.util.Collections.*;
 import static java.util.stream.Collectors.toMap;
 import static org.osgi.service.event.EventConstants.EVENT_TOPIC;
 
@@ -65,6 +66,11 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
             PROPERTY_DEVICE_UNIQUE_ID,
             PROPERTY_MODEL_ID,
             PROPERTY_BOILER_SERIAL
+    );
+
+    private static final Map<String, String> COMMAND_NAMES_TO_PROPS = Map.of(
+            "activate", PROPERTY_ON_COMMAND_NAME,
+            "deactivate", PROPERTY_OFF_COMMAND_NAME
     );
 
     private static final Logger logger = LoggerFactory.getLogger(VicareDeviceThingHandler.class);
@@ -128,7 +134,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                             Map<String, String> props = Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                     PROPERTY_PROP_NAME, statName);
                             return channelBuilder(new ChannelUID(thing.getUID(), id + "_" + statName),
-                                                  feature, id + "_" + statName, null, props, null)
+                                                  feature, id + "_" + statName, null, props)
                                     .map(c -> c.withProperties(props))
                                     .map(ChannelBuilder::build);
                         }
@@ -149,7 +155,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                             if (f.getStatus() != null && !StatusValue.NA.equals(f.getStatus())) {
                                 String statusId = id + "_status";
                                 ChannelType statusTemplate = findTemplate(f, "status");
-                                channelBuilder(new ChannelUID(thing.getUID(), statusId), f, statusId, statusTemplate, props, null)
+                                channelBuilder(new ChannelUID(thing.getUID(), statusId), f, statusId, statusTemplate, props)
                                         .map(c -> c.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                                                           PROPERTY_PROP_NAME, "status")))
                                         .map(ChannelBuilder::build)
@@ -157,15 +163,20 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                             } else if (f.isActive() != null) {
                                 String activeId = id + "_active";
                                 ChannelType activeTemplate = findTemplate(f, "active");
-                                channelBuilder(new ChannelUID(thing.getUID(), activeId), f, activeId, activeTemplate, props, null)
-                                        .map(c -> c.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
-                                                                          PROPERTY_PROP_NAME, "active")))
+                                Map<String, String> propMap = new HashMap<>(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
+                                                                    PROPERTY_PROP_NAME, "active"));
+
+                                List<CommandDescriptor> commandDescriptors = FeatureUtil.activateCommands(f);
+                                commandDescriptors.forEach(c -> propMap.put(COMMAND_NAMES_TO_PROPS.get(c.getName()), c.getName()));
+                                channelBuilder(new ChannelUID(thing.getUID(), activeId), f, activeId, activeTemplate, props,
+                                               commandDescriptors)
+                                        .map(c -> c.withProperties(propMap))
                                         .map(ChannelBuilder::build)
                                         .ifPresent(channels::add);
                             }
                         }
 
-                        private void maybeAddPropertiesForSetter(Feature f, String name, Map<String, String> props) {
+                        private Optional<CommandDescriptor> maybeAddPropertiesForSetter(Feature f, String name, Map<String, String> props) {
                             Optional<CommandDescriptor> setter = ChannelTypeUtil.getSetterCommandDescriptor(f, name);
                             if (!setter.isPresent() && "value".equals(name)) {
                                 setter = f.getCommands().stream()
@@ -177,6 +188,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                                 props.put(PROPERTY_COMMAND_NAME, command.getName());
                                 props.put(PROPERTY_PARAM_NAME, command.getParams().get(0).getName());
                             }
+                            return setter;
                         }
 
                         @Override
@@ -187,9 +199,21 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                                                 String statusId = escapeUIDSegment(f.getName() + "_status");
                                                 channelBuilder(new ChannelUID(thing.getUID(), statusId), f, statusId,
                                                                findTemplate(f, "status"),
-                                                               FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()), null)
+                                                               FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()))
                                                         .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                                                                             PROPERTY_PROP_NAME, "status")).build())
+                                                        .ifPresent(channels::add);
+                                                break;
+                                            case "active":
+                                                String id = escapeUIDSegment(f.getName() + "_" + k);
+                                                List<CommandDescriptor> commandDescriptors = FeatureUtil.activateCommands(f);
+                                                Map<String, String> propMap = new HashMap<>(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
+                                                                                     PROPERTY_PROP_NAME, k));
+                                                commandDescriptors.forEach(c -> propMap.put(COMMAND_NAMES_TO_PROPS.get(c.getName()), c.getName()));
+                                                channelBuilder(new ChannelUID(thing.getUID(), id), f, id, findTemplate(f, k),
+                                                               FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()),
+                                                               commandDescriptors)
+                                                        .map(cb -> cb.withProperties(propMap).build())
                                                         .ifPresent(channels::add);
                                                 break;
                                             default:
@@ -203,7 +227,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                                                     public void visit(BooleanValue v) {
                                                         String id = escapeUIDSegment(f.getName() + "_" + k);
                                                         channelBuilder(new ChannelUID(thing.getUID(), id), f, id, findTemplate(f, k),
-                                                                       FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()), null)
+                                                                       FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()))
                                                                 .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                                                                                     PROPERTY_PROP_NAME, k)).build())
                                                                 .ifPresent(channels::add);
@@ -214,11 +238,13 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                                                         Map<String, String> props = new HashMap<>();
                                                         props.put(PROPERTY_FEATURE_NAME, feature.getName());
                                                         props.put(PROPERTY_PROP_NAME, k);
-                                                        maybeAddPropertiesForSetter(f, k, props);
+                                                        Optional<CommandDescriptor> commandDescriptor = maybeAddPropertiesForSetter(
+                                                                f, k, props);
                                                         String id = escapeUIDSegment(f.getName() + "_" + k);
                                                         channelBuilder(new ChannelUID(thing.getUID(), id), f, id,
                                                                        findTemplate(f, k),
-                                                                       FeatureUtil.extractTemplatePropertiesFromFeature(f, props), null)
+                                                                       FeatureUtil.extractTemplatePropertiesFromFeature(f, props),
+                                                                       commandDescriptor.orElse(null))
                                                                 .map(cb -> cb.withProperties(props).build())
                                                                 .ifPresent(channels::add);
                                                     }
@@ -237,7 +263,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                                                     public void visit(StringValue v) {
                                                         String id = escapeUIDSegment(f.getName() + "_" + k);
                                                         channelBuilder(new ChannelUID(thing.getUID(), id), f, id, findTemplate(f, k),
-                                                                       FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()), null)
+                                                                       FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()))
                                                                 .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                                                         PROPERTY_PROP_NAME, k)).build())
                                                                 .ifPresent(channels::add);
@@ -282,14 +308,14 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                             String slopeId = escapeUIDSegment(f.getName() + "_slope");
                             channelBuilder(new ChannelUID(thing.getUID(), slopeId), f, slopeId,
                                            findTemplate(f, "slope"),
-                                           FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()), null)
+                                           FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()))
                                     .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                                                         PROPERTY_PROP_NAME, "slope")).build())
                                     .ifPresent(channels::add);
                             String shiftId = escapeUIDSegment(f.getName() + "_shift");
                             channelBuilder(new ChannelUID(thing.getUID(), shiftId), f, shiftId,
                                            findTemplate(f, "shift"),
-                                           FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()), null)
+                                           FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()))
                                     .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
                                                                         PROPERTY_PROP_NAME, "shift")).build())
                                     .ifPresent(channels::add);
@@ -300,15 +326,15 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                             String activeId = escapeUIDSegment(feature.getName() + "_active");
                             String startId = escapeUIDSegment(feature.getName() + "_start");
                             String endId = escapeUIDSegment(feature.getName() + "_end");
-                            channelBuilder(new ChannelUID(thing.getUID(), activeId), datePeriodFeature, activeId, null, emptyMap(), null)
+                            channelBuilder(new ChannelUID(thing.getUID(), activeId), datePeriodFeature, activeId, null, emptyMap())
                                     .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                                                         PROPERTY_PROP_NAME, "active")).build())
                                     .ifPresent(channels::add);
-                            channelBuilder(new ChannelUID(thing.getUID(), startId), datePeriodFeature, startId, null, emptyMap(), null)
+                            channelBuilder(new ChannelUID(thing.getUID(), startId), datePeriodFeature, startId, null, emptyMap())
                                     .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                                                         PROPERTY_PROP_NAME, "start")).build())
                                     .ifPresent(channels::add);
-                            channelBuilder(new ChannelUID(thing.getUID(), endId), datePeriodFeature, endId, null, emptyMap(), null)
+                            channelBuilder(new ChannelUID(thing.getUID(), endId), datePeriodFeature, endId, null, emptyMap())
                                     .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                                                         PROPERTY_PROP_NAME, "end")).build())
                                     .ifPresent(channels::add);
@@ -351,10 +377,27 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                                                     Feature feature,
                                                     String id,
                                                     ChannelType template,
+                                                    Map<String, String> props) {
+        return channelBuilder(channelUID, feature, id, template, props, emptyList());
+    }
+
+    private Optional<ChannelBuilder> channelBuilder(ChannelUID channelUID,
+                                                    Feature feature,
+                                                    String id,
+                                                    ChannelType template,
                                                     Map<String, String> props,
                                                     CommandDescriptor commandDescriptor) {
+        return channelBuilder(channelUID, feature, id, template, props, commandDescriptor == null ? emptyList() : singletonList(commandDescriptor));
+    }
+
+    private Optional<ChannelBuilder> channelBuilder(ChannelUID channelUID,
+                                                    Feature feature,
+                                                    String id,
+                                                    ChannelType template,
+                                                    Map<String, String> props,
+                                                    List<CommandDescriptor> commandDescriptors) {
         Optional<ChannelTypeUID> channelTypeUID = createChannelType(feature, template,
-                                                                    id, props, commandDescriptor)
+                                                                    id, props, commandDescriptors)
                 .map(ChannelType::getUID);
         try {
             return channelTypeUID.map(ct -> getCallback().createChannelBuilder(channelUID, ct));
@@ -375,7 +418,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                     return channelBuilder(new ChannelUID(getThing().getUID(), id),
                                           feature,
                                           ChannelTypeUtil.channelIdToChannelType(id),
-                                          null, emptyMap(), null)
+                                          null, emptyMap())
                             .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                     PROPERTY_COMMAND_NAME, cd.getName())))
                             .map(ChannelBuilder::build);
@@ -405,139 +448,144 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
 
     public void syncHandleCommand(ChannelUID channelUID, Command command) {
         try {
-            Optional<Feature> feature = ((VicareBridgeHandler) getBridge().getHandler()).handleBridgedDeviceCommand(channelUID, command);
-            feature.ifPresent(f -> {
-                f.accept(new Feature.Visitor() {
-                    @Override
-                    public void visit(ConsumptionFeature f) {
-                        Channel channel = getThing().getChannel(channelUID);
-                        String statName = channel.getProperties().get(PROPERTY_PROP_NAME);
-                        updateConsumptionStat(() -> f.getConsumption(CONSUMPTION_STATS_BY_CHANNEL_NAME.get(statName))
-                                .map(DimensionalValue::getValue).orElse(0.0));
-                    }
-
-                    private void updateConsumptionStat(Supplier<Double> valueSupplier) {
-                        updateState(channelUID, new DecimalType(valueSupplier.get()));
-                    }
-
-                    @Override
-                    public void visit(NumericSensorFeature f) {
-                        Channel channel = getThing().getChannel(channelUID);
-                        String propName = channel.getProperties().get(PROPERTY_PROP_NAME);
-                        if ("active".equals(propName)) {
-                            updateState(channelUID, f.isActive() ? OnOffType.ON : OnOffType.OFF);
-                        } else if ("status".equals(propName)) {
-                            updateState(channelUID, StringType.valueOf(f.getStatus() == null ? null : f.getStatus().getName()));
-                        } else {
-                            double value = f.getValue().getValue();
-                            updateState(channelUID, new DecimalType(value));
+            if (command == RefreshType.REFRESH) {
+                Optional<Feature> feature = ((VicareBridgeHandler) getBridge().getHandler()).handleBridgedRefreshCommand(channelUID);
+                feature.ifPresent(f -> {
+                    f.accept(new Feature.Visitor() {
+                        @Override
+                        public void visit(ConsumptionFeature f) {
+                            Channel channel = getThing().getChannel(channelUID);
+                            String statName = channel.getProperties().get(PROPERTY_PROP_NAME);
+                            updateConsumptionStat(() -> f.getConsumption(CONSUMPTION_STATS_BY_CHANNEL_NAME.get(statName))
+                                    .map(DimensionalValue::getValue).orElse(0.0));
                         }
-                    }
 
-                    @Override
-                    public void visit(StatusSensorFeature f) {
-                        Channel channel = getThing().getChannel(channelUID);
-                        String propertyName = channel.getProperties().get(PROPERTY_PROP_NAME);
-                        State state;
-                        switch (propertyName) {
-                            case "status":
-                                state = StringType.valueOf(f.getStatus() == null ? null : f.getStatus().getName());
-                                break;
-                            default:
-                                Value value = f.getProperties().get(propertyName);
-                                var visitor = new Value.Visitor() {
-                                    State state = UnDefType.UNDEF;
-
-                                    @Override
-                                    public void visit(ArrayValue v) {
-                                        unsupportedValue(v);
-                                    }
-
-                                    @Override
-                                    public void visit(BooleanValue v) {
-                                        state = v.getValue() ? OnOffType.ON : OnOffType.OFF;
-                                    }
-
-                                    @Override
-                                    public void visit(DimensionalValue v) {
-                                        state = new DecimalType(v.getValue());
-                                    }
-
-                                    @Override
-                                    public void visit(LocalDateValue v) {
-                                        unsupportedValue(v);
-                                    }
-
-                                    @Override
-                                    public void visit(StatusValue v) {
-                                        unsupportedValue(v);
-                                    }
-
-                                    @Override
-                                    public void visit(StringValue v) {
-                                        state = new StringType(v.getValue());
-                                    }
-
-                                    private void unsupportedValue(Value v) {
-                                        logger.trace("Unable to update unsupported value {} for property {}.{}",
-                                                v, f.getName(), propertyName);
-                                    }
-                                };
-                                value.accept(visitor);
-                                state = visitor.state;
-                                break;
+                        private void updateConsumptionStat(Supplier<Double> valueSupplier) {
+                            updateState(channelUID, new DecimalType(valueSupplier.get()));
                         }
-                        updateState(channelUID, state);
-                    }
 
-                    @Override
-                    public void visit(TextFeature f) {
-                        logger.info("Update {} with {}", channelUID, f.getValue());
-                        updateState(channelUID, new StringType(f.getValue()));
-                    }
-
-                    @Override
-                    public void visit(CurveFeature f) {
-                        Channel channel = getThing().getChannel(channelUID);
-                        switch (channel.getProperties().get(PROPERTY_PROP_NAME)) {
-                            case "slope":
-                                State slopeState = new DecimalType(f.getSlope().getValue());
-                                updateState(channelUID, slopeState);
-                                break;
-                            case "shift":
-                                State shiftState = new DecimalType(f.getShift().getValue());
-                                updateState(channelUID, shiftState);
-                                break;
+                        @Override
+                        public void visit(NumericSensorFeature f) {
+                            Channel channel = getThing().getChannel(channelUID);
+                            String propName = channel.getProperties().get(PROPERTY_PROP_NAME);
+                            if ("active".equals(propName)) {
+                                updateState(channelUID, f.isActive() ? OnOffType.ON : OnOffType.OFF);
+                            } else if ("status".equals(propName)) {
+                                updateState(channelUID, StringType.valueOf(f.getStatus() == null ? null : f.getStatus().getName()));
+                            } else {
+                                double value = f.getValue().getValue();
+                                updateState(channelUID, new DecimalType(value));
+                            }
                         }
-                    }
 
-                    @Override
-                    public void visit(DatePeriodFeature datePeriodFeature) {
-                        Channel channel = getThing().getChannel(channelUID);
-                        State newState = UnDefType.UNDEF;
-                        switch (channel.getProperties().get(PROPERTY_PROP_NAME)) {
-                            case "active":
-                                newState = StatusValue.ON.equals(datePeriodFeature.getActive()) ? OnOffType.ON : OnOffType.OFF;
-                                break;
-                            case "start":
-                                LocalDate startDate = datePeriodFeature.getStart();
-                                if (startDate != null) {
-                                    newState = new DateTimeType(startDate.atStartOfDay(ZoneId.systemDefault()));
-                                }
-                                break;
-                            case "end":
-                                LocalDate endDate = datePeriodFeature.getEnd();
-                                if (endDate != null) {
-                                    newState = new DateTimeType(endDate.atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()));
-                                }
-                                break;
+                        @Override
+                        public void visit(StatusSensorFeature f) {
+                            Channel channel = getThing().getChannel(channelUID);
+                            String propertyName = channel.getProperties().get(PROPERTY_PROP_NAME);
+                            State state;
+                            switch (propertyName) {
+                                case "status":
+                                    state = StringType.valueOf(f.getStatus() == null ? null : f.getStatus().getName());
+                                    break;
+                                default:
+                                    Value value = f.getProperties().get(propertyName);
+                                    var visitor = new Value.Visitor() {
+                                        State state = UnDefType.UNDEF;
+
+                                        @Override
+                                        public void visit(ArrayValue v) {
+                                            unsupportedValue(v);
+                                        }
+
+                                        @Override
+                                        public void visit(BooleanValue v) {
+                                            state = v.getValue() ? OnOffType.ON : OnOffType.OFF;
+                                        }
+
+                                        @Override
+                                        public void visit(DimensionalValue v) {
+                                            state = new DecimalType(v.getValue());
+                                        }
+
+                                        @Override
+                                        public void visit(LocalDateValue v) {
+                                            unsupportedValue(v);
+                                        }
+
+                                        @Override
+                                        public void visit(StatusValue v) {
+                                            unsupportedValue(v);
+                                        }
+
+                                        @Override
+                                        public void visit(StringValue v) {
+                                            state = new StringType(v.getValue());
+                                        }
+
+                                        private void unsupportedValue(Value v) {
+                                            logger.trace("Unable to update unsupported value {} for property {}.{}",
+                                                    v, f.getName(), propertyName);
+                                        }
+                                    };
+                                    value.accept(visitor);
+                                    state = visitor.state;
+                                    break;
+                            }
+                            updateState(channelUID, state);
                         }
-                        updateState(channelUID, newState);
-                    }
+
+                        @Override
+                        public void visit(TextFeature f) {
+                            logger.info("Update {} with {}", channelUID, f.getValue());
+                            updateState(channelUID, new StringType(f.getValue()));
+                        }
+
+                        @Override
+                        public void visit(CurveFeature f) {
+                            Channel channel = getThing().getChannel(channelUID);
+                            switch (channel.getProperties().get(PROPERTY_PROP_NAME)) {
+                                case "slope":
+                                    State slopeState = new DecimalType(f.getSlope().getValue());
+                                    updateState(channelUID, slopeState);
+                                    break;
+                                case "shift":
+                                    State shiftState = new DecimalType(f.getShift().getValue());
+                                    updateState(channelUID, shiftState);
+                                    break;
+                            }
+                        }
+
+                        @Override
+                        public void visit(DatePeriodFeature datePeriodFeature) {
+                            Channel channel = getThing().getChannel(channelUID);
+                            State newState = UnDefType.UNDEF;
+                            switch (channel.getProperties().get(PROPERTY_PROP_NAME)) {
+                                case "active":
+                                    newState = StatusValue.ON.equals(datePeriodFeature.getActive()) ? OnOffType.ON : OnOffType.OFF;
+                                    break;
+                                case "start":
+                                    LocalDate startDate = datePeriodFeature.getStart();
+                                    if (startDate != null) {
+                                        newState = new DateTimeType(startDate.atStartOfDay(ZoneId.systemDefault()));
+                                    }
+                                    break;
+                                case "end":
+                                    LocalDate endDate = datePeriodFeature.getEnd();
+                                    if (endDate != null) {
+                                        newState = new DateTimeType(endDate.atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()));
+                                    }
+                                    break;
+                            }
+                            updateState(channelUID, newState);
+                        }
+                    });
                 });
-            });
-            if (thing.getStatus() != ThingStatus.ONLINE) {
-                updateStatus(ThingStatus.ONLINE);
+                if (thing.getStatus() != ThingStatus.ONLINE) {
+                    updateStatus(ThingStatus.ONLINE);
+                }
+            } else if (command instanceof State){
+                Optional<State> newValue = getBridgeHandler().handleBridgedDeviceCommand(channelUID, (State) command);
+                newValue.ifPresent(state -> updateState(channelUID, state));
             }
         } catch (AuthenticationException e) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Unable to authenticate with Viessmann API: " + e.getMessage());
@@ -606,7 +654,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
     }
 
     private Optional<ChannelType> createChannelType(Feature feature, ChannelType template, String channelId,
-                                   Map<String, String> props, CommandDescriptor commandDescriptor) {
+                                   Map<String, String> props, List<CommandDescriptor> commandDescriptors) {
         String candidateChannelTypeId = ChannelTypeUtil.channelIdToChannelType(channelId);
         ChannelTypeUID channelTypeUID = new ChannelTypeUID(BINDING_ID, candidateChannelTypeId);
         ChannelType channelType = vicareServiceProvider.getChannelTypeRegistry().getChannelType(channelTypeUID);
@@ -664,15 +712,22 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
             channelTypeUID = new ChannelTypeUID(BINDING_ID, ChannelTypeUtil.deviceSpecificChannelTypeId(channelId,
                                                                                                         getThing()));
             StateChannelTypeBuilder builder = ChannelTypeBuilder.state(channelTypeUID, label, template.getItemType());
+            List<String> description = new ArrayList<>();
             if (template.getDescription() != null) {
-                String description = ChannelTypeUtil.substitutePropertyValues(template.getDescription(), props);
-                builder = builder.withDescription(description);
+                description.add(ChannelTypeUtil.substitutePropertyValues(template.getDescription(), props));
             }
-            builder = builder
-                    .withCategory(template.getCategory())
+            builder.withCategory(template.getCategory())
                     .withAutoUpdatePolicy(template.getAutoUpdatePolicy());
 
-            builder = ChannelTypeUtil.stateDescription(feature, builder, template, commandDescriptor);
+            ChannelTypeUtil.stateDescription(feature, builder, template, commandDescriptors)
+                    .ifPresent(frag -> {
+                        builder.withStateDescriptionFragment(frag);
+                        description.add(frag.isReadOnly() ? "(read-only)" : "(read/write)");
+                       }
+                    );
+            if (!description.isEmpty()) {
+                builder.withDescription(join(" ", description));
+            }
             channelType = builder.build();
             channelTypes.put(channelTypeUID, channelType);
         }

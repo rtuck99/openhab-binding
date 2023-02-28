@@ -50,6 +50,6 @@ public class DeviceDynamicCommandDescriptionProvider implements DynamicCommandDe
     }
 
     private Optional<CommandDescriptor> getCommandDescriptor(Channel channel) {
-        return getThingHandler().getBridgeHandler().getCommandDescriptor(channel);
+        return getThingHandler().getBridgeHandler().getCommandDescriptor(channel, null);
     }
 }

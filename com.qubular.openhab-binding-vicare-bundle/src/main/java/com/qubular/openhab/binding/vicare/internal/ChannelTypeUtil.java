@@ -7,9 +7,11 @@ import com.qubular.vicare.model.features.*;
 import com.qubular.vicare.model.params.EnumParamDescriptor;
 import com.qubular.vicare.model.params.NumericParamDescriptor;
 import org.openhab.core.thing.Thing;
+import org.openhab.core.thing.type.AutoUpdatePolicy;
 import org.openhab.core.thing.type.ChannelType;
 import org.openhab.core.thing.type.StateChannelTypeBuilder;
 import org.openhab.core.types.StateDescription;
+import org.openhab.core.types.StateDescriptionFragment;
 import org.openhab.core.types.StateDescriptionFragmentBuilder;
 import org.openhab.core.types.StateOption;
 
@@ -18,9 +20,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 class ChannelTypeUtil {
@@ -50,14 +50,14 @@ class ChannelTypeUtil {
         return channelId.replaceAll("(_[\\d+])(_?)", "$2");
     }
 
-    static StateChannelTypeBuilder stateDescription(Feature feature, StateChannelTypeBuilder builder, ChannelType template,
-                                                    CommandDescriptor commandDescriptor) {
+    static Optional<StateDescriptionFragment> stateDescription(Feature feature, StateChannelTypeBuilder builder, ChannelType template,
+                                                               Collection<CommandDescriptor> commandDescriptors) {
         StateDescription state = template.getState();
-        if (state != null || commandDescriptor != null) {
+        if (state != null || !commandDescriptors.isEmpty()) {
             StateDescriptionFragmentBuilder sdf = StateDescriptionFragmentBuilder.create();
-            ParamDescriptor paramDescriptor = commandDescriptor != null &&
-                    commandDescriptor.getParams().size() == 1 ?
-                    commandDescriptor.getParams().get(0) : null;
+            ParamDescriptor paramDescriptor = commandDescriptors.size() == 1 &&
+                    commandDescriptors.iterator().next().getParams().size() == 1 ?
+                    commandDescriptors.iterator().next().getParams().get(0) : null;
             feature.accept(new Feature.Visitor() {
                 @Override
                 public void visit(ConsumptionFeature f) {
@@ -104,12 +104,17 @@ class ChannelTypeUtil {
                 if (state.getOptions() != null && !state.getOptions().isEmpty())
                     sdf.withOptions(state.getOptions());
 
-                sdf.withReadOnly(state.isReadOnly());
+                boolean readOnly = commandDescriptors.isEmpty();
+                if (commandDescriptors.stream().anyMatch(c -> c.getName().equals("activate") || c.getName().equals("deactivate"))) {
+                    readOnly = false;
+                    builder = builder.withAutoUpdatePolicy(AutoUpdatePolicy.VETO);
+                }
+                sdf.withReadOnly(readOnly);
             }
 
-            return builder.withStateDescriptionFragment(sdf.build());
+            return Optional.of(sdf.build());
         } else {
-            return builder;
+            return Optional.empty();
         }
     }
 

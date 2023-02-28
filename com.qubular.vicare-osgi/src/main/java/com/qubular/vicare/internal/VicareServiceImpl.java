@@ -119,6 +119,17 @@ public class VicareServiceImpl implements VicareService {
 
     private static class ExtendedPayload {
         public long limitReset;
+        public String code;
+        public String reason;
+
+        @Override
+        public String toString() {
+            return "ExtendedPayload{" +
+                    "limitReset=" + limitReset +
+                    ", code='" + code + '\'' +
+                    ", reason='" + reason + '\'' +
+                    '}';
+        }
     }
 
     @Override
@@ -286,6 +297,9 @@ public class VicareServiceImpl implements VicareService {
                     HttpErrorResponse errorResponse = apiGson().fromJson(contentResponse.getContentAsString(), HttpErrorResponse.class);
                     String msg = format("Failed to send command, server returned %d, %s - %s", contentResponse.getStatus(), errorResponse.errorType, errorResponse.message);
                     logger.warn(msg);
+                    if (errorResponse.extendedPayload != null) {
+                        msg += format("Extended Payload: {}", errorResponse.extendedPayload);
+                    }
                     throw new IOException(msg);
                 } catch (Exception e) {
                     // never mind

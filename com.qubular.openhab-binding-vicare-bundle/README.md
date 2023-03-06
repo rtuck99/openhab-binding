@@ -76,3 +76,5 @@ Changelog
 ### 3.4.0
 
 * Add official support for OpenHAB 3.4
+* Issue #30 Add support for writing to heating circuit eco/comfort operating program active status (not all systems support this)
+* Issue #27 Add support for heating circuit room temperature sensor

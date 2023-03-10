@@ -4,7 +4,7 @@
 
   <groupId>com.qubular</groupId>
   <artifactId>com.qubular.openhab-binding</artifactId>
-  <version>3.4.0</version>
+  <version>3.4.1-SNAPSHOT</version>
   <licenses>
     <license>
       <name>Eclipse Public License 2.0</name>

@@ -11,6 +11,11 @@ Requirements
 
 This binding requires OpenHAB 3.4
 
+Upgrading from previous versions
+--------------------------------
+
+Remove the old binding, and then install the new one via the bindings page. There is no need to add or remove any of the Things they will still work with the new binding.
+
 Supported Devices
 ----------------
 
@@ -78,3 +83,9 @@ Changelog
 * Add official support for OpenHAB 3.4
 * Issue #30 Add support for writing to heating circuit eco/comfort operating program active status (not all systems support this)
 * Issue #27 Add support for heating circuit room temperature sensor
+
+Known Issues
+------------
+
+Please note due to recent changes in the underlying Viessmann API, some features that were
+previously supported under one name may now be reported elsewhere and therefore any existing Item links may need to be updated.

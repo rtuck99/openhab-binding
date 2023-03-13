@@ -536,7 +536,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
 
                         @Override
                         public void visit(TextFeature f) {
-                            logger.info("Update {} with {}", channelUID, f.getValue());
+                            logger.trace("Update {} with {}", channelUID, f.getValue());
                             updateState(channelUID, new StringType(f.getValue()));
                         }
 

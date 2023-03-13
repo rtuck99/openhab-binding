@@ -78,6 +78,10 @@ and they will appear in your Inbox.
 Changelog
 ---------
 
+### 3.4.1
+
+* Issue #35 Migrated to use new feature endpoints
+
 ### 3.4.0
 
 * Add official support for OpenHAB 3.4

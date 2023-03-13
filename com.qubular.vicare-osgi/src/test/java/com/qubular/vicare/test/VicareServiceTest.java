@@ -471,9 +471,9 @@ public class VicareServiceTest {
                 }
             }
         };
-        registerServlet("/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.temperature.levels/commands/setMax", iotServlet);
+        registerServlet("/iot/v1/features/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.temperature.levels/commands/setMax", iotServlet);
 
-        vicareService.sendCommand(URI.create("http://localhost:9000/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.temperature.levels/commands/setMax"),
+        vicareService.sendCommand(URI.create("http://localhost:9000/iot/v1/features/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.temperature.levels/commands/setMax"),
                                   Map.of("temperature", 46));
         assertEquals("{\"temperature\":46}", requestContent.get(1, TimeUnit.SECONDS));
     }
@@ -654,9 +654,9 @@ public class VicareServiceTest {
                 }
             }
         };
-        registerServlet("/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.modes.active/commands/setMode", iotServlet);
+        registerServlet("/iot/v1/features/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.modes.active/commands/setMode", iotServlet);
 
-        vicareService.sendCommand(URI.create("http://localhost:9000/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.modes.active/commands/setMode"),
+        vicareService.sendCommand(URI.create("http://localhost:9000/iot/v1/features/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.modes.active/commands/setMode"),
                                   Map.of("mode", "dhwAndHeating"));
         assertEquals("{\"mode\":\"dhwAndHeating\"}", requestContent.get(1, TimeUnit.SECONDS));
     }
@@ -958,7 +958,7 @@ public class VicareServiceTest {
             protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
                 try {
-                    assertEquals("/iot/equipment/installations/2012616/gateways/7633107093013212/devices/0/features", URI.create(req.getRequestURI()).getPath());
+                    assertEquals("/iot/features/installations/2012616/gateways/7633107093013212/devices/0/features", URI.create(req.getRequestURI()).getPath());
                     assertEquals("Bearer mytoken", req.getHeader("Authorization"));
                     String jsonResponse = new String(getClass().getResourceAsStream(fileName).readAllBytes(), StandardCharsets.UTF_8);
 

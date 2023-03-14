@@ -33,7 +33,7 @@ public class SimpleConfiguration implements VicareConfiguration {
 
     @Override
     public String getAccessServerURI() {
-        return String.valueOf(ofNullable(configurationParameters.get("accessServerUri")).orElse("https://iam.viessmann.com/idp/v2/token"));
+        return String.valueOf(ofNullable(configurationParameters.get("accessServerUri")).orElse("https://iam.viessmann.com/idp/v3/token"));
     }
 
     @Override

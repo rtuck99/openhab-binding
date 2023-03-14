@@ -11,7 +11,6 @@ import com.qubular.vicare.model.Gateway;
 import com.qubular.vicare.model.Installation;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.util.FormContentProvider;
-import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.util.Fields;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +26,6 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.http.HttpHeaders;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
@@ -50,7 +48,6 @@ public class VicareServlet extends HttpServlet {
     private final VicareService vicareService;
     public static final String CONTEXT_PATH = "/vicare";
 
-    public static final URI AUTHORISE_ENDPOINT = URI.create("https://iam.viessmann.com/idp/v2/authorize");
     private static final Logger logger = LoggerFactory.getLogger(VicareServlet.class);
 
 
@@ -244,7 +241,7 @@ public class VicareServlet extends HttpServlet {
                 "client_id", config.getClientId());
 
 
-        return AUTHORISE_ENDPOINT.toString() + "?" +
+        return URI.create(config.getAccessServerURI()).resolve("authorize") + "?" +
                 URIHelper.generateQueryParamsForURI(queryParams);
     }
 

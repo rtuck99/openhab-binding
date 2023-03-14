@@ -214,6 +214,27 @@ public class VicareServiceTest {
     }
 
     @Test
+    @DisabledIf("realConnection")
+    public void browserRedirectUsesEndpointRelativeToConfigured() throws ExecutionException, InterruptedException, TimeoutException, ServletException, NamespaceException, IOException, GeneralSecurityException {
+        String contentAsString = httpClient.GET("http://localhost:9000/vicare/setup")
+                .getContentAsString();
+        AtomicReference<Map<String,String[]>> parameterMap = new AtomicReference<>();
+
+        System.out.print(contentAsString);
+        Matcher matcher = Pattern.compile("<form action=\"(.*?)\"", Pattern.MULTILINE)
+                .matcher(contentAsString);
+        assertTrue(matcher.find(), contentAsString);
+
+        String reflectorUri = matcher.group(1);
+        httpClient.setFollowRedirects(false);
+        ContentResponse reflectorResponse = httpClient.GET(reflectorUri);
+        assertEquals(HttpServletResponse.SC_FOUND, reflectorResponse.getStatus());
+        String redirectUri = reflectorResponse.getHeaders().get("Location");
+
+        assertEquals("http://localhost:9000/authorize", redirectUri.substring(0, redirectUri.indexOf('?')));
+    }
+
+    @Test
     @EnabledIf("realConnection")
     public void demoAuthentication() throws InterruptedException {
         Thread.sleep(180000);

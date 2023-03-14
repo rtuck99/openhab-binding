@@ -6,7 +6,7 @@ import java.io.File;
 import java.net.URI;
 
 public interface VicareConfiguration {
-    String DEFAULT_ACCESS_SERVER_URI = "https://iam.viessmann.com/idp/v2/token";
+    String DEFAULT_ACCESS_SERVER_URI = "https://iam.viessmann.com/idp/v3/token";
     String DEFAULT_IOT_SERVER_URI = "https://api.viessmann.com/iot/v1/";
     String getClientId();
 

@@ -16,7 +16,7 @@
       <parameter name="accessServerUri" type="text">
         <label>Access Server URI</label>
         <description>URI for the OAuth access server endpoint. You should not need to change this.</description>
-        <default>https://iam.viessmann.com/idp/v2/token</default>
+        <default>https://iam.viessmann.com/idp/v3/token</default>
       </parameter>
       <parameter name="iotServerUri" type="text">
         <label>IoT Service Endpoint</label>

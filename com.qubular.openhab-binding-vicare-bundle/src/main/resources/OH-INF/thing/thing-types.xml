@@ -176,10 +176,14 @@
     <label>Deactivate DHW One Time Charge</label>
     <description>The command to deactivate the one-time charge of domestic hot water. The command will be sent when this channel receives the ON command.</description>
   </channel-type>
-  <channel-type id="heating_dhw_operating_modes_off_active">
+  <channel-type id="template_heating_dhw_operating_modes_-_active">
     <item-type>Switch</item-type>
-    <label>DHW Operating Modes Off</label>
+    <label>DHW ${pretty:operatingMode} Operating Mode Active</label>
     <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_dhw_operating_modes_active_value">
+    <item-type>String</item-type>
+    <label>DHW Active Operating Mode</label>
   </channel-type>
   <channel-type id="heating_dhw_status">
     <item-type>String</item-type>

@@ -316,9 +316,13 @@ public class VicareBindingTest {
                                                                   Map.of("active", BooleanValue.FALSE),
                                                                   List.of(new CommandDescriptor("activate", true, emptyList(), URI.create("https://api.viessmann.com/iot/v1/equipment/installations/123456/gateways/00/devices/0/features/heating.dhw.oneTimeCharge/commands/activate")),
                                                                           new CommandDescriptor("deactivate", false, emptyList(), URI.create("https://api.viessmann.com/iot/v1/equipment/installations/123456/gateways/00/devices/0/features/heating.dhw.oneTimeCharge/commands/deactivate"))));
-        Feature heatingDHWOperatingModesOff = new StatusSensorFeature("heating.dhw.operating.modes.off",
-                StatusValue.NA,
-                false);
+        List<Feature> heatingDHWOperatingModes = List.of(new StatusSensorFeature("heating.dhw.operating.modes.off", StatusValue.NA, false),
+            new StatusSensorFeature("heating.dhw.operating.modes.balanced", StatusValue.NA, false),
+            new StatusSensorFeature("heating.dhw.operating.modes.comfort", StatusValue.NA, true),
+            new StatusSensorFeature("heating.dhw.operating.modes.eco", StatusValue.NA, false),
+            new TextFeature("heating.dhw.operating.modes.active", "value", "eco", List.of(new CommandDescriptor("setMode", true, List.of(new EnumParamDescriptor(true, "mode", Set.of("eco", "comfort", "off"))),
+                                                                                    URI.create("https://api.viessmann.com/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.dhw.operating.modes.active/commands/setMode"))))
+                                                         );
         List<Feature> heatingSensors = List.of(
                 new NumericSensorFeature("heating.sensors.temperature.outside", "value", new DimensionalValue(Unit.CELSIUS, 15.8), new StatusValue("connected"), null),
                 new NumericSensorFeature("heating.sensors.temperature.return", "value", new DimensionalValue(Unit.CELSIUS, 34.1), new StatusValue("connected"), null),
@@ -335,6 +339,7 @@ public class VicareBindingTest {
         features.addAll(operatingProgramsStatusSensorFeatures);
         features.addAll(heatingSensors);
         features.addAll(heatingCircuitsSensorsTemperatureSupply);
+        features.addAll(heatingDHWOperatingModes);
         features.addAll(List.of(temperatureSensor, statisticsFeature, textFeature, statusFeature,
                                                   consumptionFeature, burnerFeature, curveFeature, holidayFeature,
                                                   heatingDhw,
@@ -357,7 +362,6 @@ public class VicareBindingTest {
                                                   heatingCircuitsZoneMode,
                                                   heatingDHWHygiene,
                                                   heatingDHWOneTimeCharge,
-                                                  heatingDHWOperatingModesOff,
                                                   heatingCompressors0,
                                                   heatingCompressors0Statistics));
         doReturn(
@@ -1598,8 +1602,18 @@ public class VicareBindingTest {
         verify(vicareService, timeout(1000)).sendCommand(URI.create("https://api.viessmann.com/iot/v1/equipment/installations/123456/gateways/00/devices/0/features/heating.dhw.oneTimeCharge/commands/deactivate"), emptyMap());
     }
 
-    @Test
-    public void supportsHeatingDhwOperatingModesOff() throws AuthenticationException, IOException {
+    public static Stream<Arguments> source_heatingDHWOperatingModes() {
+        return Stream.of(Arguments.of("heating.dhw.operating.modes.off", "heating_dhw_operating_modes_off_active", "DHW Off Operating Mode Active", OnOffType.OFF),
+                         Arguments.of("heating.dhw.operating.modes.comfort", "heating_dhw_operating_modes_comfort_active", "DHW Comfort Operating Mode Active", OnOffType.ON),
+                         Arguments.of("heating.dhw.operating.modes.balanced", "heating_dhw_operating_modes_balanced_active", "DHW Balanced Operating Mode Active", OnOffType.OFF),
+                         Arguments.of("heating.dhw.operating.modes.eco", "heating_dhw_operating_modes_eco_active", "DHW Eco Operating Mode Active", OnOffType.OFF));
+    }
+
+    @ParameterizedTest
+    @MethodSource("source_heatingDHWOperatingModes")
+    public void supportsHeatingDhwOperatingModes(String featureName, String channelId,
+                                                    String expectedLabel,
+                                                    OnOffType expectedActive) throws AuthenticationException, IOException {
         simpleHeatingInstallation();
         Bridge bridge = vicareBridge();
         createBridgeHandler(bridge);
@@ -1614,16 +1628,48 @@ public class VicareBindingTest {
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
 
-        Channel channel = findChannel(thingCaptor, "heating_dhw_operating_modes_off_active");
+        Channel channel = findChannelNoVerify(thingCaptor, channelId);
         assertNotNull(channel);
-        assertEquals("heating_dhw_operating_modes_off_active", channel.getChannelTypeUID().getId());
-        assertEquals("heating.dhw.operating.modes.off", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+        assertEquals(featureName, channel.getProperties().get(PROPERTY_FEATURE_NAME));
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals(expectedLabel, channelType.getLabel());
 
         handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
         verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(OnOffType.OFF, stateCaptor.getValue());
+        assertEquals(expectedActive, stateCaptor.getValue());
+    }
+    @Test
+    public void supportsHeatingDhwOperatingModeActive() throws AuthenticationException, IOException, CommandFailureException {
+        simpleHeatingInstallation();
+        Bridge bridge = vicareBridge();
+        createBridgeHandler(bridge);
+        VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
+                vicareServiceProvider);
+        Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
+        ThingHandler handler = vicareHandlerFactory.createHandler(deviceThing);
+        ThingHandlerCallback callback = simpleHandlerCallback(bridge, handler);
+        registerAndInitialize(handler);
+        InOrder inOrder = inOrder(vicareService);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
+        verify(callback, timeout(1000).atLeastOnce()).thingUpdated(thingCaptor.capture());
+
+        Channel channel = findChannelNoVerify(thingCaptor, "heating_dhw_operating_modes_active_value");
+        assertNotNull(channel);
+        assertEquals("heating.dhw.operating.modes.active", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals("DHW Active Operating Mode", channelType.getLabel());
+
+        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(new StringType("eco"), stateCaptor.getValue());
+
+        handler.handleCommand(channel.getUID(), new StringType("comfort"));
+        inOrder.verify(vicareService, timeout(1000)).sendCommand(URI.create("https://api.viessmann.com/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.dhw.operating.modes.active/commands/setMode"), Map.of("mode", "comfort"));
     }
 
     @Test

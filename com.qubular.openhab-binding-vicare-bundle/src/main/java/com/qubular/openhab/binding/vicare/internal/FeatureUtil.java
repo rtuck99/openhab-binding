@@ -16,6 +16,7 @@ public class FeatureUtil {
     private static final Pattern PATTERN_HEATING_COMPRESSOR = Pattern.compile("heating\\.compressors\\.([\\d+])(\\..*)?");
 
     private static final Pattern PATTERN_ENERGY_SAVING_OPERATING_PROGRAM = Pattern.compile("(heating\\.circuits\\.[\\d+]\\.operating\\.programs\\.)(.+)EnergySaving");
+    private static final Pattern PATTERN_DHW_OPERATING_MODE = Pattern.compile("(heating\\.dhw\\.operating\\.modes\\.)(.+)");
 
     private static final Pattern PATTERN_FORCED_LAST_FROM_SCHEDULE_OPERATING_PROGRAM = Pattern.compile("heating\\.circuits\\.[\\d+]\\.operating\\.programs\\.forcedLastFromSchedule");
 
@@ -85,6 +86,10 @@ public class FeatureUtil {
         Matcher energySavingOPMatcher = PATTERN_ENERGY_SAVING_OPERATING_PROGRAM.matcher(feature.getName());
         if (energySavingOPMatcher.matches()) {
             props.put("operatingProgram", energySavingOPMatcher.group(2));
+        }
+        Matcher operatingModeMatcher = PATTERN_DHW_OPERATING_MODE.matcher(feature.getName());
+        if (operatingModeMatcher.matches()) {
+            props.put("operatingMode", operatingModeMatcher.group(2));
         }
         return props;
     }

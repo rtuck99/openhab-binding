@@ -82,6 +82,7 @@ Changelog
 
 * Issue #35 Migrated to use new feature endpoints
 * Issue #34 Make v3 identity provider endpoint the default
+* Issue #36 Support DHW Operating Modes after API Change
 
 ### 3.4.0
 

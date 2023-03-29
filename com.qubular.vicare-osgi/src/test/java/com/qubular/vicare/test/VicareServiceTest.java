@@ -1048,17 +1048,50 @@ public class VicareServiceTest {
         assertEquals(URI.create("https://api.viessmann.com/iot/v1/equipment/installations/123456/gateways/00/devices/0/features/heating.dhw.oneTimeCharge/commands/deactivate"), dhwFeature.get().getCommands().get(1).getUri());
     }
 
-    @Test
+    public static Stream<Arguments> source_heating_dhw_operating_modes() {
+        return Stream.of(
+                Arguments.of("deviceFeaturesResponse4.json", "heating.dhw.operating.modes.off", false),
+                Arguments.of("deviceFeaturesResponse7.json", "heating.dhw.operating.modes.off", false),
+//                Arguments.of("deviceFeaturesResponse4.json", "heating.dhw.operating.modes.balanced"),
+                Arguments.of("deviceFeaturesResponse7.json", "heating.dhw.operating.modes.comfort", false),
+                Arguments.of("deviceFeaturesResponse7.json", "heating.dhw.operating.modes.eco", true)
+                         );
+    }
+
+    @ParameterizedTest
+    @MethodSource("source_heating_dhw_operating_modes")
     @DisabledIf("realConnection")
-    public void supports_heating_dhw_operating_modes_off() throws ServletException, AuthenticationException, NamespaceException, IOException {
-        List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
+    public void supports_heating_dhw_operating_modes(String fileName, String featureName, boolean active) throws ServletException, AuthenticationException, NamespaceException, IOException {
+        logger.info("source_heating_dhw_operating_modes({}, {}, {})", fileName, featureName, active);
+        List<Feature> features = getFeatures(fileName);
 
         Optional<StatusSensorFeature> dhwFeature = features.stream()
-                .filter(f -> f.getName().equals("heating.dhw.operating.modes.off"))
+                .filter(f -> f.getName().equals(featureName))
                 .map(StatusSensorFeature.class::cast)
                 .findFirst();
         assertTrue(dhwFeature.isPresent());
-        assertFalse(dhwFeature.get().isActive());
+        assertEquals(active, dhwFeature.get().isActive());
+    }
+
+    @Test
+    public void supports_dhw_operating_modes_active() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse7.json");
+
+        Optional<TextFeature> dhwFeature = features.stream()
+                .filter(f -> f.getName().equals("heating.dhw.operating.modes.active"))
+                .map(TextFeature.class::cast)
+                .findFirst();
+        assertTrue(dhwFeature.isPresent());
+        assertEquals("eco", ((StringValue)dhwFeature.get().getProperties().get("value")).getValue());
+
+        CommandDescriptor setModeCommand = dhwFeature.get().getCommands().get(0);
+        assertEquals("setMode", setModeCommand.getName());
+        assertEquals(URI.create("https://api.viessmann.com/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.dhw.operating.modes.active/commands/setMode"), setModeCommand.getUri());
+        assertEquals(1, setModeCommand.getParams().size());
+        ParamDescriptor param = setModeCommand.getParams().get(0);
+        assertEquals("mode", param.getName());
+        assertEquals(String.class, param.getType());
+        assertEquals(Set.of("off", "comfort", "eco"), ((EnumParamDescriptor)param).getAllowedValues());
     }
 
     @Test

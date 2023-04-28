@@ -14,8 +14,8 @@ public class DatePeriodFeature extends Feature {
     public DatePeriodFeature(String name, boolean active, LocalDate start, LocalDate end) {
         super(name);
         properties = Map.of("active", BooleanValue.valueOf(active),
-                            "start", new LocalDateValue(start),
-                            "end", new LocalDateValue(end));
+                            "start", LocalDateValue.of(start),
+                            "end", LocalDateValue.of(end));
     }
 
     public StatusValue getActive() {

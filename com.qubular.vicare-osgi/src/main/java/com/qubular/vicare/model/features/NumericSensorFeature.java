@@ -14,19 +14,28 @@ public class NumericSensorFeature extends Feature {
     private final Map<String, Value> properties;
     private final String propertyName;
 
-    public NumericSensorFeature(String name, String propertyName, List<CommandDescriptor> commands, DimensionalValue value, StatusValue status, Boolean active) {
+    public NumericSensorFeature(String name, Map<String, Value> properties, List<CommandDescriptor> commands, String propertyName) {
         super(name, commands);
-        properties = new HashMap<>();
+        this.properties = properties;
+        this.propertyName = propertyName;
+    }
+
+    public NumericSensorFeature(String name, String propertyName, List<CommandDescriptor> commands, DimensionalValue value, StatusValue status, Boolean active) {
+        this(name, propertyMap(propertyName, value, status, active), commands, propertyName);
+    }
+
+    public NumericSensorFeature(String name, String propertyName, DimensionalValue value, StatusValue status, Boolean active) {
+        this(name, propertyName, Collections.emptyList(), value, status, active);
+    }
+
+    private static Map<String, Value> propertyMap(String propertyName, DimensionalValue value, StatusValue status, Boolean active) {
+        Map<String, Value> properties = new HashMap<>();
         properties.put(propertyName, value);
         properties.put("status", status);
         if (active != null) {
             properties.put("active", BooleanValue.valueOf(active));
         }
-        this.propertyName = propertyName;
-    }
-
-    public NumericSensorFeature(String name, String propertyName, DimensionalValue value, StatusValue status, Boolean active) {
-        this(name, propertyName, Collections.emptyList(), value, status, active);
+        return properties;
     }
 
     public DimensionalValue getValue() {

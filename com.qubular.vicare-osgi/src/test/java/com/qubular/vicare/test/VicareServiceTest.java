@@ -5,10 +5,7 @@ import com.qubular.vicare.model.*;
 import com.qubular.vicare.model.features.*;
 import com.qubular.vicare.model.params.EnumParamDescriptor;
 import com.qubular.vicare.model.params.NumericParamDescriptor;
-import com.qubular.vicare.model.values.BooleanValue;
-import com.qubular.vicare.model.values.DimensionalValue;
-import com.qubular.vicare.model.values.StatusValue;
-import com.qubular.vicare.model.values.StringValue;
+import com.qubular.vicare.model.values.*;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.http.HttpHeader;
@@ -1357,5 +1354,192 @@ public class VicareServiceTest {
         featuresByName.forEach(
                 (name, featureList) -> assertEquals(1, featureList.size())
         );
+    }
+
+    @Test
+    public void supports_heating_buffer_sensors_temperature() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse8.json");
+        Optional<Feature> topSensor = features.stream().filter(
+                        f -> f.getName().equals("heating.buffer.sensors.temperature.top"))
+                .findFirst();
+        assertTrue(topSensor.isPresent());
+        assertEquals(new StatusValue("notConnected"), topSensor.get().getProperties().get("status"));
+        Optional<Feature> mainSensor = features.stream().filter(
+                        f -> f.getName().equals("heating.buffer.sensors.temperature.main"))
+                .findFirst();
+        assertTrue(mainSensor.isPresent());
+        assertEquals(new StatusValue("notConnected"), mainSensor.get().getProperties().get("status"));
+    }
+
+    @Test
+    public void supports_heating_dhw_sensors_temperature_hotWaterStorage_bottom() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse8.json");
+        Optional<Feature> bottomSensor = features.stream().filter(
+                        f -> f.getName().equals("heating.dhw.sensors.temperature.hotWaterStorage.bottom"))
+                .findFirst();
+        assertTrue(bottomSensor.isPresent());
+        assertEquals(new StatusValue("notConnected"), bottomSensor.get().getProperties().get("status"));
+    }
+
+    @Test
+    public void supports_heating_dhw_sensors_temperature_hotWaterStorage_top() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse8.json");
+        Optional<Feature> topSensor = features.stream().filter(
+                        f -> f.getName().equals("heating.dhw.sensors.temperature.hotWaterStorage.top"))
+                .findFirst();
+        assertTrue(topSensor.isPresent());
+        assertEquals(new StatusValue("connected"), topSensor.get().getProperties().get("status"));
+        assertEquals(new DimensionalValue(Unit.CELSIUS, 44.4), topSensor.get().getProperties().get("value"));
+    }
+
+    @Test
+    public void supports_heating_dhw_temperature_hysteresis() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse8.json");
+        Optional<Feature> hyst = features.stream().filter(
+                        f -> f.getName().equals("heating.dhw.temperature.hysteresis"))
+                .findFirst();
+        assertTrue(hyst.isPresent());
+        assertEquals(new DimensionalValue(Unit.KELVIN, 5), hyst.get().getProperties().get("value"));
+        assertEquals(new DimensionalValue(Unit.KELVIN, 5), hyst.get().getProperties().get("switchOnValue"));
+        assertEquals(new DimensionalValue(Unit.KELVIN, 5), hyst.get().getProperties().get("switchOffValue"));
+
+        Optional<CommandDescriptor> setHysteresis = hyst.get().getCommands().stream().filter(
+                c -> c.getName().equals("setHysteresis")).findFirst();
+        assertEquals(1, setHysteresis.get().getParams().size());
+        NumericParamDescriptor hysteresis = (NumericParamDescriptor) setHysteresis.get().getParams().get(0);
+        assertEquals(1, hysteresis.getMin());
+        assertEquals(10, hysteresis.getMax());
+        assertEquals(0.5, hysteresis.getStepping());
+        assertTrue(hysteresis.isRequired());
+
+        Optional<CommandDescriptor> setHysteresisSwitchOnValue = hyst.get().getCommands().stream().filter(
+                c -> c.getName().equals("setHysteresisSwitchOnValue")).findFirst();
+        assertEquals(1, setHysteresisSwitchOnValue.get().getParams().size());
+        hysteresis = (NumericParamDescriptor) setHysteresisSwitchOnValue.get().getParams().get(0);
+        assertEquals(1, hysteresis.getMin());
+        assertEquals(10, hysteresis.getMax());
+        assertEquals(0.5, hysteresis.getStepping());
+        assertTrue(hysteresis.isRequired());
+
+        Optional<CommandDescriptor> setHysteresisSwitchOffValue = hyst.get().getCommands().stream().filter(
+                c -> c.getName().equals("setHysteresisSwitchOffValue")).findFirst();
+        assertEquals(1, setHysteresisSwitchOffValue.get().getParams().size());
+        hysteresis = (NumericParamDescriptor) setHysteresisSwitchOffValue.get().getParams().get(0);
+        assertEquals(1, hysteresis.getMin());
+        assertEquals(10, hysteresis.getMax());
+        assertEquals(0.5, hysteresis.getStepping());
+        assertTrue(hysteresis.isRequired());
+    }
+
+    @Test
+    public void supports_heating_dhw_temperature_temp2() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse8.json");
+        Optional<Feature> temp2 = features.stream().filter(
+                        f -> f.getName().equals("heating.dhw.temperature.temp2"))
+                .findFirst();
+        assertTrue(temp2.isPresent());
+        assertEquals(new DimensionalValue(Unit.CELSIUS, 47), temp2.get().getProperties().get("value"));
+        assertEquals(1, temp2.get().getCommands().size());
+        CommandDescriptor setTargetTemp = temp2.get().getCommands().get(0);
+        assertEquals("setTargetTemperature", setTargetTemp.getName());
+        assertTrue(setTargetTemp.isExecutable());
+        assertEquals(1, setTargetTemp.getParams().size());
+        NumericParamDescriptor param = (NumericParamDescriptor) setTargetTemp.getParams().get(0);
+        assertEquals(10, param.getMin());
+        assertEquals(60, param.getMax());
+        assertEquals(1, param.getStepping());
+        assertEquals("temperature", param.getName());
+    }
+
+    public static Stream<Arguments> source_ventilation_operating_modes() {
+        return Stream.of(
+                Arguments.of("deviceFeaturesResponse8.json", "ventilation.operating.modes.standby", BooleanValue.FALSE),
+                Arguments.of("deviceFeaturesResponse8.json", "ventilation.operating.modes.ventilation", BooleanValue.TRUE),
+                Arguments.of("deviceFeaturesResponse8.json", "ventilation.operating.modes.standard", BooleanValue.FALSE)
+                         );
+    }
+
+    @ParameterizedTest
+    @MethodSource("source_ventilation_operating_modes")
+    public void supports_ventilation_operating_modes(String fileName, String featureName, BooleanValue expectedActive) throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures(fileName);
+        Optional<Feature> feature = features.stream().filter(f -> f.getName().equals(featureName)).findFirst();
+        assertTrue(feature.isPresent());
+        assertEquals(expectedActive, feature.get().getProperties().get("active"));
+    }
+
+    @Test
+    public void supports_ventilation_operating_modes_active() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse8.json");
+        Optional<Feature> opMode = features.stream().filter(f -> f.getName().equals("ventilation.operating.modes.active")).findFirst();
+        assertTrue(opMode.isPresent());
+        assertEquals(new StringValue("ventilation"), opMode.get().getProperties().get("value"));
+        assertEquals(1, opMode.get().getCommands().size());
+        CommandDescriptor setMode = opMode.get().getCommands().get(0);
+        assertTrue(setMode.isExecutable());
+        assertEquals(1, setMode.getParams().size());
+        EnumParamDescriptor allowedModes = (EnumParamDescriptor) setMode.getParams().get(0);
+        assertEquals(Set.of("standby", "standard", "ventilation"), allowedModes.getAllowedValues());
+        assertTrue(allowedModes.isRequired());
+    }
+
+    public static Stream<Arguments> source_ventilation_operating_programs() {
+        return Stream.of(
+                Arguments.of("deviceFeaturesResponse8.json", "ventilation.operating.programs.levelOne", false, false, null),
+                Arguments.of("deviceFeaturesResponse8.json", "ventilation.operating.programs.levelTwo", false, false, null),
+                Arguments.of("deviceFeaturesResponse8.json", "ventilation.operating.programs.levelThree", true, false, null),
+                Arguments.of("deviceFeaturesResponse8.json", "ventilation.operating.programs.levelFour", false, false, null),
+                Arguments.of("deviceFeaturesResponse8.json", "ventilation.operating.programs.comfort", false, true, null),
+                Arguments.of("deviceFeaturesResponse8.json", "ventilation.operating.programs.eco", false, true, null),
+                Arguments.of("deviceFeaturesResponse8.json", "ventilation.operating.programs.standby", false, false, 0)
+                );
+    }
+
+    @MethodSource("source_ventilation_operating_programs")
+    @ParameterizedTest
+    public void supports_ventilation_operating_programs(String fileName, String featureName, boolean expectedActive, boolean hasCommands, Integer expectedVolumeFlow) throws ServletException, AuthenticationException, NamespaceException, IOException {
+        logger.info("supports_ventilation_operating_programs({},{},{},{})", fileName, featureName, expectedActive, hasCommands);
+        List<Feature> features = getFeatures(fileName);
+        Optional<Feature> feature = features.stream().filter(f -> f.getName().equals(featureName)).findFirst();
+        assertTrue(feature.isPresent());
+        assertEquals(BooleanValue.valueOf(expectedActive), feature.get().getProperties().get("active"));
+        Value volumeFlow = feature.get().getProperties().get("volumeFlow");
+        if (expectedVolumeFlow != null) {
+            assertEquals(new DimensionalValue(Unit.CUBIC_METRES_PER_HOUR, 0.0), volumeFlow);
+        } else {
+            assertNull(volumeFlow);
+        }
+
+        Optional<CommandDescriptor> activate = feature.get().getCommands().stream().filter(c -> c.getName().equals("activate")).findFirst();
+        Optional<CommandDescriptor> deactivate = feature.get().getCommands().stream().filter(c -> c.getName().equals("deactivate")).findFirst();
+        assertEquals(hasCommands, activate.isPresent());
+        assertEquals(hasCommands, deactivate.isPresent());
+        activate.ifPresent(c -> {
+            assertEquals(0, c.getParams().size());
+            assertEquals(!expectedActive, c.isExecutable());
+        });
+        deactivate.ifPresent(c -> {
+            assertEquals(0, c.getParams().size());
+            assertEquals(expectedActive, c.isExecutable());
+        });
+    }
+
+    @Test
+    public void supports_ventilation_operating_programs_active() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse8.json");
+        Optional<Feature> opMode = features.stream().filter(f -> f.getName().equals("ventilation.operating.programs.active")).findFirst();
+        assertTrue(opMode.isPresent());
+        assertEquals(new StringValue("levelThree"), opMode.get().getProperties().get("value"));
+        assertEquals(0, opMode.get().getCommands().size());
+    }
+
+    @Test
+    public void supports_ventilation_operating_programs_holiday() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse8.json");
+        Optional<Feature> holiday = features.stream().filter(f -> f.getName().equals("ventilation.operating.programs.holiday")).findFirst();
+        assertTrue(holiday.isPresent());
+        assertEquals(BooleanValue.FALSE, holiday.get().getProperties().get("active"));
+        assertEquals(LocalDateValue.EMPTY, holiday.get().getProperties().get("start"));
+        assertEquals(LocalDateValue.EMPTY, holiday.get().getProperties().get("end"));
     }
 }

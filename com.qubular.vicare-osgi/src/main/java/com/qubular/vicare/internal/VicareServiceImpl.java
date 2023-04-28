@@ -420,22 +420,10 @@ public class VicareServiceImpl implements VicareService {
                         String textValue = value.get("value").getAsString();
                         return new TextFeature(featureName, "value", textValue, commandDescriptors);
                     } else if (TYPE_NUMBER.equals(valueType)) {
-                        if (statusObject != null) {
-                            String status = statusObject.get("value").getAsString();
-                            return new NumericSensorFeature(featureName,
-                                                            "value",
+                        return new NumericSensorFeature(featureName,
+                                                            propertyMap(properties),
                                                             commandDescriptors,
-                                                            dimensionalValueFromUnitValue(value),
-                                                            new StatusValue(status),
-                                                            null);
-                        } else {
-                            return new NumericSensorFeature(featureName,
-                                                            "value",
-                                                            commandDescriptors,
-                                                            dimensionalValueFromUnitValue(value),
-                                                            NA,
-                                                            null);
-                        }
+                                                            "value");
                     }
                 } else if (featureName.contains(".consumption.summary")) {
                     Map<String, DimensionalValue> stats = properties.entrySet().stream()
@@ -465,7 +453,7 @@ public class VicareServiceImpl implements VicareService {
                         boolean activeStatus = activeObject.get("value").getAsBoolean();
                         return new DatePeriodFeature(featureName, activeStatus, dateFromYYYYMMDD(startObject), dateFromYYYYMMDD(endObject));
                     } else if (activeObject != null) {
-                        return new StatusSensorFeature(featureName, propertyMap(properties));
+                        return new StatusSensorFeature(featureName, propertyMap(properties), generateCommands(commands));
                     }
                 } else if (featureName.endsWith(".heating.curve")) {
                     JsonObject shiftObject = properties.getAsJsonObject("shift");
@@ -511,7 +499,8 @@ public class VicareServiceImpl implements VicareService {
                                                   JsonObject propObject = e.getValue().getAsJsonObject();
                                                   switch (propObject.get("type").getAsString()) {
                                                       case TYPE_STRING:
-                                                          return new StringValue(propObject.get("value").getAsString());
+                                                          String value = propObject.get("value").getAsString();
+                                                          return "status".equals(e.getKey()) ? new StatusValue(value) : new StringValue(value);
                                                       case TYPE_BOOLEAN:
                                                           return BooleanValue.valueOf(
                                                                   propObject.get("value").getAsBoolean());

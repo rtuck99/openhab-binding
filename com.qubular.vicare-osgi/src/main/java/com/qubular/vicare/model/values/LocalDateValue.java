@@ -8,6 +8,12 @@ import java.util.Objects;
 public class LocalDateValue extends Value {
     private final LocalDate value;
 
+    public static final LocalDateValue EMPTY = new LocalDateValue(null);
+
+    public static LocalDateValue of(LocalDate value) {
+        return value == null ? EMPTY : new LocalDateValue(value);
+    }
+
     public LocalDateValue(LocalDate value) {
         this.value = value;
     }

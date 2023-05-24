@@ -56,6 +56,11 @@
     <category>Heating</category>
     <state pattern="%.1f °C"/>
   </channel-type>
+  <channel-type id="template_heating_buffer_sensors_temperature_-_status">
+    <item-type>String</item-type>
+    <label>Heating Buffer ${pretty:0} Temperature Sensor Status</label>
+    <state readOnly="true"/>
+  </channel-type>
   <channel-type id="heating_burners_active">
     <item-type>Switch</item-type>
     <label>Burner Status</label>
@@ -203,6 +208,19 @@
     <description>Status of the domestic hot water (DHW) circulation pump</description>
     <state readOnly="true"/>
   </channel-type>
+  <channel-type id="template_heating_dhw_sensors_temperature_hotWaterStorage_-_value">
+    <item-type>Number:Temperature</item-type>
+    <label>Hot Water Storage ${pretty:0} Temperature</label>
+    <description>Shows the value of the temperature sensor located in the hot water storage at the ${pretty:0}</description>
+    <category>Temperature</category>
+    <state readOnly="true" pattern="%.1f °C"/>
+  </channel-type>
+  <channel-type id="template_heating_dhw_sensors_temperature_hotWaterStorage_-_status">
+    <item-type>String</item-type>
+    <label>Hot Water Storage ${pretty:0} Temperature Sensor Status</label>
+    <description>Shows the status of the temperature sensor located in the hot water storage at the ${pretty:0}</description>
+    <state readOnly="true"/>
+  </channel-type>
   <channel-type id="heating_dhw_sensors_temperature_outlet">
     <item-type>Number:Temperature</item-type>
     <label>DHW Outlet Temperature</label>
@@ -229,12 +247,35 @@
     <description>Shows the status of the temperature sensor located in the hot water storage.</description>
     <state readOnly="true"/>
   </channel-type>
+  <channel-type id="template_heating_dhw_temperature_hysteresis_value">
+    <item-type>Number:Temperature</item-type>
+    <label>DHW Hysteresis</label>
+    <description>Shows the hysteresis value of the Domestic Hot Water temperature in heat pumps.</description>
+    <state readOnly="false"/>
+  </channel-type>
+  <channel-type id="template_heating_dhw_temperature_hysteresis_switchOnValue">
+    <item-type>Number:Temperature</item-type>
+    <label>DHW Hysteresis Switch On Value</label>
+    <state readOnly="false"/>
+  </channel-type>
+  <channel-type id="template_heating_dhw_temperature_hysteresis_switchOffValue">
+    <item-type>Number:Temperature</item-type>
+    <label>DHW Hysteresis Switch Off Value</label>
+    <state readOnly="false"/>
+  </channel-type>
   <channel-type id="heating_dhw_temperature_main">
     <item-type>Number:Temperature</item-type>
     <label>DHW Target Temperature</label>
     <description>Shows the target temperature value of the domestic hot water (DHW). </description>
     <category>Heating</category>
     <state pattern="%.1f °C"/>
+  </channel-type>
+  <channel-type id="template_heating_dhw_temperature_temp2_value">
+    <item-type>Number:Temperature</item-type>
+    <label>DHW Temp2 Temperature</label>
+    <description>Shows the target value of the domestic hot water (DHW) Temp2 temperature.</description>
+    <category>Heating</category>
+    <state pattern="%.1f °C" readOnly="false"/>
   </channel-type>
   <channel-type id="heating_sensors_temperature_outside">
     <item-type>Number:Temperature</item-type>
@@ -924,5 +965,41 @@
     <label>Solar DHW Temperature</label>
     <description>Show solar domestic hot water temperature in °C</description>
     <state readOnly="true" pattern="%.1f °C"/>
+  </channel-type>
+  <channel-type id="template_ventilation_operating_modes_-_active">
+    <item-type>Switch</item-type>
+    <label>${pretty:0} Ventilation Mode Active</label>
+    <description>Shows whether the ${pretty:0} operating mode is active.</description>
+  </channel-type>
+  <channel-type id="template_ventilation_operating_modes_active_value">
+    <item-type>String</item-type>
+    <label>Active Ventilation Operating Mode</label>
+    <description>Shows current active operating mode enabled on the device.</description>
+    <state readOnly="false"/>
+  </channel-type>
+  <channel-type id="template_ventilation_operating_programs_-_active">
+    <item-type>Switch</item-type>
+    <label>${pretty:0} Ventilation Operating Program Active</label>
+    <description>Shows whether the ${pretty:0} program is active.</description>
+    <state readOnly="false"/>
+  </channel-type>
+  <channel-type id="ventilation_operating_programs_active_value">
+    <item-type>String</item-type>
+    <label>Active Ventilation Operating Program</label>
+    <description>Shows the current active operating program of the ventilation.</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="ventilation_operating_programs_holiday_active">
+    <item-type>Switch</item-type>
+    <label>Ventilation Holiday Operating Program Active</label>
+    <description>Shows whether the holiday program is active.</description>
+  </channel-type>
+  <channel-type id="ventilation_operating_programs_holiday_start">
+    <item-type>DateTime</item-type>
+    <label>Ventilation Holiday Operating Program Start</label>
+  </channel-type>
+  <channel-type id="ventilation_operating_programs_holiday_end">
+    <item-type>DateTime</item-type>
+    <label>Ventilation Holiday Operating Program End</label>
   </channel-type>
 </thing:thing-descriptions>

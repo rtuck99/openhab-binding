@@ -45,6 +45,7 @@ configuration some or all of these may or may not be present:
 * DHW Primary and Circulation Pump Status
 * DHW target temperature (read/write)
 * DHW One time charge mode (read/write)
+* DHW Temperature Hysteresis (read/write)
 * Holiday program settings (read-only)
 * Holiday-at-home program settings (read-only)
 * Heating curve settings
@@ -58,6 +59,9 @@ configuration some or all of these may or may not be present:
 * Heat pump compressor status
 * Heat pump compressor statistics
 * Heat pump primary and secondary supply temperature sensors
+* Ventilation operating mode and operating program
+* Ventilation holiday program (read-only)
+* Heating buffer temperature sensors
 
 Configuring
 -----------
@@ -74,7 +78,6 @@ authorise the Viessmann binding by clicking on the Authorise button on the setup
 After authorising the binding, then it should automatically discover any heating devices you have
 and they will appear in your Inbox.
 
-
 Changelog
 ---------
 
@@ -83,6 +86,7 @@ Changelog
 * Issue #35 Migrated to use new feature endpoints
 * Issue #34 Make v3 identity provider endpoint the default
 * Issue #36 Support DHW Operating Modes after API Change
+* Issue #37 Support for ventilation system
 
 ### 3.4.0
 

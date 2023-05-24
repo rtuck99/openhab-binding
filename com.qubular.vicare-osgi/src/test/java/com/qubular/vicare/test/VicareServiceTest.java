@@ -1407,6 +1407,7 @@ public class VicareServiceTest {
                 c -> c.getName().equals("setHysteresis")).findFirst();
         assertEquals(1, setHysteresis.get().getParams().size());
         NumericParamDescriptor hysteresis = (NumericParamDescriptor) setHysteresis.get().getParams().get(0);
+        assertEquals("hysteresis", hysteresis.getName());
         assertEquals(1, hysteresis.getMin());
         assertEquals(10, hysteresis.getMax());
         assertEquals(0.5, hysteresis.getStepping());
@@ -1416,6 +1417,7 @@ public class VicareServiceTest {
                 c -> c.getName().equals("setHysteresisSwitchOnValue")).findFirst();
         assertEquals(1, setHysteresisSwitchOnValue.get().getParams().size());
         hysteresis = (NumericParamDescriptor) setHysteresisSwitchOnValue.get().getParams().get(0);
+        assertEquals("hysteresis", hysteresis.getName());
         assertEquals(1, hysteresis.getMin());
         assertEquals(10, hysteresis.getMax());
         assertEquals(0.5, hysteresis.getStepping());
@@ -1426,6 +1428,7 @@ public class VicareServiceTest {
         assertEquals(1, setHysteresisSwitchOffValue.get().getParams().size());
         hysteresis = (NumericParamDescriptor) setHysteresisSwitchOffValue.get().getParams().get(0);
         assertEquals(1, hysteresis.getMin());
+        assertEquals("hysteresis", hysteresis.getName());
         assertEquals(10, hysteresis.getMax());
         assertEquals(0.5, hysteresis.getStepping());
         assertTrue(hysteresis.isRequired());
@@ -1445,6 +1448,7 @@ public class VicareServiceTest {
         assertTrue(setTargetTemp.isExecutable());
         assertEquals(1, setTargetTemp.getParams().size());
         NumericParamDescriptor param = (NumericParamDescriptor) setTargetTemp.getParams().get(0);
+        assertTrue(param.isRequired());
         assertEquals(10, param.getMin());
         assertEquals(60, param.getMax());
         assertEquals(1, param.getStepping());
@@ -1476,9 +1480,11 @@ public class VicareServiceTest {
         assertEquals(new StringValue("ventilation"), opMode.get().getProperties().get("value"));
         assertEquals(1, opMode.get().getCommands().size());
         CommandDescriptor setMode = opMode.get().getCommands().get(0);
+        assertEquals("setMode", setMode.getName());
         assertTrue(setMode.isExecutable());
         assertEquals(1, setMode.getParams().size());
         EnumParamDescriptor allowedModes = (EnumParamDescriptor) setMode.getParams().get(0);
+        assertEquals("mode", allowedModes.getName());
         assertEquals(Set.of("standby", "standard", "ventilation"), allowedModes.getAllowedValues());
         assertTrue(allowedModes.isRequired());
     }

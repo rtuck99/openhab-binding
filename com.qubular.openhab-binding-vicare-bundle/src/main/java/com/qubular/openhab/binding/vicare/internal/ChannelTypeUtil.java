@@ -21,9 +21,17 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 class ChannelTypeUtil {
+    private static final Map<String, String> FEATURE_SETTER_MAP = Map.of(
+            "heating.dhw.temperature.temp2/value", "setTargetTemperature"
+    );
+
+    private static final Pattern FEATURE_SUFFIX_PATTERN = Pattern.compile(".*\\.([^.]+)$");
+
     static String substitutePropertyValues(String template, Map<String, String> props) {
         for (Map.Entry<String, String> e : props.entrySet()) {
             template = template.replaceAll("\\$\\{" + e.getKey() + "}", e.getValue());
@@ -137,9 +145,28 @@ class ChannelTypeUtil {
     }
 
     static Optional<CommandDescriptor> getSetterCommandDescriptor(Feature f, String propertyName) {
-        Optional<CommandDescriptor> setter = f.getCommands().stream()
+        String setterName = FEATURE_SETTER_MAP.get(f.getName() + "/" + propertyName);
+        if (setterName != null) {
+            return f.getCommands().stream().filter(cmd -> cmd.getName().equals(setterName)).findFirst();
+        }
+        Optional<CommandDescriptor> setter =
+                f.getCommands().stream()
                 .filter(cd -> cd.getName().equalsIgnoreCase("set" + propertyName))
                 .findFirst();
+        if (!setter.isPresent()) {
+            Matcher matcher = FEATURE_SUFFIX_PATTERN.matcher(f.getName());
+            if (matcher.matches()) {
+                if ("value".equals(propertyName)) {
+                    return f.getCommands().stream()
+                            .filter(cd -> cd.getName().equalsIgnoreCase("set" + matcher.group(1)))
+                            .findFirst();
+                } else {
+                    return f.getCommands().stream()
+                            .filter(cd -> cd.getName().equalsIgnoreCase("set" + matcher.group(1) + propertyName))
+                            .findFirst();
+                }
+            }
+        }
         return setter;
     }
 }

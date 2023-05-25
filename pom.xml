@@ -4,7 +4,7 @@
 
   <groupId>com.qubular</groupId>
   <artifactId>com.qubular.openhab-binding</artifactId>
-  <version>3.4.2-SNAPSHOT</version>
+  <version>4.0.0-SNAPSHOT</version>
   <licenses>
     <license>
       <name>Eclipse Public License 2.0</name>
@@ -14,8 +14,8 @@
   <packaging>pom</packaging>
   <properties>
     <org.osgi.service.http.port>9000</org.osgi.service.http.port>
-    <openhab.version>3.4.0</openhab.version>
-    <oh.java.version>11</oh.java.version>
+    <openhab.version>4.0.0.M3</openhab.version>
+    <oh.java.version>17</oh.java.version>
     <maven.compiler.source>${oh.java.version}</maven.compiler.source>
     <maven.compiler.target>${oh.java.version}</maven.compiler.target>
     <maven.compiler.compilerVersion>${oh.java.version}</maven.compiler.compilerVersion>
@@ -27,13 +27,13 @@
     <bnd.importpackage>!sun.*,!javax.annotation.*,!lzma.sdk.*,!net.jpountz.*,!com.sun.*,!io.grpc.census.*,com.aayushatharva.brotli4j.*;resolution:=optional,com.github.luben.*;resolution:=optional,com.google.protobuf.nano.*;resolution:=optional,com.jcraft.jzlib.*;resolution:=optional,com.ning.compress.*;resolution:=optional,com.oracle.*;resolution:=optional,io.grpc.*;resolution:=optional,io.perfmark.*;resolution:=optional;org.bouncycastle.*;resolution:=optional,org.conscrypt.*;resolution:=optional,org.eclipse.jetty.*;resolution:=optional,org.jboss.*;resolution:=optional,reactor.blockhound.*;resolution:=optional,com.google.api.client.*;resolution:=optional,!io.opencensus.*,org.apache.http.*;resolution:=optional</bnd.importpackage>
     <eea.version>2.3.0</eea.version>
     <feature.directory>src/main/feature/feature.xml</feature.directory>
-    <karaf.version>4.3.4</karaf.version>
+    <karaf.version>4.4.3</karaf.version>
     <junit.version>5.8.1</junit.version>
     <osgi.version>7.0.0</osgi.version>
     <felix.framework.version>7.0.0</felix.framework.version>
     <slf4j.version>1.7.32</slf4j.version>
-    <pax.web.version>7.3.23</pax.web.version>
-    <jetty.version>9.4.43.v20210629</jetty.version>
+    <pax.web.version>8.0.15</pax.web.version>
+    <jetty.version>9.4.50.v20221201</jetty.version>
     <log4j2.version>2.17.2</log4j2.version>
     <commons.lang.version>3.12.0</commons.lang.version>
   </properties>
@@ -53,7 +53,8 @@
       </snapshots>
       <id>openhab-release</id>
       <name>openHAB Release Repository</name>
-      <url>https://openhab.jfrog.io/openhab/libs-release</url>
+      <!--url>https://openhab.jfrog.io/openhab/libs-release</url-->
+      <url>https://openhab.jfrog.io/openhab/libs-milestone</url>
     </repository>
   </repositories>
   <pluginRepositories>
@@ -137,7 +138,7 @@
       <dependency>
         <groupId>org.ops4j.pax.logging</groupId>
         <artifactId>pax-logging-log4j2</artifactId>
-        <version>2.0.12</version>
+        <version>2.2.0</version>
       </dependency>
 
       <!-- OSGi dependencies (provided) -->
@@ -186,23 +187,23 @@
       <dependency>
         <groupId>org.apache.felix</groupId>
         <artifactId>org.apache.felix.scr</artifactId>
-        <version>2.1.18</version>
+        <version>2.2.4</version>
       </dependency>
       <dependency>
         <!-- contains the JavaServlet OSGi capability  -->
         <groupId>org.apache.felix</groupId>
         <artifactId>org.apache.felix.http.servlet-api</artifactId>
-        <version>1.1.2</version>
+        <version>1.2.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.felix</groupId>
         <artifactId>org.apache.felix.http.jetty</artifactId>
-        <version>4.0.14</version>
+        <version>4.2.10</version>
       </dependency>
       <dependency>
         <groupId>org.apache.felix</groupId>
         <artifactId>org.apache.felix.configadmin</artifactId>
-        <version>1.9.22</version>
+        <version>1.9.26</version>
       </dependency>
 
     <!-- bnd testing runtime dependency -->
@@ -239,7 +240,7 @@
       <dependency>
         <groupId>org.apache.xbean</groupId>
         <artifactId>xbean-finder</artifactId>
-        <version>4.19</version>
+        <version>4.22</version>
       </dependency>
 <!--      <dependency>-->
 <!--        <groupId>org.eclipse.jetty.aggregate</groupId>-->
@@ -265,7 +266,7 @@
       <dependency>
         <groupId>com.google.code.gson</groupId>
         <artifactId>gson</artifactId>
-        <version>2.8.6</version>
+        <version>2.9.1</version>
         <scope>provided</scope>
       </dependency>
 

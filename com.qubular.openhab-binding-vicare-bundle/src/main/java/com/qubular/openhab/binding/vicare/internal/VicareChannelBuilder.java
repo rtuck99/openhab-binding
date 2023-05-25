@@ -377,12 +377,14 @@ public class VicareChannelBuilder implements Supplier<VicareChannelBuilder.Memo>
                 .map(cd -> {
                     String id = escapeUIDSegment(feature.getName() + "_" + cd.getName());
 
-                    return channelBuilder(new ChannelUID(thing.getUID(), id),
-                                          feature,
-                                          ChannelTypeUtil.channelIdToChannelType(id),
-                                          null, emptyMap())
+                    Optional<ChannelBuilder> channelBuilder = channelBuilder(new ChannelUID(thing.getUID(), id),
+                                                                             feature,
+                                                                             ChannelTypeUtil.channelIdToChannelType(id),
+                                                                             null, emptyMap())
                             .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
-                                                                PROPERTY_COMMAND_NAME, cd.getName())))
+                                                                PROPERTY_COMMAND_NAME, cd.getName())));
+                    // required because JDK-8268312 ?
+                    return channelBuilder
                             .map(ChannelBuilder::build);
                 })
                 .filter(Optional::isPresent)

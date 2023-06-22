@@ -44,6 +44,7 @@ import org.osgi.service.component.ComponentContext;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -477,6 +478,7 @@ public class VicareBindingTest {
         org.osgi.service.cm.Configuration config = mock(org.osgi.service.cm.Configuration.class);
         org.osgi.service.cm.Configuration persistedTokenStoreConfig = mock(org.osgi.service.cm.Configuration.class);
         doReturn(config).when(configurationAdmin).getConfiguration("com.qubular.openhab.binding.vicare.SimpleConfiguration");
+        doReturn(new File("/home/openhab/userdata/cache/org.eclipse.osgi/123/data/captures")).when(bundleContext).getDataFile("captures");
         doReturn(persistedTokenStoreConfig).when(configurationAdmin).getConfiguration(PersistedTokenStore.TOKEN_STORE_PID);
         Dictionary<String, Object> ptsProps = new Hashtable<>();
         doReturn(ptsProps).when(persistedTokenStoreConfig).getProperties();
@@ -1522,7 +1524,17 @@ public class VicareBindingTest {
         ArgumentCaptor<ThingStatusInfo> thingStatusCaptor = ArgumentCaptor.forClass(ThingStatusInfo.class);
         verify(callback).statusUpdated(same(bridge), thingStatusCaptor.capture());
         assertEquals(ThingStatus.UNKNOWN, thingStatusCaptor.getValue().getStatus());
+    }
 
+    @Test
+    public void initializeBridgeSetsResponseCaptureFolderProperty() {
+        Bridge bridge = vicareBridge();
+        VicareBridgeHandler vicareBridgeHandler = new VicareBridgeHandler(vicareServiceProvider, bridge);
+        ThingHandlerCallback callback = mock(ThingHandlerCallback.class);
+        vicareBridgeHandler.setCallback(callback);
+        vicareBridgeHandler.initialize();
+
+        verify(bridge).setProperty(PROPERTY_RESPONSE_CAPTURE_FOLDER, "/home/openhab/userdata/cache/org.eclipse.osgi/123/data/captures");
     }
 
     @Test

@@ -19,8 +19,9 @@ Remove the old binding, and then install the new one via the bindings page. Ther
 Supported Devices
 ----------------
 
-Currently this binding has only been tested with Vitodens 100-W in a fairly
-basic configuration, however it should support other Viessmann devices.
+This binding has only been developed against a Vitodens 100-W in a fairly
+basic configuration, however it should be able to work against a range of other Viessmann heating and ventilation 
+devices including heat pumps and solar heating, although not all features on these may be supported yet.
 
 Supported Features
 ------------------
@@ -80,6 +81,8 @@ and they will appear in your Inbox.
 
 Changelog
 ---------
+### 3.4.2
+* Issue #39 Location of the response capture file is now shown in the bridge properties.
 
 ### 3.4.1
 

@@ -9,7 +9,6 @@ import com.qubular.vicare.VicareConfiguration;
 import com.qubular.vicare.VicareService;
 import com.qubular.vicare.model.CommandDescriptor;
 import com.qubular.vicare.model.Feature;
-import com.qubular.vicare.model.Value;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.library.types.OnOffType;
@@ -23,7 +22,6 @@ import org.openhab.core.thing.type.ChannelType;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.RefreshType;
 import org.openhab.core.types.State;
-import org.openhab.core.types.Type;
 import org.osgi.service.cm.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +43,7 @@ import static java.util.Optional.empty;
 
 public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThingHandler {
     public static final String CONFIG_USE_LIMITED_ENCRYPTION = "useLimitedEncryption";
+    public static final String CONFIG_POLLING_INTERVAL = "pollingInterval";
     private static final Logger logger = LoggerFactory.getLogger(VicareBridgeHandler.class);
     public static final int POLLING_STARTUP_DELAY_SECS = 10;
     private final ThingRegistry thingRegistry;
@@ -88,6 +87,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
     @Override
     public void initialize() {
         updateProperty(VicareConstants.PROPERTY_BINDING_VERSION, bindingVersion);
+        updateProperty(PROPERTY_RESPONSE_CAPTURE_FOLDER, config.getResponseCaptureFolder() != null ? config.getResponseCaptureFolder().getAbsolutePath().toString() : "");
         updateStatus(ThingStatus.UNKNOWN);
         featurePollingJob = scheduler.scheduleAtFixedRate(featurePoller(), POLLING_STARTUP_DELAY_SECS, getPollingInterval(), TimeUnit.SECONDS);
         logger.debug("VicareBridgeHandler initialised");
@@ -103,7 +103,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
     }
 
     private int getPollingInterval() {
-        BigDecimal pollingInterval = (BigDecimal) getConfig().getProperties().get("pollingInterval");
+        BigDecimal pollingInterval = (BigDecimal) getConfig().getProperties().get(CONFIG_POLLING_INTERVAL);
         return pollingInterval == null ? REQUEST_INTERVAL_SECS : pollingInterval.intValue();
     }
 

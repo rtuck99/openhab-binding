@@ -160,6 +160,12 @@
     <description>Whether domestic hot water (DHW) is activated</description>
     <state readOnly="true"/>
   </channel-type>
+  <channel-type id="heating_dhw_charging_active">
+    <item-type>Switch</item-type>
+    <label>DHW Charging Active</label>
+    <description>Shows whether the hot water charging for the DHW storage is currently active.</description>
+    <state readOnly="true"/>
+  </channel-type>
   <channel-type id="heating_dhw_hygiene_enabled">
     <item-type>Switch</item-type>
     <label>DHW Hygiene Enabled</label>

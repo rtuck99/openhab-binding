@@ -42,6 +42,7 @@ configuration some or all of these may or may not be present:
 * DHW, Heating and Total consumption statistics
 * Program mode temperature settings
 * DHW Heating status
+* DHW Charging active
 * DHW Hot water storage temperature
 * DHW Primary and Circulation Pump Status
 * DHW target temperature (read/write)
@@ -83,6 +84,7 @@ Changelog
 ---------
 ### 3.4.2
 * Issue #39 Location of the response capture file is now shown in the bridge properties.
+* Issue #38 Support for heating.dhw.charging
 
 ### 3.4.1
 

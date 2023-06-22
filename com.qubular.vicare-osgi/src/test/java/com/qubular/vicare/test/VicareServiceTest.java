@@ -1015,6 +1015,18 @@ public class VicareServiceTest {
 
     @Test
     @DisabledIf("realConnection")
+    public void supports_heating_dhw_charging() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse9.json");
+        Optional<StatusSensorFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.dhw.charging"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(feature.isPresent());
+        assertEquals(false, feature.get().isActive());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
     public void supports_heating_dhw_hygiene() throws ServletException, AuthenticationException, NamespaceException, IOException {
         List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
 

@@ -182,6 +182,7 @@ public class VicareBindingTest {
                                                                                 "value",
                                                                                 new DimensionalValue(new Unit("celsius"), 54.3), new StatusValue("connected"), null
         );
+        Feature heatingDhwCharging = new StatusSensorFeature("heating.dhw.charging", StatusValue.NA, false);
         Feature operatingModesActive = new TextFeature("heating.circuits.0.operating.modes.active",
                                                        "value",
                                                        "dhw",
@@ -390,6 +391,7 @@ public class VicareBindingTest {
                                 consumptionFeature, burnerFeature, curveFeature, holidayFeature,
                                 heatingBufferTemperatureSensor,
                                 heatingDhw,
+                                heatingDhwCharging,
                                 heatingDhwHotwaterStorageSensorTop,
                                 heatingDhwHotwaterStorageSensorBottom,
                                 heatingDhwTemperatureHysteresis,
@@ -1339,6 +1341,24 @@ public class VicareBindingTest {
         heatingThing.handler.handleCommand(hoursChannel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(hoursChannel.getUID()), stateCaptor.capture());
         assertEquals(29.0, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
+    }
+
+    @Test
+    public void supportsHeatingDhwCharging() throws AuthenticationException, IOException {
+        HeatingThing heatingThing = initialiseHeatingThing();
+
+        Channel channel = findChannelNoVerify(heatingThing.thingCaptor, "heating_dhw_charging_active");
+        assertNotNull(channel);
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals("Switch", channelType.getItemType());
+        assertEquals("DHW Charging Active", channelType.getLabel());
+        assertEquals("Shows whether the hot water charging for the DHW storage is currently active.", channelType.getDescription());
+
+        heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        heatingThing.inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.OFF, stateCaptor.getValue());
     }
 
     @Test

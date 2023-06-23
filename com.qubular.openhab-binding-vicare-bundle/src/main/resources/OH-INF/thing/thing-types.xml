@@ -154,6 +154,11 @@
     <description>Shows the number of starts of Heating Compressor ${heatingCompressor}</description>
     <state pattern="%d" readOnly="true"/>
   </channel-type>
+  <channel-type id="template_heating_compressors_statistics_-">
+    <item-type>Number</item-type>
+    <label>Heating Compressor ${heatingCompressor} ${pretty:propertyName}</label>
+    <state pattern="%d" readOnly="true"/>
+  </channel-type>
   <channel-type id="heating_dhw_active">
     <item-type>Switch</item-type>
     <label>DHW active</label>

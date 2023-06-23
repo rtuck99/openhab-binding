@@ -39,7 +39,7 @@ public class FeatureUtil {
         return words.stream().collect(Collectors.joining(" "));
     }
 
-    static String templateId(Feature f, String propertyNameSuffix, int truncation) {
+    static String templateId(Feature f, String propertyNameSuffix, final int truncation) {
         Matcher energySavingOperatingProgramMatcher = PATTERN_ENERGY_SAVING_OPERATING_PROGRAM.matcher(f.getName());
         String parentRoot;
         if (energySavingOperatingProgramMatcher.matches()) {
@@ -51,7 +51,8 @@ public class FeatureUtil {
                 parentRoot = "template_" + f.getName().replaceAll("\\.\\d+", "");
             } else {
                 String truncated = f.getName().replaceAll("\\.\\d+", "");
-                while (truncation-- > 0) {
+                int featureTruncation = truncation;
+                while (featureTruncation-- > 0) {
                     truncated = truncated.replaceAll("\\.[^.]+?$", ".-");
                 }
                 parentRoot = "template_" + truncated;
@@ -59,7 +60,7 @@ public class FeatureUtil {
         }
         parentRoot = parentRoot
                 .replace(".", "_");
-        return parentRoot + "_" + propertyNameSuffix;
+        return parentRoot + "_" + (truncation == 0 ? "-" : propertyNameSuffix);
     }
 
      private static String heatingCircuit(String featureName) {

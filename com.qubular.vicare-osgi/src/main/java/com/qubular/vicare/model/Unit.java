@@ -8,6 +8,7 @@ public class Unit {
     public static final Unit LITER = new Unit("liter");
     public static final Unit KELVIN = new Unit("kelvin");
     public static final Unit CUBIC_METRES_PER_HOUR = new Unit("cubicMeter/hour");
+    public static final Unit HOUR = new Unit("hour");
 
     private final String name;
 

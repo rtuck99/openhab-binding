@@ -335,7 +335,12 @@ public class VicareBindingTest {
                                                                     "active", BooleanValue.FALSE));
         Feature heatingCompressors0Statistics = new StatusSensorFeature("heating.compressors.0.statistics",
                                                                         Map.of("starts", new DimensionalValue(new Unit(""), 177),
-                                                                               "hours", new DimensionalValue(new Unit("hour"), 29)));
+                                                                               "hours", new DimensionalValue(new Unit("hour"), 29), 
+                                                                               "hoursLoadClassOne", new DimensionalValue(Unit.HOUR, 253),
+                                                                               "hoursLoadClassTwo", new DimensionalValue(Unit.HOUR, 519),
+                                                                               "hoursLoadClassThree", new DimensionalValue(Unit.HOUR, 1962),
+                                                                               "hoursLoadClassFour", new DimensionalValue(Unit.HOUR, 257),
+                                                                               "hoursLoadClassFive", new DimensionalValue(Unit.HOUR, 71)));
         Feature heatingBufferTemperatureSensor = new StatusSensorFeature("heating.buffer.sensors.temperature.top", Map.of("status", new StatusValue("notConnected")));
         Feature heatingDhwHotwaterStorageSensorTop = new NumericSensorFeature("heating.dhw.sensors.temperature.hotWaterStorage.top", Map.of("status", new StatusValue("connected"),
                 "value", new DimensionalValue(Unit.CELSIUS, 44.4)), emptyList(), "value");
@@ -1324,23 +1329,41 @@ public class VicareBindingTest {
         assertEquals("Number", channelType.getItemType());
         assertTrue(channelType.getState().isReadOnly());
 
-        Channel hoursChannel = findChannelNoVerify(heatingThing.thingCaptor, "heating_compressors_0_statistics_hours");
-        assertEquals("heating.compressors.0.statistics", channel.getProperties().get(PROPERTY_FEATURE_NAME));
+        heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        heatingThing.inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL,
+                                                                              DEVICE_1_ID);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(177.0, ((DecimalType) stateCaptor.getValue()).doubleValue(), 0.01);
+
+    }
+
+    public static Stream<Arguments> source_heatingCompressorsStatistics_hours() {
+        return Stream.of(Arguments.of("heating_compressors_0_statistics_hours", "heating.compressors.0.statistics", "Heating Compressor 0 Hours", "Shows the number of working hours of Heating Compressor 0 (read-only)", 29.0),
+                         Arguments.of("heating_compressors_0_statistics_hoursLoadClassOne", "heating.compressors.0.statistics", "Heating Compressor 0 Hours Load Class One", "(read-only)", 253),
+                         Arguments.of("heating_compressors_0_statistics_hoursLoadClassTwo", "heating.compressors.0.statistics", "Heating Compressor 0 Hours Load Class Two", "(read-only)", 519),
+                         Arguments.of("heating_compressors_0_statistics_hoursLoadClassThree", "heating.compressors.0.statistics", "Heating Compressor 0 Hours Load Class Three", "(read-only)", 1962),
+                         Arguments.of("heating_compressors_0_statistics_hoursLoadClassFour", "heating.compressors.0.statistics", "Heating Compressor 0 Hours Load Class Four", "(read-only)", 257),
+                         Arguments.of("heating_compressors_0_statistics_hoursLoadClassFive", "heating.compressors.0.statistics", "Heating Compressor 0 Hours Load Class Five", "(read-only)", 71)
+                         );
+    } 
+    
+    @MethodSource("source_heatingCompressorsStatistics_hours")
+    @ParameterizedTest
+    public void supportsHeatingCompressorsStatistics_hours(String channelName, String featureName, String expectedLabel, String expectedDescription, double expectedValue) throws AuthenticationException, IOException {
+        HeatingThing heatingThing = initialiseHeatingThing();
+        Channel hoursChannel = findChannelNoVerify(heatingThing.thingCaptor, channelName);
+        assertEquals(featureName, hoursChannel.getProperties().get(PROPERTY_FEATURE_NAME));
         ChannelType hoursChannelType = channelTypeRegistry.getChannelType(hoursChannel.getChannelTypeUID());
-        assertEquals("Heating Compressor 0 Hours", hoursChannelType.getLabel());
-        assertEquals("Shows the number of working hours of Heating Compressor 0 (read-only)", hoursChannelType.getDescription());
+        assertEquals(expectedLabel, hoursChannelType.getLabel());
+        assertEquals(expectedDescription, hoursChannelType.getDescription());
         assertEquals("Number", hoursChannelType.getItemType());
         assertTrue(hoursChannelType.getState().isReadOnly());
 
-        heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-        heatingThing.inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
-        verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(177.0, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
-
         heatingThing.handler.handleCommand(hoursChannel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(hoursChannel.getUID()), stateCaptor.capture());
-        assertEquals(29.0, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
+        assertEquals(expectedValue, ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
     }
 
     @Test

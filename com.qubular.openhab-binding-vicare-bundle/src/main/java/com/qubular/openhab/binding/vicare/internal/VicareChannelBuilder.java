@@ -320,7 +320,7 @@ public class VicareChannelBuilder implements Supplier<VicareChannelBuilder.Memo>
     }
 
     private ChannelType findTemplate(Feature f, String propertyNameSuffix) {
-        int truncation = 0;
+        int truncation = -1;
         do {
             String templateId = FeatureUtil.templateId(f, propertyNameSuffix, truncation);
             if (templateId != null) {

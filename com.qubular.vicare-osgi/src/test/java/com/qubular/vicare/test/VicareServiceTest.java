@@ -49,6 +49,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.qubular.vicare.model.values.StatusValue.OFF;
+import static java.util.Collections.emptyMap;
 import static java.util.Optional.ofNullable;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -924,18 +925,34 @@ public class VicareServiceTest {
         assertEquals(new StringValue("ready"), feature.get().getProperties().get("phase"));
     }
 
-    @Test
+    public static Stream<Arguments> source_heating_compressors_statistics() {
+        return Stream.of(Arguments.of("deviceFeaturesResponse5.json", 177, 29, emptyMap()),
+                         Arguments.of("deviceFeaturesResponse8.json", 11890, 3115.5,
+                                      Map.of("hoursLoadClassOne", 253,
+                                             "hoursLoadClassTwo", 519,
+                                             "hoursLoadClassThree", 1962,
+                                             "hoursLoadClassFour", 257,
+                                             "hoursLoadClassFive", 71)));
+    }
+
+    @MethodSource("source_heating_compressors_statistics")
+    @ParameterizedTest
     @DisabledIf("realConnection")
-    public void supports_heating_compressors_statistics() throws ServletException, AuthenticationException, NamespaceException, IOException {
-        List<Feature> features = getFeatures("deviceFeaturesResponse5.json");
+    public void supports_heating_compressors_statistics(String fileName, int expectedStarts, double expectedHours, Map<String, Integer> expectedLoadClassHours) throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures(fileName);
 
         Optional<Feature> feature = features.stream()
                 .filter(f -> f.getName().equals("heating.compressors.0.statistics"))
                 .map(Feature.class::cast)
                 .findFirst();
         assertTrue(feature.isPresent());
-        assertEquals(new DimensionalValue(new Unit(""), 177), feature.get().getProperties().get("starts"));
-        assertEquals(new DimensionalValue(new Unit("hour"), 29), feature.get().getProperties().get("hours"));
+        assertTrue(feature.get() instanceof StatusSensorFeature);
+        assertEquals(new DimensionalValue(new Unit(""), expectedStarts), feature.get().getProperties().get("starts"));
+        assertEquals(new DimensionalValue(Unit.HOUR, expectedHours), feature.get().getProperties().get("hours"));
+        for (var expectedLoadClassHour : expectedLoadClassHours.entrySet()) {
+            assertEquals(new DimensionalValue(Unit.HOUR, expectedLoadClassHour.getValue()), feature.get().getProperties().get(expectedLoadClassHour.getKey()),
+                         "Incorrect property for " + expectedLoadClassHour.getKey());
+        }
     }
 
     @Test

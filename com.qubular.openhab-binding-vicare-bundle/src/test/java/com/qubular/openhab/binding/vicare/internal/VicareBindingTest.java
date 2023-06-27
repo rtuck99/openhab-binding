@@ -2097,7 +2097,7 @@ public class VicareBindingTest {
         InOrder inOrder = inOrder(vicareService, callback);
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
-        verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
+        inOrder.verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
         HeatingThing result = new HeatingThing(handler, callback, inOrder, thingCaptor);
         return result;
     }

@@ -9,9 +9,9 @@
     <Root level="info">
       <AppenderRef ref="Console"/>
     </Root>
-    <Logger name="org.apache.felix.configadmin" level="debug"/>
-    <Logger name="com.qubular.vicare" level="debug"/>
-    <Logger name="com.qubular.glowmarkt" level="trace"/>
+    <Logger name="org.apache.felix.configadmin" level="info"/>
+    <Logger name="com.qubular.vicare" level="info"/>
+    <Logger name="com.qubular.glowmarkt" level="info"/>
 <!--    <Logger name="org.eclipse.jetty" level="debug"/>-->
   </Loggers>
 </Configuration>

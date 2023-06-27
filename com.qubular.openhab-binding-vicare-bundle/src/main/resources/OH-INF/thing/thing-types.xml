@@ -911,6 +911,12 @@
     <description>Shows whether the solar thermal is activated and present on the heating installation</description>
     <state readOnly="true"/>
   </channel-type>
+  <channel-type id="heating_solar_power_cumulativeProduced">
+    <item-type>Number:Energy</item-type>
+    <label>Solar Power Cumulative Production</label>
+    <description>Shows the cumulative value of power produced by solar thermal.</description>
+    <state readOnly="true" pattern="%.0f kWh"/>
+  </channel-type>
   <channel-type id="heating_solar_power_production_currentDay">
     <item-type>Number:Energy</item-type>
     <label>Solar Power Production - Current Day</label>

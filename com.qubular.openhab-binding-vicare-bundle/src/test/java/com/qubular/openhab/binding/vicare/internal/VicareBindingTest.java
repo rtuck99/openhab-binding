@@ -220,6 +220,7 @@ public class VicareBindingTest {
                                                                           "week", new ArrayValue(Unit.KILOWATT_HOUR, new double[]{31.0, 58.3, 147.2, 44.5, 149.6, 21.9, 84.7}),
                                                                           "month", new ArrayValue(Unit.KILOWATT_HOUR, new double[]{247.8, 355.5, 419.6, 437.9, 383.9, 512, 634.5, 905.1, 296.6, 57.7, 109.6, 162.7, 490.3}),
                                                                           "year", new ArrayValue(Unit.KILOWATT_HOUR, new double[]{4250.6, 0})));
+        Feature solarPowerCumulativeProduced = new NumericSensorFeature("heating.solar.power.cumulativeProduced", "value", new DimensionalValue(Unit.KILOWATT_HOUR, 14091.0), StatusValue.NA, null);
         Feature solarSensorsTemperatureDHW = new NumericSensorFeature("heating.solar.sensors.temperature.dhw",
                                                                       "value",
                                                                       new DimensionalValue(Unit.CELSIUS, 28.1),
@@ -406,6 +407,7 @@ public class VicareBindingTest {
                                 heatingDhwTemperatureMain,
                                 solarSensorsTemperatureCollector,
                                 solarPowerProduction,
+                                solarPowerCumulativeProduced,
                                 solarSensorsTemperatureDHW,
                                 solarPumpsCircuit,
                                 heatingSolar,
@@ -1727,6 +1729,21 @@ public class VicareBindingTest {
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(tempChannel.getUID()), stateCaptor.capture());
         assertEquals(new DecimalType(35.4), stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsHeatingSolarPowerCumulativeProduced() throws AuthenticationException, IOException {
+        HeatingThing heatingThing = initialiseHeatingThing();
+
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        Channel channel = findChannel(heatingThing.thingCaptor, "heating_solar_power_cumulativeProduced");
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals("Solar Power Cumulative Production", channelType.getLabel());
+        assertEquals("Shows the cumulative value of power produced by solar thermal.", channelType.getDescription());
+
+        heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(new DecimalType(14091), stateCaptor.getValue());
     }
 
     @Test

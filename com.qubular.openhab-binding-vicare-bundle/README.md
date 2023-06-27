@@ -86,6 +86,7 @@ Changelog
 * Issue #39 Location of the response capture file is now shown in the bridge properties.
 * Issue #38 Support for heating.dhw.charging
 * Issue #40 Support heating.compressors.n.statistics for load classes
+* Support for heating.solar.power.cumulativeProduced cumulative solar power production statistic
 
 ### 3.4.1
 

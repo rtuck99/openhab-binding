@@ -1310,6 +1310,20 @@ public class VicareServiceTest {
 
     @Test
     @DisabledIf("realConnection")
+    public void supports_heating_solar_power_cumulativeProduced() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse9.json");
+
+        Optional<NumericSensorFeature> solarPower = features.stream()
+                .filter(f -> f.getName().equals("heating.solar.power.cumulativeProduced"))
+                .map(NumericSensorFeature.class::cast)
+                .findFirst();
+
+        assertEquals(14091.0, solarPower.get().getValue().getValue(), 0.001);
+        assertEquals(Unit.KILOWATT_HOUR, solarPower.get().getValue().getUnit());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
     public void supports_heating_solar_power_production() throws ServletException, AuthenticationException, NamespaceException, IOException {
         List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
 

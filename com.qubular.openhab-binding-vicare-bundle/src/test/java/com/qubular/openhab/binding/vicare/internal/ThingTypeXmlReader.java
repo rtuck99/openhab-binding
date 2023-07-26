@@ -121,16 +121,23 @@ public class ThingTypeXmlReader {
 
     private StateDescriptionFragment readState(XMLStreamReader reader) {
         Boolean readOnly = null;
+        String pattern = null;
         for (int i = 0; i < reader.getAttributeCount(); ++i) {
             switch (reader.getAttributeLocalName(i)) {
                 case "readOnly":
                     readOnly = Boolean.valueOf(reader.getAttributeValue(i));
+                    break;
+                case "pattern":
+                    pattern = reader.getAttributeValue(i);
                     break;
             }
         }
         StateDescriptionFragmentBuilder builder = StateDescriptionFragmentBuilder.create();
         if (readOnly != null) {
             builder = builder.withReadOnly(readOnly);
+        }
+        if (pattern != null) {
+            builder = builder.withPattern(pattern);
         }
         return builder.build();
     }

@@ -1304,7 +1304,7 @@ public class VicareServiceTest {
                 .map(NumericSensorFeature.class::cast)
                 .findFirst();
 
-        assertEquals(new DimensionalValue(Unit.LITER, expectedValue), sensorFeature.get().getValue());
+        assertEquals(new DimensionalValue(Unit.LITRE, expectedValue), sensorFeature.get().getValue());
         assertEquals(expectedStatus, sensorFeature.get().getStatus());
     }
 

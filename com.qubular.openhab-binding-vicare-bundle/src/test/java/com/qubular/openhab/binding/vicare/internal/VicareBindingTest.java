@@ -31,6 +31,7 @@ import org.openhab.core.config.discovery.AbstractDiscoveryService;
 import org.openhab.core.config.discovery.DiscoveryListener;
 import org.openhab.core.config.discovery.DiscoveryResult;
 import org.openhab.core.library.types.*;
+import org.openhab.core.library.unit.Units;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.*;
 import org.openhab.core.thing.binding.builder.ChannelBuilder;
@@ -220,6 +221,10 @@ public class VicareBindingTest {
                                                                           "week", new ArrayValue(Unit.KILOWATT_HOUR, new double[]{31.0, 58.3, 147.2, 44.5, 149.6, 21.9, 84.7}),
                                                                           "month", new ArrayValue(Unit.KILOWATT_HOUR, new double[]{247.8, 355.5, 419.6, 437.9, 383.9, 512, 634.5, 905.1, 296.6, 57.7, 109.6, 162.7, 490.3}),
                                                                           "year", new ArrayValue(Unit.KILOWATT_HOUR, new double[]{4250.6, 0})));
+        Feature heatingGasConsumptionDhw = new ConsumptionTotalFeature("heating.gas.consumption.dhw",
+                                                                       Map.of("day", new ArrayValue(Unit.KILOWATT_HOUR, new double[]{0.7, 1.3, 1.7, 1, 1, 1.5, 0.8, 0.3}),
+                                                                              "week", new ArrayValue(Unit.CUBIC_METRE, new double[]{0.7, 7.6, 6.5, 10.1, 8.6, 9.1}),
+                                                                              "month", new ArrayValue(Unit.CUBIC_METRE, new double[]{11.3, 39.8, 33.4, 35.4, 25.6, 25.7, 37.8, 41, 44.3, 40.5, 47.2, 44.7, 51.6})));
         Feature solarPowerCumulativeProduced = new NumericSensorFeature("heating.solar.power.cumulativeProduced", "value", new DimensionalValue(Unit.KILOWATT_HOUR, 14091.0), StatusValue.NA, null);
         Feature solarSensorsTemperatureDHW = new NumericSensorFeature("heating.solar.sensors.temperature.dhw",
                                                                       "value",
@@ -405,6 +410,7 @@ public class VicareBindingTest {
                                 heatingDhwTemperatureHotWaterStorage, operatingModesActive,
                                 heatingCircuitTemperatureLevels,
                                 heatingDhwTemperatureMain,
+                                heatingGasConsumptionDhw,
                                 solarSensorsTemperatureCollector,
                                 solarPowerProduction,
                                 solarPowerCumulativeProduced,
@@ -832,7 +838,7 @@ public class VicareBindingTest {
                     heatingThing.handler.handleCommand(c.getUID(), RefreshType.REFRESH);
                     ArgumentCaptor<State> stateCaptor = forClass(State.class);
                     verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(c.getUID()), stateCaptor.capture());
-                    assertEquals(expectedValues.get(c.getChannelTypeUID().getId()), ((DecimalType)stateCaptor.getValue()).doubleValue(), 0.01);
+                    assertEquals(expectedValues.get(c.getChannelTypeUID().getId()), ((QuantityType<?>)stateCaptor.getValue()).doubleValue(), 0.01);
         });
     }
 
@@ -1746,6 +1752,31 @@ public class VicareBindingTest {
         assertEquals(new DecimalType(14091), stateCaptor.getValue());
     }
 
+    public static Stream<Arguments> source_heatingGasConsumptionDhw() {
+        return Stream.of(
+                Arguments.of("heating_gas_consumption_dhw_currentDay", "%.1f %unit%", new QuantityType(0.7, Units.KILOWATT_HOUR), "Number:Energy"),
+                Arguments.of("heating_gas_consumption_dhw_previousDay", "%.1f %unit%", new QuantityType(1.3, Units.KILOWATT_HOUR), "Number:Energy"),
+                Arguments.of("heating_gas_consumption_dhw_currentWeek", "%.1f %unit%", new QuantityType(0.7, tech.units.indriya.unit.Units.CUBIC_METRE), "Number:Volume"),
+                Arguments.of("heating_gas_consumption_dhw_previousWeek", "%.1f %unit%", new QuantityType(7.6, tech.units.indriya.unit.Units.CUBIC_METRE), "Number:Volume")
+         );
+    }
+
+    @MethodSource("source_heatingGasConsumptionDhw")
+    @ParameterizedTest
+    public void supportsHeatingGasConsumptionDhw_withUnitVariation(String channelId, String expectedPattern, State expectedState, String expectedItemType) throws AuthenticationException, IOException {
+        HeatingThing heatingThing = initialiseHeatingThing();
+
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        Channel channel = findChannel(heatingThing.thingCaptor, channelId);
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals(expectedPattern, channelType.getState().getPattern());
+        assertEquals(expectedItemType, channel.getAcceptedItemType());
+
+        heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(expectedState, stateCaptor.getValue());
+    }
+
     @Test
     public void supportsHeatingSolarPowerProduction() throws AuthenticationException, IOException {
         HeatingThing heatingThing = initialiseHeatingThing();
@@ -1755,49 +1786,49 @@ public class VicareBindingTest {
         assertEquals("heating_solar_power_production_currentDay", channel.getChannelTypeUID().getId());
         heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new DecimalType(0), stateCaptor.getValue());
+        assertEquals(new QuantityType(0, Units.KILOWATT_HOUR), stateCaptor.getValue());
 
         channel = findChannel(heatingThing.thingCaptor, "heating_solar_power_production_previousDay");
         assertEquals("heating_solar_power_production_previousDay", channel.getChannelTypeUID().getId());
         heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new DecimalType(11.4), stateCaptor.getValue());
+        assertEquals(new QuantityType(11.4, Units.KILOWATT_HOUR), stateCaptor.getValue());
 
         channel = findChannel(heatingThing.thingCaptor, "heating_solar_power_production_currentWeek");
         assertEquals("heating_solar_power_production_currentWeek", channel.getChannelTypeUID().getId());
         heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new DecimalType(31), stateCaptor.getValue());
+        assertEquals(new QuantityType(31, Units.KILOWATT_HOUR), stateCaptor.getValue());
 
         channel = findChannel(heatingThing.thingCaptor, "heating_solar_power_production_previousWeek");
         assertEquals("heating_solar_power_production_previousWeek", channel.getChannelTypeUID().getId());
         heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new DecimalType(58.3), stateCaptor.getValue());
+        assertEquals(new QuantityType(58.3, Units.KILOWATT_HOUR), stateCaptor.getValue());
 
         channel = findChannel(heatingThing.thingCaptor, "heating_solar_power_production_currentMonth");
         assertEquals("heating_solar_power_production_currentMonth", channel.getChannelTypeUID().getId());
         heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new DecimalType(247.8), stateCaptor.getValue());
+        assertEquals(new QuantityType(247.8, Units.KILOWATT_HOUR), stateCaptor.getValue());
 
         channel = findChannel(heatingThing.thingCaptor, "heating_solar_power_production_previousMonth");
         assertEquals("heating_solar_power_production_previousMonth", channel.getChannelTypeUID().getId());
         heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new DecimalType(355.5), stateCaptor.getValue());
+        assertEquals(new QuantityType(355.5, Units.KILOWATT_HOUR), stateCaptor.getValue());
 
         channel = findChannel(heatingThing.thingCaptor, "heating_solar_power_production_currentYear");
         assertEquals("heating_solar_power_production_currentYear", channel.getChannelTypeUID().getId());
         heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new DecimalType(4250.6), stateCaptor.getValue());
+        assertEquals(new QuantityType(4250.6, Units.KILOWATT_HOUR), stateCaptor.getValue());
 
         channel = findChannel(heatingThing.thingCaptor, "heating_solar_power_production_previousYear");
         assertEquals("heating_solar_power_production_previousYear", channel.getChannelTypeUID().getId());
         heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new DecimalType(0), stateCaptor.getValue());
+        assertEquals(new QuantityType(0, Units.KILOWATT_HOUR), stateCaptor.getValue());
     }
 
     @Test

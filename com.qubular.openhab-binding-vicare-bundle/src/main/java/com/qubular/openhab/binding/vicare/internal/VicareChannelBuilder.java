@@ -70,16 +70,21 @@ public class VicareChannelBuilder implements Supplier<VicareChannelBuilder.Memo>
                         CONSUMPTION_CHANNEL_NAMES_BY_STAT.entrySet()
                                 .stream()
                                 .filter(e -> f.getConsumption(e.getKey()).isPresent())
-                                .map(e -> consumptionChannel(id, f, e.getValue()))
+                                .map(e -> consumptionChannel(id, f, e.getValue(), e.getKey()))
                                 .forEach(c -> c.ifPresent(result.channels::add));
                     }
 
-                    private Optional<Channel> consumptionChannel(String id, Feature feature, String statName) {
+                    private Optional<Channel> consumptionChannel(String id, ConsumptionFeature feature, String statName, ConsumptionFeature.Stat stat) {
                         Map<String, String> props = Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
                                                            PROPERTY_PROP_NAME, statName);
+                        String itemType = feature.getConsumption(stat)
+                                .map(DimensionalValue::getUnit)
+                                .map(UnitMapping::apiToItemType)
+                                .orElse("Number");
+
                         return channelBuilder(new ChannelUID(thing.getUID(), id + "_" + statName),
                                               feature, id + "_" + statName, null, props)
-                                .map(c -> c.withProperties(props))
+                                .map(c -> c.withProperties(props).withAcceptedItemType(itemType))
                                 .map(ChannelBuilder::build);
                     }
 

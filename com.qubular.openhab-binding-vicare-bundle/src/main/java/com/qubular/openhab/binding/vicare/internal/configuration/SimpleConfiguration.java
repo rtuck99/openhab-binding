@@ -2,16 +2,13 @@ package com.qubular.openhab.binding.vicare.internal.configuration;
 
 import com.qubular.vicare.VicareConfiguration;
 import org.osgi.framework.BundleContext;
-import org.osgi.service.cm.Configuration;
-import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
 
 import java.io.File;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 import static java.util.Optional.ofNullable;
@@ -38,7 +35,11 @@ public class SimpleConfiguration implements VicareConfiguration {
 
     @Override
     public String getIOTServerURI() {
-        return String.valueOf(ofNullable(configurationParameters.get("iotServerUri")).orElse("https://api.viessmann.com/iot/v1/"));
+        return getIOTServerURI(configurationParameters);
+    }
+    
+    private static String getIOTServerURI(Map<String, Object> config) {
+        return String.valueOf(ofNullable(config.get("iotServerUri")).orElse("https://api.viessmann.com/iot/"));
     }
 
     public void setConfigurationParameters(Map<String, Object> configurationParameters) {
@@ -80,5 +81,13 @@ public class SimpleConfiguration implements VicareConfiguration {
     @Override
     public String getDebugInjectedGatewaySerial() {
         return (String) configurationParameters.get("injectedGatewaySerial");
+    }
+    
+    public static Map<String, Object> upgradeConfiguration(Map<String, Object> oldConfig) {
+        Map<String, Object> newConfig = new HashMap<>(oldConfig);
+        String currentIOTServerURI = getIOTServerURI(oldConfig);
+        String newIOTServerURI = currentIOTServerURI.replaceAll("(.*)/v1/", "$1/");
+        newConfig.put("iotServerUri", newIOTServerURI);
+        return newConfig;
     }
 }

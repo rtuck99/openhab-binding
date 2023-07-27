@@ -139,7 +139,7 @@ public class VicareServiceImpl implements VicareService {
                 .orElseThrow(()-> new AuthenticationException("No access token for Viessmann API"));
 
         try {
-            URI endpoint = URI.create(config.getIOTServerURI()).resolve("equipment/installations?includeGateways=true");
+            URI endpoint = URI.create(config.getIOTServerURI()).resolve("v1/equipment/installations?includeGateways=true");
             logger.debug("Querying {}", endpoint);
             HttpClient httpClient = httpClientProvider.getHttpClient();
             ContentResponse iotApiResponse = httpClient
@@ -221,7 +221,7 @@ public class VicareServiceImpl implements VicareService {
                 .orElseThrow(()-> new AuthenticationException("No access token for Viessmann API"));
 
         URI endpoint = URI.create(config.getIOTServerURI())
-                .resolve(format("features/installations/%s/gateways/%s/devices/%s/features", installationId, gatewaySerial, deviceId));
+                .resolve(format("v1/features/installations/%s/gateways/%s/devices/%s/features", installationId, gatewaySerial, deviceId));
 
         try {
             String responseContent = maybeInjectFeatureResponse(installationId, gatewaySerial);

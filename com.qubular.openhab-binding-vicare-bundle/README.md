@@ -82,7 +82,15 @@ and they will appear in your Inbox.
 
 Changelog
 ---------
+
+### 3.4.3
+
+* Issue #45 Change iotServerUri configuration parameter so that it doesn't include the API version
+* Issue #43 Support gas consumption statistics reporting in kWh.  
+  Upgrade note: Existing gas consumption statistics Items may need to be recreated in order to output in kWh.
+
 ### 3.4.2
+
 * Issue #39 Location of the response capture file is now shown in the bridge properties.
 * Issue #38 Support for heating.dhw.charging
 * Issue #40 Support heating.compressors.n.statistics for load classes

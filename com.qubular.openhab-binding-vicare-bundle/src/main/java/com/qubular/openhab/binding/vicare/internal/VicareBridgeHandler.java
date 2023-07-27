@@ -86,6 +86,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
 
     @Override
     public void initialize() {
+        upgradeConfiguration();
         updateProperty(VicareConstants.PROPERTY_BINDING_VERSION, bindingVersion);
         updateProperty(PROPERTY_RESPONSE_CAPTURE_FOLDER, config.getResponseCaptureFolder() != null ? config.getResponseCaptureFolder().getAbsolutePath().toString() : "");
         updateStatus(ThingStatus.UNKNOWN);
@@ -285,5 +286,11 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
 
     boolean isFeatureScanRunning() {
         return !(featurePollingJob.isCancelled() || featurePollingJob.isDone());
+    }
+
+    private void upgradeConfiguration() {
+        org.openhab.core.config.core.Configuration config = editConfiguration();
+        config.setProperties(SimpleConfiguration.upgradeConfiguration(config.getProperties()));
+        updateConfiguration(config);
     }
 }

@@ -109,9 +109,16 @@ public class VicareServiceTest {
     @DisabledIf("realConnection")
     public void setupPageRendersAndIncludesRedirectURI() throws Exception {
         tokenStore.storeAccessToken("mytoken", Instant.now().plus(1, ChronoUnit.DAYS));
+        CompletableFuture<Void> requestResult = new CompletableFuture<>();
         Servlet iotServlet = new HttpServlet() {
             @Override
             protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+                try {
+                    assertEquals("/iot/v1/equipment/installations", URI.create(req.getRequestURI()).getPath());
+                    requestResult.complete(null);
+                } catch (AssertionFailedError e) {
+                    requestResult.completeExceptionally(e);
+                }
                 String jsonResponse = new String(getClass().getResourceAsStream("installationsResponse.json").readAllBytes(), StandardCharsets.UTF_8);
                 resp.setContentType("application/json");
                 resp.setStatus(200);
@@ -124,6 +131,8 @@ public class VicareServiceTest {
 
         String contentAsString = httpClient.GET("http://localhost:9000/vicare/setup")
                 .getContentAsString();
+
+        requestResult.get(1, TimeUnit.SECONDS);
         assertTrue(contentAsString.contains("<title>Viessmann API Binding Setup</title>"), contentAsString);
         assertTrue(contentAsString.contains("the following redirect URI: http://localhost:9000/vicare/authCode"), contentAsString);
         Matcher matcher = Pattern.compile("<form action=\"(.*?)\"", Pattern.MULTILINE)
@@ -303,7 +312,7 @@ public class VicareServiceTest {
             protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 
                 try {
-                    assertEquals("/iot/equipment/installations", URI.create(req.getRequestURI()).getPath());
+                    assertEquals("/iot/v1/equipment/installations", URI.create(req.getRequestURI()).getPath());
                     assertEquals("true", req.getParameter("includeGateways"));
                     assertEquals("Bearer mytoken", req.getHeader("Authorization"));
                     String jsonResponse = new String(getClass().getResourceAsStream("installationsResponse.json").readAllBytes(), StandardCharsets.UTF_8);
@@ -993,7 +1002,7 @@ public class VicareServiceTest {
             protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
                 try {
-                    assertEquals("/iot/features/installations/2012616/gateways/7633107093013212/devices/0/features", URI.create(req.getRequestURI()).getPath());
+                    assertEquals("/iot/v1/features/installations/2012616/gateways/7633107093013212/devices/0/features", URI.create(req.getRequestURI()).getPath());
                     assertEquals("Bearer mytoken", req.getHeader("Authorization"));
                     String jsonResponse = new String(getClass().getResourceAsStream(fileName).readAllBytes(), StandardCharsets.UTF_8);
 
@@ -1004,6 +1013,7 @@ public class VicareServiceTest {
                     }
                     servletTestResult.complete(null);
                 } catch (AssertionFailedError e) {
+                    logger.warn("getFeatures() FAILED: {}", e.getMessage());
                     servletTestResult.completeExceptionally(e);
                     resp.setStatus(400);
                 }

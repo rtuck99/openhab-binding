@@ -297,6 +297,7 @@
           <configuration>
             <systemPropertyVariables>
               <junit.jupiter.execution.timeout.default>15 m</junit.jupiter.execution.timeout.default>
+              <org.ops4j.pax.logging.DefaultServiceLog.level>WARN</org.ops4j.pax.logging.DefaultServiceLog.level>
             </systemPropertyVariables>
           </configuration>
         </plugin>

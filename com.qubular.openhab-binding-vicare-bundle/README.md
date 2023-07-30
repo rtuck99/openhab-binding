@@ -85,6 +85,7 @@ Changelog
 
 ### 3.4.3
 
+* Issue #44 DEVICE_COMMUNICATION_ERROR no longer causes the bridge status to be marked Offline
 * Issue #45 Change iotServerUri configuration parameter so that it doesn't include the API version
 * Issue #43 Support gas consumption statistics reporting in kWh.  
   Upgrade note: Existing gas consumption statistics Items may need to be recreated in order to output in kWh.

@@ -1,0 +1,11 @@
+{
+  "viErrorId": "|00-b70813696b0549d4ad43ae0d701f01a8-4f4ba4e748574ab1-01.1f35caa0_",
+  "statusCode": 400,
+  "errorType": "DEVICE_COMMUNICATION_ERROR",
+  "message": "",
+  "extendedPayload": {
+    "httpStatusCode": "NotFound",
+    "code": "404",
+    "reason": "GATEWAY_OFFLINE"
+  }
+}

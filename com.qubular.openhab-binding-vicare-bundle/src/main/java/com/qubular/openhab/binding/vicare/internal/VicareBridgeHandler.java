@@ -3,10 +3,7 @@ package com.qubular.openhab.binding.vicare.internal;
 import com.qubular.openhab.binding.vicare.VicareServiceProvider;
 import com.qubular.openhab.binding.vicare.internal.configuration.SimpleConfiguration;
 import com.qubular.openhab.binding.vicare.internal.tokenstore.PersistedTokenStore;
-import com.qubular.vicare.AuthenticationException;
-import com.qubular.vicare.CommandFailureException;
-import com.qubular.vicare.VicareConfiguration;
-import com.qubular.vicare.VicareService;
+import com.qubular.vicare.*;
 import com.qubular.vicare.model.CommandDescriptor;
 import com.qubular.vicare.model.Feature;
 import org.eclipse.jdt.annotation.Nullable;
@@ -152,7 +149,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
         }
     }
 
-    public Optional<Feature> handleBridgedRefreshCommand(ChannelUID channelUID) {
+    public Optional<Feature> handleBridgedRefreshCommand(ChannelUID channelUID) throws AuthenticationException, IOException {
         logger.trace("Handling REFRESH for channel {} from thing {}", channelUID, channelUID.getThingUID());
         Thing targetThing = thingRegistry.get(channelUID.getThingUID());
         Channel channel = targetThing.getChannel(channelUID);
@@ -160,7 +157,8 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
             // Don't refresh channels that represent commands
             return empty();
         }
-        return getFeatures(targetThing)
+        try {
+            return getFeatures(targetThing)
                 .thenApply(features -> {
                     String featureName = channel.getProperties().get(PROPERTY_FEATURE_NAME);
                     if (getThing().getStatus() != ThingStatus.ONLINE) {
@@ -170,16 +168,22 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
                             .filter(f -> f.getName().equals(featureName))
                             .findAny();
                 })
-                .exceptionally(e -> {
-                    if (e instanceof AuthenticationException) {
-                        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "Unable to authenticate with Viessmann API: " + e.getMessage());
-                    } else {
-                        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "Unable to communicate with Viessmann API: " + e.getMessage());
-                    }
-                    logger.debug("Unexpected exception refreshing", e);
-                    return empty();
-                })
                 .join();
+        } catch (CompletionException e) {
+            Throwable t = e.getCause();
+            if (t instanceof AuthenticationException) {
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
+                             "Unable to authenticate with Viessmann API: " + e.getMessage());
+                throw ((AuthenticationException) t);
+            } else if ((t instanceof IOException) && (t instanceof VicareServiceException)) {
+                // VicareServiceException handled by device
+                throw ((IOException) t);
+            }
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
+                             "Unable to communicate with Viessmann API: " + e.getMessage());
+                logger.debug("Unexpected exception refreshing", e);
+            return empty();
+        }
     }
 
     public Optional<State> handleBridgedDeviceCommand(ChannelUID channelUID, State command) throws AuthenticationException, IOException, CommandFailureException {

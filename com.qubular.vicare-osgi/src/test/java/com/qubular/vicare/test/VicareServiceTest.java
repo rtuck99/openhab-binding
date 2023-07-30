@@ -361,6 +361,48 @@ public class VicareServiceTest {
     }
 
     @Test
+    public void getFeaturesThrowsAPIException_when400Returned() throws ServletException, NamespaceException, AuthenticationException, IOException {
+        CompletableFuture<Void> servletTestResult = new CompletableFuture<>();
+        tokenStore.storeAccessToken("mytoken", Instant.now().plus(1, ChronoUnit.DAYS));
+        Servlet iotServlet = new HttpServlet() {
+            @Override
+            protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+                try {
+                    assertEquals("/iot/v1/features/installations/2012616/gateways/1234567890123456/devices/0/features", URI.create(req.getRequestURI()).getPath());
+                    assertEquals("Bearer mytoken", req.getHeader("Authorization"));
+                    String jsonResponse = new String(getClass().getResourceAsStream("gatewayOffline_v1_features.json").readAllBytes(), StandardCharsets.UTF_8);
+
+                    resp.setContentType("application/json");
+                    resp.setStatus(400);
+                    try (ServletOutputStream outputStream = resp.getOutputStream()) {
+                        outputStream.print(jsonResponse);
+                    }
+                    servletTestResult.complete(null);
+                } catch (AssertionFailedError e) {
+                    logger.warn("getFeatures() FAILED: {}", e.getMessage());
+                    servletTestResult.completeExceptionally(e);
+                    resp.setStatus(400);
+                }
+            }
+        };
+        registerServlet("/iot", iotServlet);
+        try {
+            List<Feature> features = vicareService.getFeatures(2012616, "1234567890123456", "0");
+            fail("Expected exception to be thrown");
+        } catch (VicareServiceException e) {
+            VicareError error = e.getVicareError();
+            assertEquals(400, error.getStatusCode());
+            assertEquals(VicareError.ERROR_TYPE_DEVICE_COMMUNICATION_ERROR, error.getErrorType());
+            VicareError.ExtendedPayload extendedPayload = error.getExtendedPayload();
+            assertEquals(404, extendedPayload.getCode());
+            assertEquals(VicareError.ExtendedPayload.REASON_GATEWAY_OFFLINE, extendedPayload.getReason());
+        }
+        servletTestResult.orTimeout(10, TimeUnit.SECONDS).join();
+
+    }
+
+    @Test
     @DisabledIf("realConnection")
     public void supports_heating_boiler_serial() throws ServletException, NamespaceException, AuthenticationException, IOException {
         List<Feature> features = getFeatures("deviceFeaturesResponse.json");

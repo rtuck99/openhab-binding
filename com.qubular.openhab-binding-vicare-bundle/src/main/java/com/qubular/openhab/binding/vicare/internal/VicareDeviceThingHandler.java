@@ -1,9 +1,7 @@
 package com.qubular.openhab.binding.vicare.internal;
 
 import com.qubular.openhab.binding.vicare.VicareServiceProvider;
-import com.qubular.vicare.AuthenticationException;
-import com.qubular.vicare.CommandFailureException;
-import com.qubular.vicare.VicareService;
+import com.qubular.vicare.*;
 import com.qubular.vicare.model.Unit;
 import com.qubular.vicare.model.Value;
 import com.qubular.vicare.model.values.*;
@@ -311,6 +309,8 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
             }
         } catch (AuthenticationException e) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Unable to authenticate with Viessmann API: " + e.getMessage());
+        } catch (VicareServiceException e) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "Unable to communicate with device: " + e.getMessage());
         } catch (IOException e) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Unable to communicate with Viessmann API: " + e.getMessage());
         } catch (CommandFailureException e) {

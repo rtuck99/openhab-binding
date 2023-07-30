@@ -3,9 +3,7 @@ package com.qubular.openhab.binding.vicare.internal;
 import com.qubular.openhab.binding.vicare.VicareServiceProvider;
 import com.qubular.openhab.binding.vicare.internal.configuration.SimpleConfiguration;
 import com.qubular.openhab.binding.vicare.internal.tokenstore.PersistedTokenStore;
-import com.qubular.vicare.AuthenticationException;
-import com.qubular.vicare.CommandFailureException;
-import com.qubular.vicare.VicareService;
+import com.qubular.vicare.*;
 import com.qubular.vicare.model.*;
 import com.qubular.vicare.model.features.*;
 import com.qubular.vicare.model.params.EnumParamDescriptor;
@@ -26,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.mockito.stubbing.OngoingStubbing;
 import org.openhab.core.config.core.Configuration;
 import org.openhab.core.config.discovery.AbstractDiscoveryService;
 import org.openhab.core.config.discovery.DiscoveryListener;
@@ -104,7 +103,19 @@ public class VicareBindingTest {
     private static Map<ChannelTypeUID, ChannelType> channelTypes;
 
 
-    private void simpleHeatingInstallation() throws AuthenticationException, IOException {
+    private void disconnectedHeatingInstallation() throws AuthenticationException, IOException {
+        VicareError error = mock(VicareError.class);
+        when(error.getErrorType()).thenReturn(VicareError.ERROR_TYPE_DEVICE_COMMUNICATION_ERROR);
+        when(error.getStatusCode()).thenReturn(400);
+        VicareError.ExtendedPayload extendedPayload = mock(VicareError.ExtendedPayload.class);
+        when(extendedPayload.getCode()).thenReturn(404);
+        when(extendedPayload.getReason()).thenReturn(VicareError.ExtendedPayload.REASON_GATEWAY_OFFLINE);
+        when(error.getExtendedPayload()).thenReturn(extendedPayload);
+
+        simpleHeatingInstallation().thenThrow(new VicareServiceException(error));
+    }
+
+    private OngoingStubbing<List<Feature>> simpleHeatingInstallation() throws AuthenticationException, IOException {
         Installation installation = mock(Installation.class);
         Gateway gateway = mock(Gateway.class);
         doReturn(GATEWAY_SERIAL).when(gateway).getSerial();
@@ -433,10 +444,8 @@ public class VicareBindingTest {
                                 ventilationOperatingModesActive,
                                 ventilationOperatingProgramsActive,
                                 ventilationOperatingProgramsHoliday));
-        doReturn(
-                features)
-                .when(vicareService)
-                .getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
+        return when(vicareService.getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID))
+                .thenReturn(features);
     }
 
     private void oneHeatingInstallationTwoBoilers() throws AuthenticationException, IOException {
@@ -701,6 +710,19 @@ public class VicareBindingTest {
         heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
         assertEquals(new StringType("connected"), stateCaptor.getValue());
+    }
+
+    @Test
+    public void thingRefreshSetsDeviceStatusOffline_whenVicareServiceReportsDeviceOffline() throws AuthenticationException, IOException {
+        HeatingThing heatingThing = initialiseDisconnectedHeatingThing();
+        verify(heatingThing.callback, timeout(1000)).statusUpdated(eq(heatingThing.thingCaptor.getValue()), argThat((ThingStatusInfo tsi) -> tsi.getStatus() == ThingStatus.ONLINE));
+        Channel channel = findChannelNoVerify(heatingThing.thingCaptor,
+                                                  "heating_circuits_1_operating_programs_active_value");
+        heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(heatingThing.bridgeCallback, after(1000).never()).statusUpdated(any(Thing.class), argThat((ThingStatusInfo tsi)->tsi.getStatus() == ThingStatus.OFFLINE));
+
+        ThingStatusInfo expectedStatus = new ThingStatusInfo(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "Unable to communicate with device: API returned 400:DEVICE_COMMUNICATION_ERROR - null - 404:GATEWAY_OFFLINE");
+        verify(heatingThing.callback).statusUpdated(heatingThing.thingCaptor.getValue(), expectedStatus);
     }
 
     @Test
@@ -1004,10 +1026,12 @@ public class VicareBindingTest {
         heatingThing.inOrder.verify(vicareService, never()).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
     }
 
-    private void createBridgeHandler(Bridge bridge) {
+    private ThingHandlerCallback createBridgeHandler(Bridge bridge) {
         VicareBridgeHandler bridgeHandler = new VicareBridgeHandler(vicareServiceProvider, bridge);
-        bridgeHandler.setCallback(mock(ThingHandlerCallback.class));
+        ThingHandlerCallback callback = mock(ThingHandlerCallback.class);
+        bridgeHandler.setCallback(callback);
         when(bridge.getHandler()).thenReturn(bridgeHandler);
+        return callback;
     }
 
     @Test
@@ -2115,10 +2139,19 @@ public class VicareBindingTest {
 
     }
 
+    private HeatingThing initialiseDisconnectedHeatingThing() throws AuthenticationException, IOException {
+        disconnectedHeatingInstallation();
+        return postInitialiseHeatingThing();
+    }
+
     private HeatingThing initialiseHeatingThing() throws AuthenticationException, IOException {
         simpleHeatingInstallation();
+        return postInitialiseHeatingThing();
+    }
+
+    private HeatingThing postInitialiseHeatingThing() throws AuthenticationException, IOException {
         Bridge bridge = vicareBridge();
-        createBridgeHandler(bridge);
+        ThingHandlerCallback bridgeCallback = createBridgeHandler(bridge);
         VicareHandlerFactory vicareHandlerFactory = new VicareHandlerFactory(bundleContext,
                                                                              vicareServiceProvider);
         Thing deviceThing = heatingDeviceThing(DEVICE_1_ID);
@@ -2129,18 +2162,23 @@ public class VicareBindingTest {
         inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
         ArgumentCaptor<Thing> thingCaptor = forClass(Thing.class);
         inOrder.verify(callback, timeout(1000).atLeastOnce()).statusUpdated(thingCaptor.capture(), any(ThingStatusInfo.class));
-        HeatingThing result = new HeatingThing(handler, callback, inOrder, thingCaptor);
+
+        HeatingThing result = new HeatingThing(bridge, handler, bridgeCallback, callback, inOrder, thingCaptor);
         return result;
     }
 
     private static class HeatingThing {
         public final ThingHandler handler;
         public final ThingHandlerCallback callback;
+        public final ThingHandlerCallback bridgeCallback;
         public final InOrder inOrder;
         public final ArgumentCaptor<Thing> thingCaptor;
+        public final Thing bridge;
 
-        public HeatingThing(ThingHandler handler, ThingHandlerCallback callback, InOrder inOrder, ArgumentCaptor<Thing> thingCaptor) {
+        public HeatingThing(Bridge bridge, ThingHandler handler, ThingHandlerCallback bridgeHandlerCallback, ThingHandlerCallback callback, InOrder inOrder, ArgumentCaptor<Thing> thingCaptor) {
+            this.bridge = bridge;
             this.handler = handler;
+            this.bridgeCallback = bridgeHandlerCallback;
             this.callback = callback;
             this.inOrder = inOrder;
             this.thingCaptor = thingCaptor;

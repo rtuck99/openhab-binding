@@ -110,28 +110,6 @@ public class VicareServiceImpl implements VicareService {
         public String reason;
     }
 
-    private static class HttpErrorResponse {
-        public int statusCode;
-        public String message;
-        public String errorType;
-        public ExtendedPayload extendedPayload;
-    }
-
-    private static class ExtendedPayload {
-        public long limitReset;
-        public String code;
-        public String reason;
-
-        @Override
-        public String toString() {
-            return "ExtendedPayload{" +
-                    "limitReset=" + limitReset +
-                    ", code='" + code + '\'' +
-                    ", reason='" + reason + '\'' +
-                    '}';
-        }
-    }
-
     @Override
     public List<Installation> getInstallations() throws AuthenticationException, IOException {
         logger.trace("Fetching installations.");
@@ -238,17 +216,17 @@ public class VicareServiceImpl implements VicareService {
                 } else {
                     String msg = "";
                     try {
-                        HttpErrorResponse errorResponse = apiGson().fromJson(responseContent, HttpErrorResponse.class);
+                        VicareError errorResponse = apiGson().fromJson(responseContent, VicareError.class);
                         if (errorResponse != null) {
                             msg = format("Unable to request features from IoT API, server returned %s, %s: %s",
                                                 contentResponse.getStatus(),
-                                                errorResponse.message,
-                                                errorResponse.errorType);
-                            if (contentResponse.getStatus() == RATE_LIMIT_EXCEEDED && errorResponse.extendedPayload != null) {
-                                logger.warn("Rate limit expires at %s", Instant.ofEpochMilli(errorResponse.extendedPayload.limitReset));
+                                                errorResponse.getMessage(),
+                                                errorResponse.getErrorType());
+                            if (contentResponse.getStatus() == RATE_LIMIT_EXCEEDED && errorResponse.getExtendedPayload() != null) {
+                                logger.warn("Rate limit expires at %s", Instant.ofEpochMilli(errorResponse.getExtendedPayload().getLimitReset()));
                             }
                             logger.warn(msg);
-                            throw new IOException(msg);
+                            throw new VicareServiceException(errorResponse);
                         }
                     } catch (JsonSyntaxException e) {
                         // never mind
@@ -294,11 +272,11 @@ public class VicareServiceImpl implements VicareService {
                 }
             } else {
                 try {
-                    HttpErrorResponse errorResponse = apiGson().fromJson(contentResponse.getContentAsString(), HttpErrorResponse.class);
-                    String msg = format("Failed to send command, server returned %d, %s - %s", contentResponse.getStatus(), errorResponse.errorType, errorResponse.message);
+                    VicareError errorResponse = apiGson().fromJson(contentResponse.getContentAsString(), VicareError.class);
+                    String msg = format("Failed to send command, server returned %d, %s - %s", contentResponse.getStatus(), errorResponse.getErrorType(), errorResponse.getMessage());
                     logger.warn(msg);
-                    if (errorResponse.extendedPayload != null) {
-                        msg += format("Extended Payload: {}", errorResponse.extendedPayload);
+                    if (errorResponse.getExtendedPayload() != null) {
+                        msg += format("Extended Payload: {}", errorResponse.getExtendedPayload());
                     }
                     throw new IOException(msg);
                 } catch (Exception e) {

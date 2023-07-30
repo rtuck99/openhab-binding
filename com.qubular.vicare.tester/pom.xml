@@ -3,7 +3,7 @@
   <parent>
     <artifactId>com.qubular.openhab-binding</artifactId>
     <groupId>com.qubular</groupId>
-    <version>3.4.3-SNAPSHOT</version>
+    <version>3.4.3</version>
   </parent>
   <description>Test container that executes integration tests</description>
   <modelVersion>4.0.0</modelVersion>

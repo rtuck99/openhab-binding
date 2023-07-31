@@ -14,7 +14,7 @@
   <packaging>pom</packaging>
   <properties>
     <org.osgi.service.http.port>9000</org.osgi.service.http.port>
-    <openhab.version>4.0.0.M3</openhab.version>
+    <openhab.version>4.0.0</openhab.version>
     <oh.java.version>17</oh.java.version>
     <maven.compiler.source>${oh.java.version}</maven.compiler.source>
     <maven.compiler.target>${oh.java.version}</maven.compiler.target>
@@ -40,7 +40,7 @@
   <scm>
     <connection>scm:git:ssh://git@github.com/rtuck99/openhab-binding.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/rtuck99/openhab-binding.git</developerConnection>
-    <tag>com.qubular.openhab-binding-3.4.0</tag>
+    <tag>com.qubular.openhab-binding-4.0.0</tag>
     <url>https://github.com/rtuck99/openhab-binding</url>
   </scm>
   <repositories>
@@ -84,11 +84,6 @@
       <dependency>
         <groupId>com.qubular</groupId>
         <artifactId>com.qubular.openhab-binding-glowmarkt-bundle</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.qubular</groupId>
-        <artifactId>com.qubular.openhab-binding-googleassistant-bundle</artifactId>
         <version>${project.version}</version>
       </dependency>
       <!-- Junit -->
@@ -160,6 +155,11 @@
         <groupId>org.osgi</groupId>
         <artifactId>org.osgi.util.promise</artifactId>
         <version>1.2.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.osgi</groupId>
+        <artifactId>org.osgi.service.component</artifactId>
+        <version>1.5.0</version>
       </dependency>
       <dependency>
         <!-- needed for pax web -->
@@ -370,7 +370,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-enforcer-plugin</artifactId>
-          <version>3.1.0</version>
+          <version>3.3.0</version>
           <executions>
             <execution>
               <id>default-cli</id>
@@ -395,8 +395,6 @@
     <module>com.qubular.openhab-binding-glowmarkt-bundle</module>
     <module>com.qubular.openhab-binding-glowmarkt-feature</module>
     <module>com.qubular.glowmarkt-osgi</module>
-    <module>com.qubular.openhab-binding-googleassistant-bundle</module>
-    <module>com.qubular.openhab-binding-googleassistant-feature</module>
     <module>com.qubular.vicare.tester</module>
   </modules>
 

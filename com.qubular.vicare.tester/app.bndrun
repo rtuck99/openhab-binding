@@ -5,7 +5,7 @@ target/index.xml;name="app"
 
 -runfw: org.apache.felix.framework
 
--runee: JavaSE-11
+-runee: JavaSE-17
 
 -runrequires: \
     bnd.identity;id='com.qubular.vicare-osgi',\
@@ -52,23 +52,20 @@ target/index.xml;name="app"
 	junit-platform-commons;version='[1.8.1,1.8.2)',\
 	junit-platform-engine;version='[1.8.1,1.8.2)',\
 	junit-platform-launcher;version='[1.8.1,1.8.2)',\
-	org.apache.felix.scr;version='[2.1.18,2.1.19)',\
 	org.opentest4j;version='[1.2.0,1.2.1)',\
 	org.osgi.util.function;version='[1.1.0,1.1.1)',\
 	org.osgi.util.promise;version='[1.2.0,1.2.1)',\
-	org.apache.felix.http.jetty;version='[4.0.14,4.0.15)',\
-	org.apache.felix.http.servlet-api;version='[1.1.2,1.1.3)',\
-	org.ops4j.pax.logging.pax-logging-api;version='[2.0.12,2.0.13)',\
 	org.osgi.service.http;version='[1.2.2,1.2.3)',\
-	org.ops4j.pax.logging.pax-logging-log4j2;version='[2.0.12,2.0.13)',\
-	org.apache.felix.configadmin;version='[1.9.22,1.9.23)',\
-	com.google.gson;version='[2.8.6,2.8.7)',\
 	org.apache.commons.lang3;version='[3.12.0,3.12.1)',\
-	org.apache.felix.log;version='[1.2.0,1.2.1)',\
-	org.eclipse.jetty.http;version='[9.4.20,9.4.21)',\
-	org.eclipse.jetty.util;version='[9.4.20,9.4.21)',\
 	junit-jupiter-params;version='[5.8.1,5.8.2)',\
-	com.qubular.glowmarkt-osgi;version='[3.4.3,3.4.4)',\
-	com.qubular.glowmarkt-osgi-tests;version='[3.4.3,3.4.4)',\
-	com.qubular.vicare-osgi;version='[3.4.3,3.4.4)',\
-	com.qubular.vicare-osgi-tests;version='[3.4.3,3.4.4)'
+	com.google.gson;version='[2.9.1,2.9.2)',\
+	com.qubular.glowmarkt-osgi;version='[4.0.0,4.0.1)',\
+	com.qubular.glowmarkt-osgi-tests;version='[4.0.0,4.0.1)',\
+	com.qubular.vicare-osgi;version='[4.0.0,4.0.1)',\
+	com.qubular.vicare-osgi-tests;version='[4.0.0,4.0.1)',\
+	org.apache.felix.http.jetty;version='[4.2.10,4.2.11)',\
+	org.apache.felix.http.servlet-api;version='[1.2.0,1.2.1)',\
+	org.apache.felix.scr;version='[2.2.4,2.2.5)',\
+	org.ops4j.pax.logging.pax-logging-api;version='[2.2.0,2.2.1)',\
+	org.ops4j.pax.logging.pax-logging-log4j2;version='[2.2.0,2.2.1)',\
+	org.osgi.service.component;version='[1.5.0,1.5.1)'

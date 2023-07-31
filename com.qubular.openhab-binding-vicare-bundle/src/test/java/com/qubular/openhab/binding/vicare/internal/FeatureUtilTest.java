@@ -35,11 +35,12 @@ public class FeatureUtilTest {
 
     public static Stream<Arguments> featureNames() {
         return Stream.of(
-                Arguments.of("template_heating_circuits_operating_programs_energySaving_active", "heating.circuits.1.operating.programs.reducedEnergySaving", "active", 0),
+                Arguments.of("template_heating_circuits_operating_programs_energySaving_active", "heating.circuits.1.operating.programs.reducedEnergySaving", "active", -1),
                 Arguments.of("template_heating_circuits_operating_programs_-_active", "heating.circuits.1.operating.programs.reduced", "active", 1),
-                Arguments.of("template_heating_circuits_circulation_pump_status", "heating.circuits.0.circulation.pump", "status", 0),
-                Arguments.of("template_heating_circuits_name", "heating.circuits.0", "name", 0),
-                Arguments.of("template_heating_circuits_-_name", "heating.circuits.0.name", "name", 1)
+                Arguments.of("template_heating_circuits_circulation_pump_status", "heating.circuits.0.circulation.pump", "status", -1),
+                Arguments.of("template_heating_circuits_name", "heating.circuits.0", "name", -1),
+                Arguments.of("template_heating_circuits_-_name", "heating.circuits.0.name", "name", 1),
+                Arguments.of("template_heating_circuits_name_-", "heating.circuits.0.name", "name", 0)
         );
     }
 

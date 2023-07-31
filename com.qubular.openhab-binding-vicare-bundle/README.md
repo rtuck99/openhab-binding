@@ -19,8 +19,9 @@ Remove the old binding, and then install the new one via the bindings page. Ther
 Supported Devices
 ----------------
 
-Currently this binding has only been tested with Vitodens 100-W in a fairly
-basic configuration, however it should support other Viessmann devices.
+This binding has only been developed against a Vitodens 100-W in a fairly
+basic configuration, however it should be able to work against a range of other Viessmann heating and ventilation 
+devices including heat pumps and solar heating, although not all features on these may be supported yet.
 
 Supported Features
 ------------------
@@ -41,6 +42,7 @@ configuration some or all of these may or may not be present:
 * DHW, Heating and Total consumption statistics
 * Program mode temperature settings
 * DHW Heating status
+* DHW Charging active
 * DHW Hot water storage temperature
 * DHW Primary and Circulation Pump Status
 * DHW target temperature (read/write)
@@ -80,6 +82,20 @@ and they will appear in your Inbox.
 
 Changelog
 ---------
+
+### 3.4.3
+
+* Issue #44 DEVICE_COMMUNICATION_ERROR no longer causes the bridge status to be marked Offline
+* Issue #45 Change iotServerUri configuration parameter so that it doesn't include the API version
+* Issue #43 Support gas consumption statistics reporting in kWh.  
+  Upgrade note: Existing gas consumption statistics Items may need to be recreated in order to output in kWh.
+
+### 3.4.2
+
+* Issue #39 Location of the response capture file is now shown in the bridge properties.
+* Issue #38 Support for heating.dhw.charging
+* Issue #40 Support heating.compressors.n.statistics for load classes
+* Support for heating.solar.power.cumulativeProduced cumulative solar power production statistic
 
 ### 3.4.1
 

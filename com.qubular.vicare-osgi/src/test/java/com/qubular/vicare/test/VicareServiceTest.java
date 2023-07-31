@@ -49,6 +49,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.qubular.vicare.model.values.StatusValue.OFF;
+import static java.util.Collections.emptyMap;
 import static java.util.Optional.ofNullable;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -108,9 +109,16 @@ public class VicareServiceTest {
     @DisabledIf("realConnection")
     public void setupPageRendersAndIncludesRedirectURI() throws Exception {
         tokenStore.storeAccessToken("mytoken", Instant.now().plus(1, ChronoUnit.DAYS));
+        CompletableFuture<Void> requestResult = new CompletableFuture<>();
         Servlet iotServlet = new HttpServlet() {
             @Override
             protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+                try {
+                    assertEquals("/iot/v1/equipment/installations", URI.create(req.getRequestURI()).getPath());
+                    requestResult.complete(null);
+                } catch (AssertionFailedError e) {
+                    requestResult.completeExceptionally(e);
+                }
                 String jsonResponse = new String(getClass().getResourceAsStream("installationsResponse.json").readAllBytes(), StandardCharsets.UTF_8);
                 resp.setContentType("application/json");
                 resp.setStatus(200);
@@ -123,6 +131,8 @@ public class VicareServiceTest {
 
         String contentAsString = httpClient.GET("http://localhost:9000/vicare/setup")
                 .getContentAsString();
+
+        requestResult.get(1, TimeUnit.SECONDS);
         assertTrue(contentAsString.contains("<title>Viessmann API Binding Setup</title>"), contentAsString);
         assertTrue(contentAsString.contains("the following redirect URI: http://localhost:9000/vicare/authCode"), contentAsString);
         Matcher matcher = Pattern.compile("<form action=\"(.*?)\"", Pattern.MULTILINE)
@@ -302,7 +312,7 @@ public class VicareServiceTest {
             protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 
                 try {
-                    assertEquals("/iot/equipment/installations", URI.create(req.getRequestURI()).getPath());
+                    assertEquals("/iot/v1/equipment/installations", URI.create(req.getRequestURI()).getPath());
                     assertEquals("true", req.getParameter("includeGateways"));
                     assertEquals("Bearer mytoken", req.getHeader("Authorization"));
                     String jsonResponse = new String(getClass().getResourceAsStream("installationsResponse.json").readAllBytes(), StandardCharsets.UTF_8);
@@ -348,6 +358,48 @@ public class VicareServiceTest {
         assertEquals("E3_Vitodens_100_0421", device.getModelId());
         assertEquals("Online", device.getStatus());
         assertEquals("heating", device.getDeviceType());
+    }
+
+    @Test
+    public void getFeaturesThrowsAPIException_when400Returned() throws ServletException, NamespaceException, AuthenticationException, IOException {
+        CompletableFuture<Void> servletTestResult = new CompletableFuture<>();
+        tokenStore.storeAccessToken("mytoken", Instant.now().plus(1, ChronoUnit.DAYS));
+        Servlet iotServlet = new HttpServlet() {
+            @Override
+            protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+                try {
+                    assertEquals("/iot/v1/features/installations/2012616/gateways/1234567890123456/devices/0/features", URI.create(req.getRequestURI()).getPath());
+                    assertEquals("Bearer mytoken", req.getHeader("Authorization"));
+                    String jsonResponse = new String(getClass().getResourceAsStream("gatewayOffline_v1_features.json").readAllBytes(), StandardCharsets.UTF_8);
+
+                    resp.setContentType("application/json");
+                    resp.setStatus(400);
+                    try (ServletOutputStream outputStream = resp.getOutputStream()) {
+                        outputStream.print(jsonResponse);
+                    }
+                    servletTestResult.complete(null);
+                } catch (AssertionFailedError e) {
+                    logger.warn("getFeatures() FAILED: {}", e.getMessage());
+                    servletTestResult.completeExceptionally(e);
+                    resp.setStatus(400);
+                }
+            }
+        };
+        registerServlet("/iot", iotServlet);
+        try {
+            List<Feature> features = vicareService.getFeatures(2012616, "1234567890123456", "0");
+            fail("Expected exception to be thrown");
+        } catch (VicareServiceException e) {
+            VicareError error = e.getVicareError();
+            assertEquals(400, error.getStatusCode());
+            assertEquals(VicareError.ERROR_TYPE_DEVICE_COMMUNICATION_ERROR, error.getErrorType());
+            VicareError.ExtendedPayload extendedPayload = error.getExtendedPayload();
+            assertEquals(404, extendedPayload.getCode());
+            assertEquals(VicareError.ExtendedPayload.REASON_GATEWAY_OFFLINE, extendedPayload.getReason());
+        }
+        servletTestResult.orTimeout(10, TimeUnit.SECONDS).join();
+
     }
 
     @Test
@@ -924,18 +976,34 @@ public class VicareServiceTest {
         assertEquals(new StringValue("ready"), feature.get().getProperties().get("phase"));
     }
 
-    @Test
+    public static Stream<Arguments> source_heating_compressors_statistics() {
+        return Stream.of(Arguments.of("deviceFeaturesResponse5.json", 177, 29, emptyMap()),
+                         Arguments.of("deviceFeaturesResponse8.json", 11890, 3115.5,
+                                      Map.of("hoursLoadClassOne", 253,
+                                             "hoursLoadClassTwo", 519,
+                                             "hoursLoadClassThree", 1962,
+                                             "hoursLoadClassFour", 257,
+                                             "hoursLoadClassFive", 71)));
+    }
+
+    @MethodSource("source_heating_compressors_statistics")
+    @ParameterizedTest
     @DisabledIf("realConnection")
-    public void supports_heating_compressors_statistics() throws ServletException, AuthenticationException, NamespaceException, IOException {
-        List<Feature> features = getFeatures("deviceFeaturesResponse5.json");
+    public void supports_heating_compressors_statistics(String fileName, int expectedStarts, double expectedHours, Map<String, Integer> expectedLoadClassHours) throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures(fileName);
 
         Optional<Feature> feature = features.stream()
                 .filter(f -> f.getName().equals("heating.compressors.0.statistics"))
                 .map(Feature.class::cast)
                 .findFirst();
         assertTrue(feature.isPresent());
-        assertEquals(new DimensionalValue(new Unit(""), 177), feature.get().getProperties().get("starts"));
-        assertEquals(new DimensionalValue(new Unit("hour"), 29), feature.get().getProperties().get("hours"));
+        assertTrue(feature.get() instanceof StatusSensorFeature);
+        assertEquals(new DimensionalValue(new Unit(""), expectedStarts), feature.get().getProperties().get("starts"));
+        assertEquals(new DimensionalValue(Unit.HOUR, expectedHours), feature.get().getProperties().get("hours"));
+        for (var expectedLoadClassHour : expectedLoadClassHours.entrySet()) {
+            assertEquals(new DimensionalValue(Unit.HOUR, expectedLoadClassHour.getValue()), feature.get().getProperties().get(expectedLoadClassHour.getKey()),
+                         "Incorrect property for " + expectedLoadClassHour.getKey());
+        }
     }
 
     @Test
@@ -976,7 +1044,7 @@ public class VicareServiceTest {
             protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
                 try {
-                    assertEquals("/iot/features/installations/2012616/gateways/7633107093013212/devices/0/features", URI.create(req.getRequestURI()).getPath());
+                    assertEquals("/iot/v1/features/installations/2012616/gateways/7633107093013212/devices/0/features", URI.create(req.getRequestURI()).getPath());
                     assertEquals("Bearer mytoken", req.getHeader("Authorization"));
                     String jsonResponse = new String(getClass().getResourceAsStream(fileName).readAllBytes(), StandardCharsets.UTF_8);
 
@@ -987,6 +1055,7 @@ public class VicareServiceTest {
                     }
                     servletTestResult.complete(null);
                 } catch (AssertionFailedError e) {
+                    logger.warn("getFeatures() FAILED: {}", e.getMessage());
                     servletTestResult.completeExceptionally(e);
                     resp.setStatus(400);
                 }
@@ -1011,6 +1080,18 @@ public class VicareServiceTest {
         assertTrue(dhwFeature.isPresent());
         assertEquals(StatusValue.ON, dhwFeature.get().getStatus());
         assertEquals(true, dhwFeature.get().isActive());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_dhw_charging() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse9.json");
+        Optional<StatusSensorFeature> feature = features.stream()
+                .filter(f -> f.getName().equals("heating.dhw.charging"))
+                .map(StatusSensorFeature.class::cast)
+                .findFirst();
+        assertTrue(feature.isPresent());
+        assertEquals(false, feature.get().isActive());
     }
 
     @Test
@@ -1275,8 +1356,22 @@ public class VicareServiceTest {
                 .map(NumericSensorFeature.class::cast)
                 .findFirst();
 
-        assertEquals(new DimensionalValue(Unit.LITER, expectedValue), sensorFeature.get().getValue());
+        assertEquals(new DimensionalValue(Unit.LITRE, expectedValue), sensorFeature.get().getValue());
         assertEquals(expectedStatus, sensorFeature.get().getStatus());
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void supports_heating_solar_power_cumulativeProduced() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("deviceFeaturesResponse9.json");
+
+        Optional<NumericSensorFeature> solarPower = features.stream()
+                .filter(f -> f.getName().equals("heating.solar.power.cumulativeProduced"))
+                .map(NumericSensorFeature.class::cast)
+                .findFirst();
+
+        assertEquals(14091.0, solarPower.get().getValue().getValue(), 0.001);
+        assertEquals(Unit.KILOWATT_HOUR, solarPower.get().getValue().getUnit());
     }
 
     @Test

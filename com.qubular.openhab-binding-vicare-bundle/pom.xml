@@ -54,6 +54,12 @@
       <artifactId>org.openhab.core.test</artifactId>
       <version>${openhab.version}</version>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>ch.qos.logback</groupId>
+          <artifactId>logback-classic</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>

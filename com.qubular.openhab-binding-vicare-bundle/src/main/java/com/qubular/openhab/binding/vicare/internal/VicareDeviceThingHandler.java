@@ -1,10 +1,8 @@
 package com.qubular.openhab.binding.vicare.internal;
 
 import com.qubular.openhab.binding.vicare.VicareServiceProvider;
-import com.qubular.vicare.AuthenticationException;
-import com.qubular.vicare.CommandFailureException;
-import com.qubular.vicare.VicareService;
-import com.qubular.vicare.model.CommandDescriptor;
+import com.qubular.vicare.*;
+import com.qubular.vicare.model.Unit;
 import com.qubular.vicare.model.Value;
 import com.qubular.vicare.model.values.*;
 import com.qubular.vicare.model.values.DimensionalValue;
@@ -35,10 +33,10 @@ import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static com.qubular.openhab.binding.vicare.internal.DeviceDiscoveryEvent.generateTopic;
+import static com.qubular.openhab.binding.vicare.internal.UnitMapping.apiToOpenHab;
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
 import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThingUniqueId;
 import static java.lang.String.format;
@@ -173,12 +171,14 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                         public void visit(ConsumptionFeature f) {
                             Channel channel = getThing().getChannel(channelUID);
                             String statName = channel.getProperties().get(PROPERTY_PROP_NAME);
-                            updateConsumptionStat(() -> f.getConsumption(CONSUMPTION_STATS_BY_CHANNEL_NAME.get(statName))
-                                    .map(DimensionalValue::getValue).orElse(0.0));
+                            Optional<DimensionalValue> stat = f.getConsumption(
+                                    CONSUMPTION_STATS_BY_CHANNEL_NAME.get(statName));
+                            updateConsumptionStat(stat.map(DimensionalValue::getValue).orElse(0.0),
+                                                  stat.map(DimensionalValue::getUnit).orElse(null));
                         }
 
-                        private void updateConsumptionStat(Supplier<Double> valueSupplier) {
-                            updateState(channelUID, new DecimalType(valueSupplier.get()));
+                        private void updateConsumptionStat(Double value, Unit unit) {
+                            updateState(channelUID, apiToOpenHab(unit, value));
                         }
 
                         @Override
@@ -309,6 +309,8 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
             }
         } catch (AuthenticationException e) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Unable to authenticate with Viessmann API: " + e.getMessage());
+        } catch (VicareServiceException e) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "Unable to communicate with device: " + e.getMessage());
         } catch (IOException e) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Unable to communicate with Viessmann API: " + e.getMessage());
         } catch (CommandFailureException e) {

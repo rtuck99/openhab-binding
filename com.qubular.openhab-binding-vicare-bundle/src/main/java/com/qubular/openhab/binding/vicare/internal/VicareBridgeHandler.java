@@ -3,13 +3,9 @@ package com.qubular.openhab.binding.vicare.internal;
 import com.qubular.openhab.binding.vicare.VicareServiceProvider;
 import com.qubular.openhab.binding.vicare.internal.configuration.SimpleConfiguration;
 import com.qubular.openhab.binding.vicare.internal.tokenstore.PersistedTokenStore;
-import com.qubular.vicare.AuthenticationException;
-import com.qubular.vicare.CommandFailureException;
-import com.qubular.vicare.VicareConfiguration;
-import com.qubular.vicare.VicareService;
+import com.qubular.vicare.*;
 import com.qubular.vicare.model.CommandDescriptor;
 import com.qubular.vicare.model.Feature;
-import com.qubular.vicare.model.Value;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.library.types.OnOffType;
@@ -23,7 +19,6 @@ import org.openhab.core.thing.type.ChannelType;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.RefreshType;
 import org.openhab.core.types.State;
-import org.openhab.core.types.Type;
 import org.osgi.service.cm.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +40,7 @@ import static java.util.Optional.empty;
 
 public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThingHandler {
     public static final String CONFIG_USE_LIMITED_ENCRYPTION = "useLimitedEncryption";
+    public static final String CONFIG_POLLING_INTERVAL = "pollingInterval";
     private static final Logger logger = LoggerFactory.getLogger(VicareBridgeHandler.class);
     public static final int POLLING_STARTUP_DELAY_SECS = 10;
     private final ThingRegistry thingRegistry;
@@ -87,7 +83,9 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
 
     @Override
     public void initialize() {
+        upgradeConfiguration();
         updateProperty(VicareConstants.PROPERTY_BINDING_VERSION, bindingVersion);
+        updateProperty(PROPERTY_RESPONSE_CAPTURE_FOLDER, config.getResponseCaptureFolder() != null ? config.getResponseCaptureFolder().getAbsolutePath().toString() : "");
         updateStatus(ThingStatus.UNKNOWN);
         featurePollingJob = scheduler.scheduleAtFixedRate(featurePoller(), POLLING_STARTUP_DELAY_SECS, getPollingInterval(), TimeUnit.SECONDS);
         logger.debug("VicareBridgeHandler initialised");
@@ -103,7 +101,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
     }
 
     private int getPollingInterval() {
-        BigDecimal pollingInterval = (BigDecimal) getConfig().getProperties().get("pollingInterval");
+        BigDecimal pollingInterval = (BigDecimal) getConfig().getProperties().get(CONFIG_POLLING_INTERVAL);
         return pollingInterval == null ? REQUEST_INTERVAL_SECS : pollingInterval.intValue();
     }
 
@@ -151,7 +149,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
         }
     }
 
-    public Optional<Feature> handleBridgedRefreshCommand(ChannelUID channelUID) {
+    public Optional<Feature> handleBridgedRefreshCommand(ChannelUID channelUID) throws AuthenticationException, IOException {
         logger.trace("Handling REFRESH for channel {} from thing {}", channelUID, channelUID.getThingUID());
         Thing targetThing = thingRegistry.get(channelUID.getThingUID());
         Channel channel = targetThing.getChannel(channelUID);
@@ -159,7 +157,8 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
             // Don't refresh channels that represent commands
             return empty();
         }
-        return getFeatures(targetThing)
+        try {
+            return getFeatures(targetThing)
                 .thenApply(features -> {
                     String featureName = channel.getProperties().get(PROPERTY_FEATURE_NAME);
                     if (getThing().getStatus() != ThingStatus.ONLINE) {
@@ -169,16 +168,22 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
                             .filter(f -> f.getName().equals(featureName))
                             .findAny();
                 })
-                .exceptionally(e -> {
-                    if (e instanceof AuthenticationException) {
-                        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "Unable to authenticate with Viessmann API: " + e.getMessage());
-                    } else {
-                        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "Unable to communicate with Viessmann API: " + e.getMessage());
-                    }
-                    logger.debug("Unexpected exception refreshing", e);
-                    return empty();
-                })
                 .join();
+        } catch (CompletionException e) {
+            Throwable t = e.getCause();
+            if (t instanceof AuthenticationException) {
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
+                             "Unable to authenticate with Viessmann API: " + e.getMessage());
+                throw ((AuthenticationException) t);
+            } else if ((t instanceof IOException) && (t instanceof VicareServiceException)) {
+                // VicareServiceException handled by device
+                throw ((IOException) t);
+            }
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
+                             "Unable to communicate with Viessmann API: " + e.getMessage());
+                logger.debug("Unexpected exception refreshing", e);
+            return empty();
+        }
     }
 
     public Optional<State> handleBridgedDeviceCommand(ChannelUID channelUID, State command) throws AuthenticationException, IOException, CommandFailureException {
@@ -285,5 +290,11 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
 
     boolean isFeatureScanRunning() {
         return !(featurePollingJob.isCancelled() || featurePollingJob.isDone());
+    }
+
+    private void upgradeConfiguration() {
+        org.openhab.core.config.core.Configuration config = editConfiguration();
+        config.setProperties(SimpleConfiguration.upgradeConfiguration(config.getProperties()));
+        updateConfiguration(config);
     }
 }

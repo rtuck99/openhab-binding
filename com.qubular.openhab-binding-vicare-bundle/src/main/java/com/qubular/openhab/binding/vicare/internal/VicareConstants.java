@@ -18,4 +18,5 @@ public class VicareConstants {
     public static final String PROPERTY_DEVICE_TYPE = "deviceType";
     public static final String PROPERTY_PARAM_NAME = "paramName";
     public static final String PROPERTY_BINDING_VERSION = "bindingVersion";
+    public static final String PROPERTY_RESPONSE_CAPTURE_FOLDER = "responseCaptureFolder";
 }

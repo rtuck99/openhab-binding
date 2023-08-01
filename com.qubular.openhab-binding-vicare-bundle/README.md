@@ -9,12 +9,36 @@ Please note this binding is unofficial and not endorsed by Viessmann in any way.
 Requirements
 ------------
 
-This binding requires OpenHAB 3.4
+This binding requires OpenHAB 4.0. For earlier versions of OpenHAB please refer to previous versions of this binding on
+the community marketplace discussion for the corresponding binding version. 
 
-Upgrading from previous versions
---------------------------------
+Upgrading from OpenHAB 3.4
+--------------------------
 
-Remove the old binding, and then install the new one via the bindings page. There is no need to add or remove any of the Things they will still work with the new binding.
+It is advisable to remove previous versions of the plugin before upgrading OpenHAB. 
+
+However if you have upgraded to OpenHAB 4.0 and still have the old binding installed, remove it from the
+Settings->Bindings admin page. This may fail, in which case you will need to log into the OpenHAB shell
+and run
+
+    feature:list | grep qub
+
+If the feature is still installed, remove it with
+
+    feature:uninstall com.qubular.openhab-binding-vicare-feature
+
+However if removal of the feature did not succeed, the bundles may also need to be removed. If the following
+
+    bundle:list | grep qub
+
+shows that the bundles are still installed, then remove them as follows
+
+    bundle:uninstall com.qubular.openhab-binding-vicare-bundle
+    bundle:uninstall com.qubular.vicare-osgi
+
+Once the old binding is fully removed, you can install the new version from the Settings->Bindings page
+
+There is no need to add or remove any of the Things they will still work with the new binding.
 
 Supported Devices
 ----------------
@@ -83,35 +107,6 @@ and they will appear in your Inbox.
 Changelog
 ---------
 
-### 3.4.3
+### 4.0.0
 
-* Issue #44 DEVICE_COMMUNICATION_ERROR no longer causes the bridge status to be marked Offline
-* Issue #45 Change iotServerUri configuration parameter so that it doesn't include the API version
-* Issue #43 Support gas consumption statistics reporting in kWh.  
-  Upgrade note: Existing gas consumption statistics Items may need to be recreated in order to output in kWh.
-
-### 3.4.2
-
-* Issue #39 Location of the response capture file is now shown in the bridge properties.
-* Issue #38 Support for heating.dhw.charging
-* Issue #40 Support heating.compressors.n.statistics for load classes
-* Support for heating.solar.power.cumulativeProduced cumulative solar power production statistic
-
-### 3.4.1
-
-* Issue #35 Migrated to use new feature endpoints
-* Issue #34 Make v3 identity provider endpoint the default
-* Issue #36 Support DHW Operating Modes after API Change
-* Issue #37 Support for ventilation system
-
-### 3.4.0
-
-* Add official support for OpenHAB 3.4
-* Issue #30 Add support for writing to heating circuit eco/comfort operating program active status (not all systems support this)
-* Issue #27 Add support for heating circuit room temperature sensor
-
-Known Issues
-------------
-
-Please note due to recent changes in the underlying Viessmann API, some features that were
-previously supported under one name may now be reported elsewhere and therefore any existing Item links may need to be updated.
+This version introduces support for OpenHAB 4.0

@@ -37,6 +37,24 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <!-- rename the .kar file because community marketplace gives the AddOn the wrong id if we don't -->
+          <execution>
+            <phase>install</phase>
+            <configuration>
+              <tasks>
+                <move file="target/${artifactId}-${version}.kar" tofile="target/com.qubular.openhab.binding.vicare-${version}.kar"/>
+              </tasks>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
   <dependencies>

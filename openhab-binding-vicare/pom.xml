@@ -7,13 +7,8 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>com.qubular.openhab-binding-glowmarkt-feature</artifactId>
+  <artifactId>openhab-binding-vicare</artifactId>
   <packaging>kar</packaging>
-  <properties>
-    <maven.compiler.source>17</maven.compiler.source>
-    <maven.compiler.target>17</maven.compiler.target>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
   <build>
     <plugins>
       <plugin>
@@ -29,16 +24,23 @@
 
             </configuration>
           </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <!-- rename the .kar file because community marketplace gives the AddOn the wrong id if we don't -->
           <execution>
-            <id>default-features-generate-descriptor</id>
-            <goals><goal>features-generate-descriptor</goal></goals>
+            <phase>install</phase>
             <configuration>
-              <startLevel>80</startLevel>
-              <checkDependencyChange>true</checkDependencyChange>
-              <failOnDependencyChange>false</failOnDependencyChange>
-              <logDependencyChanges>true</logDependencyChanges>
-              <overwriteChangedDependencies>true</overwriteChangedDependencies>
+              <tasks>
+                <move file="target/${artifactId}-${version}.kar" tofile="target/com.qubular.openhab.binding.vicare-${version}.kar"/>
+              </tasks>
             </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>
@@ -47,7 +49,8 @@
   <dependencies>
     <dependency>
       <groupId>com.qubular</groupId>
-      <artifactId>com.qubular.openhab-binding-glowmarkt-bundle</artifactId>
+      <artifactId>com.qubular.openhab-binding-vicare-bundle</artifactId>
     </dependency>
   </dependencies>
+
 </project>

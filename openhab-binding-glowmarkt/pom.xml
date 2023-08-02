@@ -7,8 +7,13 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>com.qubular.openhab-binding-vicare-feature</artifactId>
+  <artifactId>openhab-binding-glowmarkt</artifactId>
   <packaging>kar</packaging>
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
   <build>
     <plugins>
       <plugin>
@@ -24,17 +29,6 @@
 
             </configuration>
           </execution>
-          <execution>
-            <id>default-features-generate-descriptor</id>
-            <goals><goal>features-generate-descriptor</goal></goals>
-            <configuration>
-              <startLevel>80</startLevel>
-              <checkDependencyChange>true</checkDependencyChange>
-              <failOnDependencyChange>false</failOnDependencyChange>
-              <logDependencyChanges>true</logDependencyChanges>
-              <overwriteChangedDependencies>true</overwriteChangedDependencies>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -46,7 +40,7 @@
             <phase>install</phase>
             <configuration>
               <tasks>
-                <move file="target/${artifactId}-${version}.kar" tofile="target/com.qubular.openhab.binding.vicare-${version}.kar"/>
+                <move file="target/${artifactId}-${version}.kar" tofile="target/com.qubular.openhab.binding.glowmarkt-${version}.kar"/>
               </tasks>
             </configuration>
             <goals>
@@ -60,8 +54,7 @@
   <dependencies>
     <dependency>
       <groupId>com.qubular</groupId>
-      <artifactId>com.qubular.openhab-binding-vicare-bundle</artifactId>
+      <artifactId>com.qubular.openhab-binding-glowmarkt-bundle</artifactId>
     </dependency>
   </dependencies>
-
 </project>

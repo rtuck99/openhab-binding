@@ -110,6 +110,11 @@ Click Add Aggregate series to add an aggregate series
 Changelog
 ---------
 
+### 4.0.1
+
+* Add official support for OpenHAB 4.0
+* Fixed #51 Glowmarkt binding not listed when attempting to add thing
+
 #### 3.4.0
 
 * Add official support for OpenHAB 3.4

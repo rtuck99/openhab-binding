@@ -107,6 +107,10 @@ and they will appear in your Inbox.
 Changelog
 ---------
 
+### 4.0.1
+
+Fixed #50 Viessmann bridge can't be added
+
 ### 4.0.0
 
 This version introduces support for OpenHAB 4.0

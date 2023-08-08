@@ -41,9 +41,6 @@ import org.osgi.framework.BundleContext;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.ComponentContext;
 
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -91,17 +88,13 @@ public class VicareBindingTest {
     private ConfigurationAdmin configurationAdmin;
     @Mock
     private VicareServiceProvider vicareServiceProvider;
-    private MyChannelTypeRegistry channelTypeRegistry;
-    @Mock
-    private ChannelTypeProvider xmlChannelTypeProvider;
+    private MockChannelTypeRegistry channelTypeRegistry;
+    private static XmlChannelTypeProvider xmlChannelTypeProvider;
 
     private ComponentContext componentContext;
     private BundleContext bundleContext;
 
     private ThingHandler bridgeHandler;
-
-    private static Map<ChannelTypeUID, ChannelType> channelTypes;
-
 
     private void disconnectedHeatingInstallation() throws AuthenticationException, IOException {
         VicareError error = mock(VicareError.class);
@@ -486,7 +479,7 @@ public class VicareBindingTest {
 
     @BeforeAll
     static void setUpClass() {
-        channelTypes = readChannelTypes();
+        xmlChannelTypeProvider = new XmlChannelTypeProvider();
     }
 
     @BeforeEach
@@ -494,7 +487,7 @@ public class VicareBindingTest {
         componentContext = mock(ComponentContext.class);
         bundleContext = mock(BundleContext.class);
         configuration = new SimpleConfiguration(bundleContext);
-        var myChannelTypeRegistry = new MyChannelTypeRegistry();
+        var myChannelTypeRegistry = new MockChannelTypeRegistry();
         this.channelTypeRegistry = myChannelTypeRegistry;
         doReturn(bundleContext).when(componentContext).getBundleContext();
         Bundle bundle = mock(Bundle.class);
@@ -505,6 +498,8 @@ public class VicareBindingTest {
         doReturn(new File("/home/openhab/userdata/cache/org.eclipse.osgi/123/data/captures")).when(bundleContext).getDataFile("captures");
         doReturn(persistedTokenStoreConfig).when(configurationAdmin).getConfiguration(PersistedTokenStore.TOKEN_STORE_PID);
         Dictionary<String, Object> ptsProps = new Hashtable<>();
+        VicareChannelTypeProvider channelTypeProvider = new SimpleVicareChannelTypeProvider();
+        myChannelTypeRegistry.addChannelTypeProvider(channelTypeProvider);
         doReturn(ptsProps).when(persistedTokenStoreConfig).getProperties();
 //        doAnswer(i -> ChannelTypeBuilder.state(i.getArgument(0), "Label", "Number:Temperature").build()).when(channelTypeRegistry).getChannelType(any(ChannelTypeUID.class));
         when(vicareServiceProvider.getVicareConfiguration()).thenReturn(configuration);
@@ -514,8 +509,9 @@ public class VicareBindingTest {
         when(vicareServiceProvider.getBundleContext()).thenReturn(bundleContext);
         when(vicareServiceProvider.getConfigurationAdmin()).thenReturn(configurationAdmin);
         when(vicareServiceProvider.getChannelTypeRegistry()).thenReturn(myChannelTypeRegistry);
-        doReturn(channelTypes.values()).when(xmlChannelTypeProvider).getChannelTypes(any(Locale.class));
-        doAnswer(i -> channelTypes.get(i.getArgument(0))).when(xmlChannelTypeProvider).getChannelType(any(ChannelTypeUID.class), nullable(Locale.class));
+        when(vicareServiceProvider.getChannelTypeProvider()).thenReturn(channelTypeProvider);
+        FeatureService featureService = new CachedFeatureService(vicareService);
+        when(vicareServiceProvider.getFeatureService()).thenReturn(featureService);
         myChannelTypeRegistry.addChannelTypeProvider(xmlChannelTypeProvider);
     }
 
@@ -1103,21 +1099,6 @@ public class VicareBindingTest {
     }
 
     private void registerAndInitialize(ThingHandler handler) {
-        handler.getServices().forEach(
-                c -> {
-                    try {
-                        if (ChannelTypeProvider.class.isAssignableFrom(c)) {
-                            ThingHandlerService thingHandlerService = c.getConstructor().newInstance();
-                            thingHandlerService.setThingHandler(handler);
-                            thingHandlerService.activate();
-                            channelTypeRegistry.addChannelTypeProvider((ChannelTypeProvider) thingHandlerService);
-                        }
-                    } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
-                             NoSuchMethodException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-        );
         handler.initialize();
     }
 
@@ -2216,31 +2197,8 @@ public class VicareBindingTest {
     }
 
     private static void verifyChannel(Channel channel) {
-        ChannelType channelType = channelTypes.get(channel.getChannelTypeUID());
+        ChannelType channelType = xmlChannelTypeProvider.channelTypes.get(channel.getChannelTypeUID());
         assertNotNull(channelType, String.format("Channel type %s not in thing-types.xml", channel.getChannelTypeUID().getId()));
     }
 
-    private static Map<ChannelTypeUID, ChannelType> readChannelTypes() {
-        try {
-            XMLStreamReader xmlStreamReader = XMLInputFactory.newFactory().createXMLStreamReader(
-                    VicareBindingTest.class.getResourceAsStream("/OH-INF/thing/thing-types.xml"));
-            ThingTypeXmlReader thingTypeXmlReader = new ThingTypeXmlReader();
-            thingTypeXmlReader.readChannelTypes(xmlStreamReader);
-            return thingTypeXmlReader.getChannelTypes();
-        } catch (XMLStreamException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static class MyChannelTypeRegistry extends ChannelTypeRegistry {
-        @Override
-        protected void addChannelTypeProvider(ChannelTypeProvider channelTypeProviders) {
-            super.addChannelTypeProvider(channelTypeProviders);
-        }
-
-        @Override
-        protected void removeChannelTypeProvider(ChannelTypeProvider channelTypeProviders) {
-            super.removeChannelTypeProvider(channelTypeProviders);
-        }
-    }
 }

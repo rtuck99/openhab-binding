@@ -39,9 +39,9 @@
           <execution>
             <phase>install</phase>
             <configuration>
-              <tasks>
-                <move file="target/${artifactId}-${version}.kar" tofile="target/com.qubular.openhab.binding.glowmarkt-${version}.kar"/>
-              </tasks>
+              <target>
+                <move file="target/${project.artifactId}-${project.version}.kar" tofile="target/com.qubular.openhab.binding.glowmarkt-${project.version}.kar"/>
+              </target>
             </configuration>
             <goals>
               <goal>run</goal>

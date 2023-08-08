@@ -222,9 +222,9 @@
         <execution>
           <phase>generate-test-resources</phase>
           <configuration>
-            <tasks>
+            <target>
               <mkdir dir="target/test-reports" />
-            </tasks>
+            </target>
           </configuration>
           <goals>
             <goal>run</goal>

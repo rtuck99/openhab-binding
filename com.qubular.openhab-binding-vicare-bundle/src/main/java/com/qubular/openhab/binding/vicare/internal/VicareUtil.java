@@ -1,13 +1,26 @@
 package com.qubular.openhab.binding.vicare.internal;
 
+import org.openhab.core.thing.Thing;
+
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+
+import static com.qubular.openhab.binding.vicare.internal.VicareConstants.PROPERTY_DEVICE_UNIQUE_ID;
 
 public class VicareUtil {
     public static class IGD {
         long installationId;
+
         String gatewaySerial;
         String deviceId;
+    }
+    public static String getDeviceUniqueId(Thing t) {
+        // Hidden configuration option for testing purposes
+        String deviceUniqueId = (String) t.getConfiguration().get("deviceUniqueId");
+        if (deviceUniqueId != null) {
+            return deviceUniqueId;
+        }
+        return t.getProperties().get(PROPERTY_DEVICE_UNIQUE_ID);
     }
 
     public static String encodeThingId(long installationId,

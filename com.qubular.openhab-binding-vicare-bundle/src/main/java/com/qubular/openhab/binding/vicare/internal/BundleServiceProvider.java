@@ -10,7 +10,6 @@ import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.event.EventAdmin;
 
 @Component(service = VicareServiceProvider.class)
 public class BundleServiceProvider implements VicareServiceProvider {
@@ -24,6 +23,10 @@ public class BundleServiceProvider implements VicareServiceProvider {
     private ConfigurationAdmin configurationAdmin;
     @Reference
     private ChannelTypeRegistry channelTypeRegistry;
+    @Reference
+    private VicareChannelTypeProvider channelTypeProvider;
+    @Reference
+    private FeatureService featureService;
 
     private BundleContext bundleContext;
 
@@ -35,6 +38,11 @@ public class BundleServiceProvider implements VicareServiceProvider {
     @Override
     public VicareService getVicareService() {
         return vicareService;
+    }
+
+    @Override
+    public VicareChannelTypeProvider getChannelTypeProvider() {
+        return channelTypeProvider;
     }
 
     @Override
@@ -65,5 +73,10 @@ public class BundleServiceProvider implements VicareServiceProvider {
     @Override
     public ChannelTypeRegistry getChannelTypeRegistry() {
         return channelTypeRegistry;
+    }
+
+    @Override
+    public FeatureService getFeatureService() {
+        return featureService;
     }
 }

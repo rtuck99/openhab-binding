@@ -25,14 +25,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.security.InvalidKeyException;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Supplier;
 
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
-import static com.qubular.openhab.binding.vicare.internal.VicareUtil.decodeThingUniqueId;
 import static java.util.Collections.emptyMap;
 import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
@@ -47,29 +44,13 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
     private final VicareConfiguration config;
 
     private final VicareService vicareService;
-    private final Map<String, CachedResponse> cachedResponses = new HashMap<>();
     private String bindingVersion;
     private final VicareServiceProvider vicareServiceProvider;
-
-    private static class CachedResponse {
-        final CompletableFuture<List<Feature>> response;
-        final Instant responseTimestamp;
-
-        public CachedResponse(CompletableFuture<List<Feature>> response, Instant responseTimestamp) {
-            this.response = response;
-            this.responseTimestamp = responseTimestamp;
-        }
-    }
 
     private static final int REQUEST_INTERVAL_SECS = 90;
 
     private volatile ScheduledFuture<?> featurePollingJob;
 
-    /**
-     * @param thingRegistry
-     * @param bridge
-     * @see BaseThingHandler
-     */
     public VicareBridgeHandler(VicareServiceProvider vicareServiceProvider,
                                Bridge bridge) {
         super(bridge);
@@ -132,7 +113,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
     public void handleConfigurationUpdate(Map<String, Object> configurationParameters) {
         super.handleConfigurationUpdate(configurationParameters);
         applyConfiguration(configurationParameters);
-        cachedResponses.clear();
+        vicareServiceProvider.getFeatureService().clear();
     }
 
     private void applyConfiguration(Map<String, Object> configurationParameters) {
@@ -158,15 +139,13 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
             return empty();
         }
         try {
-            return getFeatures(targetThing)
-                .thenApply(features -> {
-                    String featureName = channel.getProperties().get(PROPERTY_FEATURE_NAME);
+            String featureName = channel.getProperties().get(PROPERTY_FEATURE_NAME);
+            return vicareServiceProvider.getFeatureService().getFeature(targetThing, featureName, getPollingInterval())
+                .thenApply(feature -> {
                     if (getThing().getStatus() != ThingStatus.ONLINE) {
                         updateStatus(ThingStatus.ONLINE);
                     }
-                    return features.stream()
-                            .filter(f -> f.getName().equals(featureName))
-                            .findAny();
+                    return feature;
                 })
                 .join();
         } catch (CompletionException e) {
@@ -225,33 +204,6 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
         }
     }
 
-    private synchronized CompletableFuture<List<Feature>> getFeatures(Thing thing) {
-        Instant now = Instant.now();
-        String key = thing.getUID().getId();
-        CachedResponse response = cachedResponses.get(key);
-        if (response != null && now.isBefore(response.responseTimestamp.plusSeconds(getPollingInterval() - 1))) {
-            return response.response;
-        }
-
-        VicareUtil.IGD s = decodeThingUniqueId(VicareDeviceThingHandler.getDeviceUniqueId(thing));
-        CompletableFuture<List<Feature>> features = new CompletableFuture<>();
-        cachedResponses.put(key, new CachedResponse(features, now));
-        features.completeAsync(() -> {
-            try {
-                return vicareService.getFeatures(s.installationId, s.gatewaySerial, s.deviceId);
-            } catch (AuthenticationException | IOException e) {
-                if ((e instanceof AuthenticationException) &&
-                        (e.getCause() instanceof InvalidKeyException)) {
-                    features.completeExceptionally(new AuthenticationException("Unable to store access token, please check whether your crypto.policy is set to enable full strength encryption or enable limited encryption in Advanced Settings.", (Exception) e.getCause()));
-                } else {
-                    features.completeExceptionally(e);
-                }
-                return null;
-            }
-        });
-        return features;
-    }
-
     @Override
     public Collection<Class<? extends ThingHandlerService>> getServices() {
         return Collections.singleton(VicareDiscoveryService.class);
@@ -276,9 +228,8 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
             return empty();
         }
         Thing thing = thingRegistry.get(channel.getUID().getThingUID());
-            return getFeatures(thing)
-                    .thenApply(features -> features.stream()
-                            .filter(f -> f.getName().equals(featureName))
+            return vicareServiceProvider.getFeatureService().getFeature(thing, featureName, getPollingInterval())
+                    .thenApply(feature -> feature.stream()
                             .flatMap(f -> f.getCommands().stream())
                             .filter(c -> c.getName().equals(commandName))
                             .findFirst())

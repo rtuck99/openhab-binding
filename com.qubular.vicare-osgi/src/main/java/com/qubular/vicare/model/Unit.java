@@ -11,6 +11,7 @@ public class Unit {
     public static final Unit HOUR = new Unit("hour");
     public static final Unit CUBIC_METRE = new Unit("cubicMeter");
     public static final Unit PERCENT = new Unit("percent");
+    public static final Unit EMPTY = new Unit("");
 
     private final String name;
 

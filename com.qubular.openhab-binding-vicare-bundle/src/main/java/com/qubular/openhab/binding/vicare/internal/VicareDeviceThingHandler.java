@@ -44,7 +44,7 @@ import static java.lang.String.join;
 import static java.util.stream.Collectors.toMap;
 import static org.osgi.service.event.EventConstants.EVENT_TOPIC;
 
-public class VicareDeviceThingHandler extends BaseThingHandler implements ChannelTypeProvider {
+public class VicareDeviceThingHandler extends BaseThingHandler {
     static final Map<ConsumptionFeature.Stat, String> CONSUMPTION_CHANNEL_NAMES_BY_STAT = Map.of(
             ConsumptionFeature.Stat.CURRENT_DAY, "currentDay",
             ConsumptionFeature.Stat.CURRENT_WEEK, "currentWeek",
@@ -78,8 +78,6 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
             CONSUMPTION_CHANNEL_NAMES_BY_STAT.entrySet().stream()
                     .collect(toMap(Map.Entry::getValue, Map.Entry::getKey));
 
-    private static final Map<ChannelTypeUID, ChannelType> channelTypes = new ConcurrentHashMap<>();
-
     public VicareDeviceThingHandler(VicareServiceProvider vicareServiceProvider,
                                     Thing thing,
                                     VicareService vicareService) {
@@ -103,13 +101,13 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
      */
     @Override
     public void initialize() {
-        String deviceUniqueId = getDeviceUniqueId(thing);
+        String deviceUniqueId = VicareUtil.getDeviceUniqueId(thing);
         VicareUtil.IGD igd = decodeThingUniqueId(deviceUniqueId);
         Hashtable<String, Object> subscriptionProps = new Hashtable<>();
         subscriptionProps.put(EVENT_TOPIC, generateTopic(thing.getUID()));
         discoveryListenerRegistration = vicareServiceProvider.getBundleContext().registerService(
                 EventHandler.class, new DiscoveryEventHandler(), subscriptionProps);
-        CompletableFuture.supplyAsync(new VicareChannelBuilder(vicareServiceProvider, igd, thing, this))
+        CompletableFuture.supplyAsync(new VicareChannelBuilder(vicareServiceProvider, igd, thing, this::createChannelBuilder, vicareServiceProvider.getChannelTypeProvider()::addChannelType))
                 .thenAccept(memo -> {
                     try {
                         VicareChannelBuilder.Result result = memo.get();
@@ -141,15 +139,6 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
                     }
                 })
                 .exceptionally(t -> { logger.warn("Unexpected error initializing Thing", t); return null; });
-    }
-
-    static String getDeviceUniqueId(Thing t) {
-        // Hidden configuration option for testing purposes
-        String deviceUniqueId = (String) t.getConfiguration().get("deviceUniqueId");
-        if (deviceUniqueId != null) {
-            return deviceUniqueId;
-        }
-        return t.getProperties().get(PROPERTY_DEVICE_UNIQUE_ID);
     }
 
     @Override
@@ -320,25 +309,11 @@ public class VicareDeviceThingHandler extends BaseThingHandler implements Channe
 
     @Override
     public Collection<Class<? extends ThingHandlerService>> getServices() {
-        return List.of(DeviceDynamicCommandDescriptionProvider.class, VicareChannelTypeProvider.class);
-    }
-
-    @Override
-    public Collection<ChannelType> getChannelTypes(@Nullable Locale locale) {
-        return channelTypes.values();
-    }
-
-    @Override
-    public @Nullable ChannelType getChannelType(ChannelTypeUID channelTypeUID, @Nullable Locale locale) {
-        return channelTypes.get(channelTypeUID);
+        return List.of(DeviceDynamicCommandDescriptionProvider.class);
     }
 
     protected @Nullable VicareBridgeHandler getBridgeHandler() {
         return (VicareBridgeHandler) getBridge().getHandler();
-    }
-
-    public void addChannelType(ChannelTypeUID channelTypeUID, ChannelType channelType) {
-        channelTypes.put(channelTypeUID, channelType);
     }
 
     private class DiscoveryEventHandler implements EventHandler {

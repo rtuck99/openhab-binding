@@ -36,7 +36,6 @@ public class GlowmarktVirtualEntityHandler extends BaseThingHandler {
     private final GlowmarktService glowmarktService;
     private final ItemChannelLinkRegistry itemChannelLinkRegistry;
     private final GlowmarktServiceProvider serviceProvider;
-    private TariffChannelTypeProvider tariffChannelTypeProvider;
 
     public GlowmarktVirtualEntityHandler(GlowmarktServiceProvider serviceProvider, Thing thing, GlowmarktService glowmarktService) {
         super(thing);
@@ -59,8 +58,8 @@ public class GlowmarktVirtualEntityHandler extends BaseThingHandler {
                     ChannelTypeUID channelTypeUID = new ChannelTypeUID(BINDING_ID, channelType(resource));
                     Channel channel = getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), channelId(resource)), channelTypeUID)
                             .withType(channelTypeUID)
-                            .withProperties(Map.of(GlowmarktConstants.PROPERTY_CLASSIFIER, resource.getClassifier(),
-                                    GlowmarktConstants.PROPERTY_RESOURCE_ID, resource.getResourceId()))
+                            .withProperties(Map.of(PROPERTY_CLASSIFIER, resource.getClassifier(),
+                                                   PROPERTY_RESOURCE_ID, resource.getResourceId()))
                             .build();
                     channels.add(channel);
 
@@ -77,9 +76,7 @@ public class GlowmarktVirtualEntityHandler extends BaseThingHandler {
                                     if (pd instanceof StandingChargeTariffPlanDetail) {
                                         String channelId = TariffChannelTypeProvider.channelId(TariffChannelTypeProvider.PREFIX_TARIFF_STANDING_CHARGE, resource, ts, pd);
                                         ChannelTypeUID planChannelType = new ChannelTypeUID(BINDING_ID, channelId);
-                                        if (tariffChannelTypeProvider != null) {
-                                            tariffChannelTypeProvider.createChannelType(planChannelType, Locale.getDefault(), resource.getName(), null);
-                                        }
+                                        serviceProvider.getTariffChannelTypeProvider().createChannelType(planChannelType, Locale.getDefault(), resource.getName(), null);
                                         Channel planChannel = getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), channelId),
                                                                                                  planChannelType)
                                                 .withProperties(Map.of(PROPERTY_RESOURCE_ID, resource.getResourceId(),
@@ -101,9 +98,7 @@ public class GlowmarktVirtualEntityHandler extends BaseThingHandler {
                                             propMap.put(PROPERTY_TIER, perUnitTariffPlanDetail.getTier().toString());
                                         }
                                         ChannelTypeUID planChannelType = new ChannelTypeUID(BINDING_ID, channelId);
-                                        if (tariffChannelTypeProvider != null) {
-                                            tariffChannelTypeProvider.createChannelType(planChannelType, Locale.getDefault(), resource.getName(), perUnitTariffPlanDetail.getTier());
-                                        }
+                                        serviceProvider.getTariffChannelTypeProvider().createChannelType(planChannelType, Locale.getDefault(), resource.getName(), perUnitTariffPlanDetail.getTier());
                                         Channel planChannel = getCallback().createChannelBuilder(new ChannelUID(getThing().getUID(), channelId),
                                                                                                  planChannelType)
                                                 .withProperties(propMap)
@@ -189,19 +184,6 @@ public class GlowmarktVirtualEntityHandler extends BaseThingHandler {
                 logger.debug(msg, e);
             }
         }
-    }
-
-    @Override
-    public Collection<Class<? extends ThingHandlerService>> getServices() {
-        return List.of(TariffChannelTypeProvider.class);
-    }
-
-    GlowmarktServiceProvider getServiceProvider() {
-        return serviceProvider;
-    }
-
-    void setTariffChannelTypeProvider(TariffChannelTypeProvider provider) {
-        this.tariffChannelTypeProvider = provider;
     }
 
     private void fetchHistoricData(String resourceId, Item item) throws AuthenticationFailedException, IOException {

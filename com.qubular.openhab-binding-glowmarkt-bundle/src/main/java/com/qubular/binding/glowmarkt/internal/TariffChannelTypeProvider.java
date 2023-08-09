@@ -4,13 +4,13 @@ import com.qubular.glowmarkt.Resource;
 import com.qubular.glowmarkt.TariffPlanDetail;
 import com.qubular.glowmarkt.TariffStructure;
 import org.eclipse.jdt.annotation.Nullable;
+import org.openhab.core.thing.ChannelGroupUID;
 import org.openhab.core.thing.ChannelUID;
-import org.openhab.core.thing.binding.ThingHandler;
-import org.openhab.core.thing.binding.ThingHandlerService;
-import org.openhab.core.thing.type.ChannelType;
-import org.openhab.core.thing.type.ChannelTypeBuilder;
-import org.openhab.core.thing.type.ChannelTypeProvider;
-import org.openhab.core.thing.type.ChannelTypeUID;
+import org.openhab.core.thing.type.*;
+import org.openhab.core.types.StateDescriptionFragmentBuilder;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 import java.util.Collection;
 import java.util.Locale;
@@ -20,7 +20,8 @@ import java.util.concurrent.ConcurrentMap;
 
 import static com.qubular.binding.glowmarkt.internal.GlowmarktConstants.BINDING_ID;
 
-public class TariffChannelTypeProvider implements ChannelTypeProvider, ThingHandlerService {
+@Component
+public class TariffChannelTypeProvider implements ChannelTypeProvider {
     private static final ChannelTypeUID TARIFF_STANDING_CHARGE = new ChannelTypeUID(BINDING_ID, "tariff_standing_charge");
     private static final ChannelTypeUID TARIFF_PER_UNIT_RATE = new ChannelTypeUID(BINDING_ID, "tariff_per_unit_rate");
     public static final String PREFIX_TARIFF_STANDING_CHARGE = "tariff_standing_charge_";
@@ -28,8 +29,14 @@ public class TariffChannelTypeProvider implements ChannelTypeProvider, ThingHand
     private static final Set<String> MANAGED_CHANNEL_PREFIXES = Set.of(PREFIX_TARIFF_STANDING_CHARGE,
                                                                        PREFIX_TARIFF_PER_UNIT_RATE);
 
-    private GlowmarktVirtualEntityHandler thingHandler;
+    private ChannelTypeRegistry channelTypeRegistry;
+
     private final ConcurrentMap<ChannelTypeUID, ChannelType> channelTypes = new ConcurrentHashMap<>();
+
+    @Activate
+    public TariffChannelTypeProvider(@Reference ChannelTypeRegistry channelTypeRegistry) {
+        this.channelTypeRegistry = channelTypeRegistry;
+    }
 
     @Override
     public Collection<ChannelType> getChannelTypes(@Nullable Locale locale) {
@@ -42,10 +49,7 @@ public class TariffChannelTypeProvider implements ChannelTypeProvider, ThingHand
     }
 
     public @Nullable ChannelType createChannelType(ChannelTypeUID channelTypeUID, @Nullable Locale locale, String resourceName, Integer tier) {
-        if (getThingHandler() != null) {
-            return channelTypes.computeIfAbsent(channelTypeUID, channelTypeUID1 -> createChannelType(channelTypeUID1, resourceName, tier == null ? null : String.valueOf(tier)));
-        }
-        return null;
+        return channelTypes.computeIfAbsent(channelTypeUID, channelTypeUID1 -> createChannelType(channelTypeUID1, resourceName, tier == null ? null : String.valueOf(tier)));
     }
 
     static boolean isManagedChannelType(ChannelTypeUID channelTypeUID) {
@@ -64,8 +68,7 @@ public class TariffChannelTypeProvider implements ChannelTypeProvider, ThingHand
     }
 
     private ChannelType createChannelTypeFromTemplate(ChannelTypeUID channelTypeUID, ChannelTypeUID templateChannelTypeUID, String resourceName, String tier) {
-        ChannelType template = getThingHandler().getServiceProvider().getChannelTypeRegistry()
-                .getChannelType(templateChannelTypeUID);
+        ChannelType template = channelTypeRegistry.getChannelType(templateChannelTypeUID);
         String label = template.getLabel();
         if (resourceName != null) {
                 label = label.replaceAll("\\$\\{resourceName}", resourceName);
@@ -76,22 +79,14 @@ public class TariffChannelTypeProvider implements ChannelTypeProvider, ThingHand
             tier = "Tier " + tier;
         }
         label = label.replaceAll("\\$\\{tier}", tier);
-        return ChannelTypeBuilder.state(channelTypeUID, label, template.getItemType()).build();
-    }
-
-    private ChannelUID channelUID(ChannelTypeUID channelTypeUID) {
-        return new ChannelUID(getThingHandler().getThing().getUID(), channelTypeUID.getId());
-    }
-
-    @Override
-    public void setThingHandler(ThingHandler handler) {
-        this.thingHandler = (GlowmarktVirtualEntityHandler) handler;
-        thingHandler.setTariffChannelTypeProvider(this);
-    }
-
-    @Override
-    public @Nullable GlowmarktVirtualEntityHandler getThingHandler() {
-        return thingHandler;
+        StateChannelTypeBuilder stateChannelTypeBuilder = ChannelTypeBuilder.state(channelTypeUID, label,
+                                                                                   template.getItemType())
+                .withDescription(template.getDescription());
+        if (template.getState() != null) {
+            stateChannelTypeBuilder.withStateDescriptionFragment(StateDescriptionFragmentBuilder.create(
+                                                                 template.getState()).build());
+        }
+        return stateChannelTypeBuilder.build();
     }
 
     public static String channelId(String prefix, Resource resource, TariffStructure tariffStructure, TariffPlanDetail planDetail) {

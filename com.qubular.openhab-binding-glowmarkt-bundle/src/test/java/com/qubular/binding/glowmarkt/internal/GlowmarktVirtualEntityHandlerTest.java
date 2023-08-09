@@ -19,6 +19,8 @@ import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerCallback;
 import org.openhab.core.thing.binding.builder.ChannelBuilder;
 import org.openhab.core.thing.link.ItemChannelLinkRegistry;
+import org.openhab.core.thing.type.ChannelType;
+import org.openhab.core.thing.type.ChannelTypeProvider;
 import org.openhab.core.thing.type.ChannelTypeRegistry;
 import org.openhab.core.thing.type.ChannelTypeUID;
 import org.openhab.core.types.RefreshType;
@@ -76,6 +78,8 @@ class GlowmarktVirtualEntityHandlerTest {
 
     private AutoCloseable mockHandle;
     private GlowmarktBridgeHandler bridgeHandler;
+    private MockChannelTypeRegistry channelTypeRegistry;
+    private TariffChannelTypeProvider tariffChannelTypeProvider;
 
     @BeforeEach
     public void setUp() throws IOException {
@@ -100,9 +104,19 @@ class GlowmarktVirtualEntityHandlerTest {
         Hashtable<Object, Object> osgiConfigProps = new Hashtable<>();
         doReturn(osgiConfigProps).when(osgiConfig).getProperties();
         when(serviceProvider.getItemChannelLinkRegistry()).thenReturn(itemChannelLinkRegistry);
-        ChannelTypeRegistry channelTypeRegistry = new ChannelTypeRegistry();
+        channelTypeRegistry = new MockChannelTypeRegistry();
         when(serviceProvider.getChannelTypeRegistry()).thenReturn(channelTypeRegistry);
+        tariffChannelTypeProvider = new TariffChannelTypeProvider(channelTypeRegistry);
+        channelTypeRegistry.addChannelTypeProvider(tariffChannelTypeProvider);
+        when(serviceProvider.getTariffChannelTypeProvider()).thenReturn(tariffChannelTypeProvider);
+        channelTypeRegistry.addChannelTypeProvider(new XmlChannelTypeProvider());
+    }
 
+    private static class MockChannelTypeRegistry extends ChannelTypeRegistry {
+        @Override
+        public void addChannelTypeProvider(ChannelTypeProvider channelTypeProviders) {
+            super.addChannelTypeProvider(channelTypeProviders);
+        }
     }
 
     @AfterEach
@@ -182,6 +196,26 @@ class GlowmarktVirtualEntityHandlerTest {
                                             .build()))
                                     .withName("electricity consumption")
                                     .build());
+    }
+
+    private void bridgeAndVirtualEntityWithChannels() {
+        ChannelUID channelUID = new ChannelUID(virtualEntity.getUID(), String.format(
+                "tariff_standing_charge_%s_default_structure_standing_charge", ELECTRICITY_COST_RESOURCE_ID));
+        when(virtualEntity.getChannels()).thenReturn(List.of(
+                ChannelBuilder.create(channelUID, "Number:Energy")
+                        .withType(new ChannelTypeUID(BINDING_ID, channelUID.getId()))
+                        .withProperties(Map.of(PROPERTY_RESOURCE_ID, ELECTRICITY_COST_RESOURCE_ID,
+                                               PROPERTY_RESOURCE_NAME, "electricity cost",
+                                               PROPERTY_STRUCTURE_ID, "default_structure",
+                                               PROPERTY_PLAN_DETAIL_ID, "standing_charge"))
+                        .build()
+        ));
+        ThingRegistry thingRegistry = mock(ThingRegistry.class);
+        when(thingRegistry.get(virtualEntity.getUID())).thenReturn(virtualEntity);
+        when(thingRegistry.get(bridge.getUID())).thenReturn(bridge);
+        when(thingRegistry.getAll()).thenReturn(List.of(virtualEntity, bridge));
+
+        when(serviceProvider.getThingRegistry()).thenReturn(thingRegistry);
     }
 
     @Test
@@ -351,6 +385,23 @@ class GlowmarktVirtualEntityHandlerTest {
         ChannelUID perUnitRateChannelId = new ChannelUID(virtualEntityUID, "tariff_per_unit_rate_" + ELECTRICITY_CONSUMPTION_RESOURCE_ID + "_week_1_rate_1");
         thingHandler.handleCommand(perUnitRateChannelId, RefreshType.REFRESH);
         verify(thingHandlerCallback, timeout(1000)).stateUpdated(perUnitRateChannelId, DecimalType.valueOf("34.22"));
+    }
+
+    @Test
+    public void channelsPreloadedAtStartup() throws AuthenticationFailedException, IOException {
+        successfullyAuthenticate();
+        gasAndElectricityDccMeter();
+        bridgeAndVirtualEntityWithChannels();
+
+        new ChannelTypeManager(serviceProvider);
+        Collection<ChannelType> channelTypes = tariffChannelTypeProvider.getChannelTypes(Locale.getDefault());
+        assertEquals(1, channelTypes.size());
+
+        ChannelType channelType = channelTypes.iterator().next();
+        assertEquals("electricity cost Tariff Standing Charge", channelType.getLabel());
+        assertEquals("The standing charge", channelType.getDescription());
+        assertEquals(true, channelType.getState().isReadOnly());
+        assertEquals(String.format("tariff_standing_charge_%s_default_structure_standing_charge",ELECTRICITY_COST_RESOURCE_ID), channelType.getUID().getId());
     }
 
     private void verifyReadingForTimes(String from, String to) throws IOException, AuthenticationFailedException {

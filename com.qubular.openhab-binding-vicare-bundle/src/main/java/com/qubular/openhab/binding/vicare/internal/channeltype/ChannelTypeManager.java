@@ -49,9 +49,9 @@ public class ChannelTypeManager {
             }
 
             @Override
-            public void updated(Thing thing, Thing e1) {
-                logger.debug("Thing {} updated", thing.getUID());
-                preloadChannelTypes(thing);
+            public void updated(Thing oldThing, Thing newThing) {
+                logger.debug("Thing {} updated", newThing.getUID());
+                preloadChannelTypes(newThing);
             }
         };
         thingRegistry.addRegistryChangeListener(thingRegistryChangeListener);

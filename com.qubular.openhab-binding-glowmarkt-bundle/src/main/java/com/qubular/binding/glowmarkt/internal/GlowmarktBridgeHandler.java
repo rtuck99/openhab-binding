@@ -39,7 +39,6 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
     private static final String PID = "com.qubular.binding.glowmarkt.GlowmarktBridgeHandler";
     public static final String CONFIG_PARAM_APPLICATION_ID = "applicationId";
     public static final String CONFIG_PARAM_SERVER_URI = "serverUri";
-
     public static final String CONFIG_PARAM_PERSISTENCE_SERVICE = "persistenceService";
     public static final String CONFIG_PARAM_USERNAME = "username";
     public static final String CONFIG_PARAM_PASSWORD = "password";

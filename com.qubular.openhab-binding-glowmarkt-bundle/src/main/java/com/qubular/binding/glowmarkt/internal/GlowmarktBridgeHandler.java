@@ -97,7 +97,7 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
             updateStatus(ThingStatus.UNKNOWN);
         }
         updateProperty(PROPERTY_BINDING_VERSION, serviceProvider.getBindingVersion());
-        oneTimeUpdateJob = scheduler.schedule(resourceUpdateJob(),5, TimeUnit.SECONDS);
+        oneTimeUpdateJob = scheduler.schedule(resourceUpdateJob(),10, TimeUnit.SECONDS);
         cronUpdateJob = cronScheduler.schedule(() -> resourceUpdateJob().run(), getCronSchedule());
     }
 
@@ -148,8 +148,12 @@ public class GlowmarktBridgeHandler extends BaseBridgeHandler {
         return () -> {
             for (Thing thing : getThing().getThings()) {
                 ThingHandler handler = thing.getHandler();
-                for (Channel channel : thing.getChannels()) {
-                    handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+                if (handler != null) {
+                    for (Channel channel : thing.getChannels()) {
+                        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+                    }
+                } else {
+                    logger.warn("Unable to refresh channels, handler not installed yet on {}", thing);
                 }
             }
         };

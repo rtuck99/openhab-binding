@@ -115,6 +115,7 @@ Changelog
 * Add official support for OpenHAB 4.0
 * Fixed #51 Glowmarkt binding not listed when attempting to add thing
 * Fixed #48 Slow startup of Glowmarkt binding under 4.0
+* Fixed #52 NPE on start of Glowmarkt handler
 
 #### 3.4.0
 

@@ -61,7 +61,7 @@ public class ChannelTypeManagerTest {
         ChannelTypeManager channelTypeManager = new ChannelTypeManager(vicareServiceProvider);
 
         var channelTypeCaptor = ArgumentCaptor.forClass(ChannelType.class);
-        verify(channelTypeProvider).addChannelType(channelTypeCaptor.capture());
+        verify(channelTypeProvider, timeout(10000)).addChannelType(channelTypeCaptor.capture());
 
         ChannelType channelType = channelTypeCaptor.getValue();
         assertNotNull(channelType);

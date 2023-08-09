@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import static com.qubular.binding.glowmarkt.internal.GlowmarktConstants.*;
 
@@ -24,7 +26,6 @@ public class ChannelTypeManager {
     public ChannelTypeManager(@Reference GlowmarktServiceProvider serviceProvider) {
         this.serviceProvider = serviceProvider;
         ThingRegistry thingRegistry = serviceProvider.getThingRegistry();
-        thingRegistry.getAll().forEach(this::preloadChannelTypes);
         thingRegistry.addRegistryChangeListener(new ThingRegistryChangeListener() {
             @Override
             public void added(Thing thing) {
@@ -41,7 +42,16 @@ public class ChannelTypeManager {
                 preloadChannelTypes(newThing);
             }
         });
+        // Defer loading the channels to allow the thing-types.xml to be loaded
+        CompletableFuture.runAsync(this::preloadThingChannels, CompletableFuture.delayedExecutor(5, TimeUnit.SECONDS));
+    }
 
+    private void preloadThingChannels() {
+        ThingRegistry thingRegistry = serviceProvider.getThingRegistry();
+        thingRegistry.getAll()
+                .stream()
+                .filter(thing -> BINDING_ID.equals(thing.getUID().getBindingId()))
+                .forEach(this::preloadChannelTypes);
     }
 
     private void preloadChannelTypes(Thing thing) {
@@ -50,24 +60,26 @@ public class ChannelTypeManager {
     }
 
     private void preloadChannelType(Thing thing, Channel channel) {
-        Map<String, String> properties = channel.getProperties();
-        String resourceName = properties.get(PROPERTY_RESOURCE_NAME);
-        Integer tier = null;
+        if (serviceProvider.getChannelTypeRegistry().getChannelType(channel.getChannelTypeUID()) == null) {
+            Map<String, String> properties = channel.getProperties();
+            String resourceName = properties.get(PROPERTY_RESOURCE_NAME);
+            Integer tier = null;
 
-        try {
-            String tierString = properties.getOrDefault(PROPERTY_TIER, "");
-            if (! tierString.isBlank()) {
-                tier = Integer.parseInt(tierString);
+            try {
+                String tierString = properties.getOrDefault(PROPERTY_TIER, "");
+                if (! tierString.isBlank()) {
+                    tier = Integer.parseInt(tierString);
+                }
+            } catch (NumberFormatException e) {
+                // never mind
             }
-        } catch (NumberFormatException e) {
-            // never mind
+            logger.debug("Preloading channel type {}", channel.getChannelTypeUID());
+            // creates and registers the channel type
+            serviceProvider.getTariffChannelTypeProvider().createChannelType(
+                    channel.getChannelTypeUID(),
+                    Locale.getDefault(),
+                    resourceName,
+                    tier);
         }
-        // creates and registers the channel type
-        serviceProvider.getTariffChannelTypeProvider().createChannelType(
-                channel.getChannelTypeUID(),
-                Locale.getDefault(),
-                resourceName,
-                tier);
-
     }
 }

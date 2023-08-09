@@ -28,20 +28,19 @@ import org.osgi.service.cm.ConfigurationAdmin;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import static com.qubular.binding.glowmarkt.internal.GlowmarktConstants.*;
 import static com.qubular.glowmarkt.AggregationFunction.SUM;
 import static com.qubular.glowmarkt.AggregationPeriod.PT30M;
 import static java.time.Instant.parse;
+import static java.time.temporal.ChronoUnit.SECONDS;
 import static java.util.Collections.emptyList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -395,13 +394,28 @@ class GlowmarktVirtualEntityHandlerTest {
 
         new ChannelTypeManager(serviceProvider);
         Collection<ChannelType> channelTypes = tariffChannelTypeProvider.getChannelTypes(Locale.getDefault());
-        assertEquals(1, channelTypes.size());
+        assertEventually(() -> channelTypes.size() == 1);
 
         ChannelType channelType = channelTypes.iterator().next();
         assertEquals("electricity cost Tariff Standing Charge", channelType.getLabel());
         assertEquals("The standing charge", channelType.getDescription());
         assertEquals(true, channelType.getState().isReadOnly());
         assertEquals(String.format("tariff_standing_charge_%s_default_structure_standing_charge",ELECTRICITY_COST_RESOURCE_ID), channelType.getUID().getId());
+    }
+
+    private void assertEventually(Supplier<Boolean> predicate) {
+        Instant expiry = Instant.now().plus(10, SECONDS);
+        do {
+            if (predicate.get()) {
+                return;
+            }
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        } while (Instant.now().isBefore(expiry));
+        fail("Timed out.");
     }
 
     private void verifyReadingForTimes(String from, String to) throws IOException, AuthenticationFailedException {

@@ -16,11 +16,12 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import static com.qubular.openhab.binding.vicare.internal.VicareConstants.BINDING_ID;
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.PROPERTY_FEATURE_NAME;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 @Component(immediate=true)
 public class ChannelTypeManager {
@@ -35,7 +36,6 @@ public class ChannelTypeManager {
         this.vicareServiceProvider = vicareServiceProvider;
 
         ThingRegistry thingRegistry = vicareServiceProvider.getThingRegistry();
-        thingRegistry.getAll().forEach(this::preloadChannelTypes);
         thingRegistryChangeListener = new ThingRegistryChangeListener() {
             @Override
             public void added(Thing thing) {
@@ -55,6 +55,15 @@ public class ChannelTypeManager {
             }
         };
         thingRegistry.addRegistryChangeListener(thingRegistryChangeListener);
+        // Defer loading the channels to allow the thing-types.xml to be loaded
+        CompletableFuture.runAsync(this::preloadThingChannels, CompletableFuture.delayedExecutor(5, SECONDS));
+    }
+
+    private void preloadThingChannels() {
+        vicareServiceProvider.getThingRegistry().getAll()
+                .stream()
+                .filter(thing -> BINDING_ID.equals(thing.getUID().getBindingId()))
+                .forEach(this::preloadChannelTypes);
     }
 
     @SuppressWarnings("unused")

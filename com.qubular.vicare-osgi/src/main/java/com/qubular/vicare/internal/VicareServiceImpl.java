@@ -199,7 +199,7 @@ public class VicareServiceImpl implements VicareService {
                 .orElseThrow(()-> new AuthenticationException("No access token for Viessmann API"));
 
         URI endpoint = URI.create(config.getIOTServerURI())
-                .resolve(format("v1/features/installations/%s/gateways/%s/devices/%s/features", installationId, gatewaySerial, deviceId));
+                .resolve(format("v2/features/installations/%s/gateways/%s/devices/%s/features", installationId, gatewaySerial, deviceId));
 
         try {
             String responseContent = maybeInjectFeatureResponse(installationId, gatewaySerial);

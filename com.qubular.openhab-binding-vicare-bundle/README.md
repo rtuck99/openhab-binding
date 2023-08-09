@@ -109,8 +109,9 @@ Changelog
 
 ### 4.0.1
 
-* Fixed #50 Viessmann bridge can't be added
 * Fixed #48 Slow startup of Viessmann binding under 4.0.0
+* Fixed #50 Viessmann bridge can't be added
+* Fixed #54 Feature endpoint now returns incorrect payload
 
 ### 4.0.0
 

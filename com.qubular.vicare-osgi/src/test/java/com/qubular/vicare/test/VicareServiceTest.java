@@ -369,7 +369,7 @@ public class VicareServiceTest {
             protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
                 try {
-                    assertEquals("/iot/v1/features/installations/2012616/gateways/1234567890123456/devices/0/features", URI.create(req.getRequestURI()).getPath());
+                    assertEquals("/iot/v2/features/installations/2012616/gateways/1234567890123456/devices/0/features", URI.create(req.getRequestURI()).getPath());
                     assertEquals("Bearer mytoken", req.getHeader("Authorization"));
                     String jsonResponse = new String(getClass().getResourceAsStream("gatewayOffline_v1_features.json").readAllBytes(), StandardCharsets.UTF_8);
 
@@ -1044,7 +1044,7 @@ public class VicareServiceTest {
             protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
                 try {
-                    assertEquals("/iot/v1/features/installations/2012616/gateways/7633107093013212/devices/0/features", URI.create(req.getRequestURI()).getPath());
+                    assertEquals("/iot/v2/features/installations/2012616/gateways/7633107093013212/devices/0/features", URI.create(req.getRequestURI()).getPath());
                     assertEquals("Bearer mytoken", req.getHeader("Authorization"));
                     String jsonResponse = new String(getClass().getResourceAsStream(fileName).readAllBytes(), StandardCharsets.UTF_8);
 

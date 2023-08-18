@@ -1,10 +1,14 @@
 package com.qubular.openhab.binding.vicare.internal;
 
 import com.qubular.openhab.binding.vicare.VicareServiceProvider;
+import com.qubular.openhab.binding.vicare.internal.channeltype.VicareChannelTypeProvider;
+import com.qubular.openhab.binding.vicare.internal.thingtype.VicareThingTypeProvider;
 import com.qubular.vicare.VicareConfiguration;
 import com.qubular.vicare.VicareService;
 import org.openhab.core.thing.ThingRegistry;
+import org.openhab.core.thing.binding.ThingTypeProvider;
 import org.openhab.core.thing.type.ChannelTypeRegistry;
+import org.openhab.core.thing.type.ThingTypeRegistry;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.annotations.Activate;
@@ -25,8 +29,12 @@ public class BundleServiceProvider implements VicareServiceProvider {
     private ChannelTypeRegistry channelTypeRegistry;
     @Reference
     private VicareChannelTypeProvider channelTypeProvider;
+    @Reference(target="(component.name=com.qubular.openhab.binding.vicare.internal.thingtype.VicareThingTypeProvider)")
+    private ThingTypeProvider vicareThingTypeProvider;
     @Reference
     private FeatureService featureService;
+    @Reference
+    private ThingTypeRegistry thingTypeRegistry;
 
     private BundleContext bundleContext;
 
@@ -43,6 +51,16 @@ public class BundleServiceProvider implements VicareServiceProvider {
     @Override
     public VicareChannelTypeProvider getChannelTypeProvider() {
         return channelTypeProvider;
+    }
+
+    @Override
+    public VicareThingTypeProvider getVicareThingTypeProvider() {
+        return (VicareThingTypeProvider) vicareThingTypeProvider;
+    }
+
+    @Override
+    public ThingTypeRegistry getThingTypeRegistry() {
+        return thingTypeRegistry;
     }
 
     @Override

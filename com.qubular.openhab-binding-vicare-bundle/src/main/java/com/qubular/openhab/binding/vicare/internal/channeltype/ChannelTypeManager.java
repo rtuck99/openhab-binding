@@ -1,7 +1,6 @@
 package com.qubular.openhab.binding.vicare.internal.channeltype;
 
 import com.qubular.openhab.binding.vicare.VicareServiceProvider;
-import com.qubular.openhab.binding.vicare.internal.VicareChannelBuilder;
 import com.qubular.vicare.model.Feature;
 import org.openhab.core.thing.Channel;
 import org.openhab.core.thing.Thing;

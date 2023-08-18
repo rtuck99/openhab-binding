@@ -2,6 +2,7 @@ package com.qubular.openhab.binding.vicare.internal;
 
 import com.qubular.openhab.binding.vicare.VicareServiceProvider;
 import com.qubular.openhab.binding.vicare.internal.channeltype.ChannelTypeManager;
+import com.qubular.openhab.binding.vicare.internal.channeltype.VicareChannelTypeProvider;
 import com.qubular.vicare.model.Feature;
 import com.qubular.vicare.model.Unit;
 import com.qubular.vicare.model.features.NumericSensorFeature;

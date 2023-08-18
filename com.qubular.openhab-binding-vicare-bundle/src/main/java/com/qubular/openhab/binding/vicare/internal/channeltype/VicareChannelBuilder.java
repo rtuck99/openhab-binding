@@ -1,6 +1,8 @@
-package com.qubular.openhab.binding.vicare.internal;
+package com.qubular.openhab.binding.vicare.internal.channeltype;
 
 import com.qubular.openhab.binding.vicare.VicareServiceProvider;
+import com.qubular.openhab.binding.vicare.internal.UnitMapping;
+import com.qubular.openhab.binding.vicare.internal.VicareUtil;
 import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.model.CommandDescriptor;
 import com.qubular.vicare.model.Feature;
@@ -72,9 +74,9 @@ public class VicareChannelBuilder implements Supplier<VicareChannelBuilder.Memo>
     public Memo get() {
         Result result = new Result(thing.getProperties());
         try {
-            List<Feature> features = vicareServiceProvider.getVicareService().getFeatures(igd.installationId,
-                                                                                          igd.gatewaySerial,
-                                                                                          igd.deviceId);
+            List<Feature> features = vicareServiceProvider.getVicareService().getFeatures(igd.installationId(),
+                                                                                          igd.gatewaySerial(),
+                                                                                          igd.deviceId());
             for (Feature feature : features) {
                 buildChannelsForFeature(feature, result);
             }

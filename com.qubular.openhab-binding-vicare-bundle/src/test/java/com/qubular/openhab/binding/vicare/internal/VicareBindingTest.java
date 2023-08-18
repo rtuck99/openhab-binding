@@ -1,6 +1,8 @@
 package com.qubular.openhab.binding.vicare.internal;
 
 import com.qubular.openhab.binding.vicare.VicareServiceProvider;
+import com.qubular.openhab.binding.vicare.internal.channeltype.SimpleVicareChannelTypeProvider;
+import com.qubular.openhab.binding.vicare.internal.channeltype.VicareChannelTypeProvider;
 import com.qubular.openhab.binding.vicare.internal.configuration.SimpleConfiguration;
 import com.qubular.openhab.binding.vicare.internal.tokenstore.PersistedTokenStore;
 import com.qubular.vicare.*;
@@ -393,6 +395,11 @@ public class VicareBindingTest {
         );
         Feature ventilationOperatingProgramsActive = new TextFeature("ventilation.operating.programs.active", "value", "levelThree");
         Feature ventilationOperatingProgramsHoliday = new DatePeriodFeature("ventilation.operating.programs.holiday", false, LocalDate.parse("2023-05-23"), LocalDate.parse("2023-05-30"));
+        Feature unknownTemperatureSensor = new NumericSensorFeature("unknown.sensors.temperature", Map.of(
+                "unit", new StringValue("celsius"),
+                "value", new DimensionalValue(Unit.CELSIUS, 27.3),
+                "status", new StatusValue("connected")
+        ), emptyList(), "value");
 
         List<Feature> features = new ArrayList<>();
         features.addAll(programFeatures);
@@ -436,7 +443,8 @@ public class VicareBindingTest {
                                 heatingCompressors0Statistics,
                                 ventilationOperatingModesActive,
                                 ventilationOperatingProgramsActive,
-                                ventilationOperatingProgramsHoliday));
+                                ventilationOperatingProgramsHoliday,
+                                unknownTemperatureSensor));
         return when(vicareService.getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID))
                 .thenReturn(features);
     }

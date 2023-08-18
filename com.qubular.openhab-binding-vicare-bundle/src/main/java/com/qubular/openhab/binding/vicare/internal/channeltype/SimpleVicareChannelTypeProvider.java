@@ -1,5 +1,6 @@
-package com.qubular.openhab.binding.vicare.internal;
+package com.qubular.openhab.binding.vicare.internal.channeltype;
 
+import com.qubular.openhab.binding.vicare.internal.channeltype.VicareChannelTypeProvider;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.core.thing.type.ChannelType;
 import org.openhab.core.thing.type.ChannelTypeProvider;

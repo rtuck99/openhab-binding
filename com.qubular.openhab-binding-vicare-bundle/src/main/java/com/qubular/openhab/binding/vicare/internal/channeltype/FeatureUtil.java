@@ -1,8 +1,7 @@
-package com.qubular.openhab.binding.vicare.internal;
+package com.qubular.openhab.binding.vicare.internal.channeltype;
 
 import com.qubular.vicare.model.CommandDescriptor;
 import com.qubular.vicare.model.Feature;
-import com.qubular.vicare.model.features.NumericSensorFeature;
 
 import java.util.ArrayList;
 import java.util.List;

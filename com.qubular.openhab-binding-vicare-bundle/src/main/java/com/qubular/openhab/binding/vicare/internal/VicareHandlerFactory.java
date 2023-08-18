@@ -18,12 +18,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
-import java.util.Set;
 
 @Component(service= ThingHandlerFactory.class)
 public class VicareHandlerFactory extends BaseThingHandlerFactory {
-    private static final Set<ThingTypeUID> SUPPORTED_THING_TYPES =
-            Set.of(VicareConstants.THING_TYPE_BRIDGE, VicareConstants.THING_TYPE_HEATING);
     private static final Logger logger = LoggerFactory.getLogger(VicareHandlerFactory.class);
     private final VicareService vicareService;
     private final VicareServiceProvider vicareServiceProvider;
@@ -37,6 +34,7 @@ public class VicareHandlerFactory extends BaseThingHandlerFactory {
         this.vicareService = vicareServiceProvider.getVicareService();
     }
 
+    @SuppressWarnings("unused")
     @Deactivate
     public void deactivate() {
         logger.info("Deactivating Vicare Binding");
@@ -45,16 +43,18 @@ public class VicareHandlerFactory extends BaseThingHandlerFactory {
     @Override
     protected @org.eclipse.jdt.annotation.Nullable ThingHandler createHandler(Thing thing) {
         logger.info("Creating handler for {}", thing.getThingTypeUID());
-        if (VicareConstants.THING_TYPE_BRIDGE.equals(thing.getThingTypeUID())) {
-            return new VicareBridgeHandler(vicareServiceProvider, (Bridge) thing);
-        } else if (VicareConstants.THING_TYPE_HEATING.equals(thing.getThingTypeUID())) {
-            return new VicareDeviceThingHandler(vicareServiceProvider, thing, vicareService);
+        if (supportsThingType(thing.getThingTypeUID())) {
+            if (VicareConstants.THING_TYPE_BRIDGE.equals(thing.getThingTypeUID())) {
+                return new VicareBridgeHandler(vicareServiceProvider, (Bridge) thing);
+            } else {
+                return new VicareDeviceThingHandler(vicareServiceProvider, thing, vicareService);
+            }
         }
         return null;
     }
 
     @Override
     public boolean supportsThingType(ThingTypeUID thingTypeUID) {
-        return SUPPORTED_THING_TYPES.contains(thingTypeUID);
+        return VicareConstants.BINDING_ID.equals(thingTypeUID.getBindingId());
     }
 }

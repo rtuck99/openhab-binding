@@ -1,6 +1,7 @@
 package com.qubular.openhab.binding.vicare.internal;
 
 import com.qubular.openhab.binding.vicare.VicareServiceProvider;
+import com.qubular.openhab.binding.vicare.internal.channeltype.VicareChannelBuilder;
 import com.qubular.vicare.*;
 import com.qubular.vicare.model.Unit;
 import com.qubular.vicare.model.Value;
@@ -32,7 +33,6 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static com.qubular.openhab.binding.vicare.internal.DeviceDiscoveryEvent.generateTopic;
@@ -45,7 +45,7 @@ import static java.util.stream.Collectors.toMap;
 import static org.osgi.service.event.EventConstants.EVENT_TOPIC;
 
 public class VicareDeviceThingHandler extends BaseThingHandler {
-    static final Map<ConsumptionFeature.Stat, String> CONSUMPTION_CHANNEL_NAMES_BY_STAT = Map.of(
+    public static final Map<ConsumptionFeature.Stat, String> CONSUMPTION_CHANNEL_NAMES_BY_STAT = Map.of(
             ConsumptionFeature.Stat.CURRENT_DAY, "currentDay",
             ConsumptionFeature.Stat.CURRENT_WEEK, "currentWeek",
             ConsumptionFeature.Stat.CURRENT_MONTH, "currentMonth",
@@ -64,7 +64,7 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
             PROPERTY_BOILER_SERIAL
     );
 
-    static final Map<String, String> COMMAND_NAMES_TO_PROPS = Map.of(
+    public static final Map<String, String> COMMAND_NAMES_TO_PROPS = Map.of(
             "activate", PROPERTY_ON_COMMAND_NAME,
             "deactivate", PROPERTY_OFF_COMMAND_NAME
     );

@@ -1,4 +1,4 @@
-package com.qubular.openhab.binding.vicare.internal;
+package com.qubular.openhab.binding.vicare.internal.channeltype;
 
 import com.qubular.vicare.model.CommandDescriptor;
 import com.qubular.vicare.model.Feature;

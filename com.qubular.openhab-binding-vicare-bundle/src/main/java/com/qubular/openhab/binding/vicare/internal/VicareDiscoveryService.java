@@ -1,5 +1,6 @@
 package com.qubular.openhab.binding.vicare.internal;
 
+import com.qubular.openhab.binding.vicare.VicareServiceProvider;
 import com.qubular.openhab.binding.vicare.internal.tokenstore.TokenEvent;
 import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.VicareService;
@@ -8,17 +9,17 @@ import com.qubular.vicare.model.Gateway;
 import com.qubular.vicare.model.Installation;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.core.config.discovery.*;
-import org.openhab.core.events.EventSubscriber;
 import org.openhab.core.thing.ThingStatus;
 import org.openhab.core.thing.ThingTypeUID;
 import org.openhab.core.thing.ThingUID;
 import org.openhab.core.thing.binding.BridgeHandler;
 import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerService;
+import org.openhab.core.thing.type.ThingType;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
-import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
+import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 import org.osgi.service.event.EventHandler;
@@ -42,6 +43,7 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
     private static final int DISCOVERY_TIMEOUT_SECS = 10;
 
     private static final Logger logger = LoggerFactory.getLogger(VicareDiscoveryService.class);
+    private final VicareServiceProvider vicareServiceProvider;
 
     private CompletableFuture<BridgeHandler> bridgeHandler = new CompletableFuture<>();
     private ScheduledFuture<?> backgroundJob;
@@ -49,8 +51,9 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
     private EventAdmin eventAdmin;
 
     /** Invoked by the bridge handler factory */
-    public VicareDiscoveryService() {
+    public VicareDiscoveryService(@Reference VicareServiceProvider vicareServiceProvider) {
         super(SUPPORTED_THING_TYPES, DISCOVERY_TIMEOUT_SECS, true);
+        this.vicareServiceProvider = vicareServiceProvider;
         logger.info("Created Vicare Discovery Service");
         // activate manually 'cos not part of OSGI services
         // Potential race condition here because this invokes discovery before our caller
@@ -98,10 +101,11 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
                         for (Device device : gateway.getDevices()) {
                             switch (device.getDeviceType()) {
                                 case DEVICE_TYPE_HEATING:
-                                    discoverHeating(installation, gateway, device, bridgeHandler.join().getThing().getUID());
+                                    discoverHeating(installation, gateway, device, getBridgeHandler().getThing().getUID());
                                     break;
                                 default:
-                                    logger.info("Ignoring unsupported device type " + device.getDeviceType());
+                                    discoverUnknownDevice(installation, gateway, device, getBridgeHandler().getThing().getUID());
+                                    break;
                             }
                         }
                     }
@@ -130,34 +134,53 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
         };
     }
 
+    private void discoverUnknownDevice(Installation installation, Gateway gateway, Device device, ThingUID bridgeId) {
+        logger.info("Discovered unknown device type " + device.getDeviceType());
+        ThingTypeUID thingTypeUID = new ThingTypeUID(BINDING_ID, VicareUtil.escapeUIDSegment(device.getDeviceType()));
+        // prime the thingType registry
+        ThingType thingType = vicareServiceProvider.getVicareThingTypeProvider().fetchOrCreateThingType(vicareServiceProvider.getThingTypeRegistry(), thingTypeUID);
+
+        discoverDevice(new HashMap<>(), installation, gateway, device, bridgeId, String.format("Unrecognised %s device", device.getDeviceType()),
+                       thingTypeUID);
+    }
+
     private void discoverHeating(Installation installation, Gateway gateway, Device device, ThingUID bridgeId) {
-        String uniqueId = VicareUtil.encodeThingUniqueId(installation.getId(),
-                gateway.getSerial(),
-                device.getId());
-        String thingId = VicareUtil.encodeThingId(installation.getId(),
-                gateway.getSerial(),
-                device.getId());
-        ThingUID thingUid = new ThingUID(THING_TYPE_HEATING,
-                bridgeId,
-                thingId);
         Map<String, Object> props = new HashMap<>();
-        // These have to be non-null in order to resolve the device
-        props.put(PROPERTY_DEVICE_UNIQUE_ID, uniqueId);
-        props.put(PROPERTY_GATEWAY_SERIAL, device.getGatewaySerial());
-        props.put(PROPERTY_DEVICE_TYPE, device.getDeviceType());
         if (device.getBoilerSerial() != null) {
             props.put(PROPERTY_BOILER_SERIAL, device.getBoilerSerial());
         }
         if (device.getModelId() != null) {
             props.put(PROPERTY_MODEL_ID, device.getModelId());
         }
-        DiscoveryResult result = DiscoveryResultBuilder.create(thingUid)
+        discoverDevice(props, installation, gateway, device, bridgeId, null, THING_TYPE_HEATING);
+    }
+
+    private void discoverDevice(Map<String, Object> props, Installation installation, Gateway gateway, Device device, ThingUID bridgeId, @Nullable String label, ThingTypeUID thingType) {
+        String uniqueId = VicareUtil.encodeThingUniqueId(installation.getId(),
+                gateway.getSerial(),
+                device.getId());
+        String thingId = VicareUtil.encodeThingId(installation.getId(),
+                gateway.getSerial(),
+                device.getId());
+        ThingUID thingUid = new ThingUID(thingType,
+                                         bridgeId,
+                                         thingId);
+        // These have to be non-null in order to resolve the device
+        props.put(PROPERTY_DEVICE_UNIQUE_ID, uniqueId);
+        props.put(PROPERTY_GATEWAY_SERIAL, device.getGatewaySerial());
+        props.put(PROPERTY_DEVICE_TYPE, device.getDeviceType());
+        DiscoveryResultBuilder builder = DiscoveryResultBuilder.create(thingUid)
                 .withBridge(bridgeId)
                 .withProperties(props)
-                .withRepresentationProperty(PROPERTY_DEVICE_UNIQUE_ID)
-                .build();
+                .withRepresentationProperty(PROPERTY_DEVICE_UNIQUE_ID);
+        if (label != null) {
+            builder.withLabel(label);
+        }
+
+        DiscoveryResult result = builder.build();
         logger.info("Discovered {}", uniqueId);
         if (eventAdmin != null) {
+            // post an event to update any properties of the thing if it already exists
             eventAdmin.postEvent(new Event(DeviceDiscoveryEvent.generateTopic(thingUid), props));
         }
         this.thingDiscovered(result);

@@ -6,24 +6,10 @@
 
   <!-- Thing Type -->
   <thing-type id="heating">
-    <supported-bridge-type-refs>
-      <bridge-type-ref id="bridge"/>
-    </supported-bridge-type-refs>
-
     <label>Heating Device</label>
     <description>Heating device such as a boiler</description>
     <!-- A property composed from the installation id, gateway serial and device id -->
-    <representation-property>devicePath</representation-property>
-  </thing-type>
-
-  <thing-type id="circuit">
-    <supported-bridge-type-refs>
-      <bridge-type-ref id="bridge"/>
-    </supported-bridge-type-refs>
-
-    <label>Heating Circuit</label>
-    <description>A heating circuit</description>
-    <representation-property>circuitNumber</representation-property>
+    <representation-property>deviceUniqueId</representation-property>
   </thing-type>
 
   <!-- The following channel types are defined in the Data Point definitions as per Viessmann API documentation -->

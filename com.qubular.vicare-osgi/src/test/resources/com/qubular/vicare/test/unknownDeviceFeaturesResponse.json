@@ -1,0 +1,30 @@
+{
+  "data": [
+    {
+      "properties": {
+        "unit": {
+          "value": "celsius",
+          "type": "string"
+        },
+        "value": {
+          "type": "number",
+          "value": 27.3,
+          "unit": "celsius"
+        },
+        "status": {
+          "type": "string",
+          "value": "connected"
+        }
+      },
+      "commands": {},
+      "apiVersion": 2,
+      "uri": "https://api.viessmann.com/iot/v2/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/unknown.sensors.temperature",
+      "gatewayId": "1234567890123456",
+      "feature": "unknown.sensors.temperature",
+      "timestamp": "2022-07-06T07:58:00.380Z",
+      "isEnabled": false,
+      "isReady": true,
+      "deviceId": "0"
+    }
+  ]
+}

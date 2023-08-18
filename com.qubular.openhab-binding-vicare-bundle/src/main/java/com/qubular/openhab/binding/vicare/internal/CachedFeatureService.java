@@ -65,7 +65,7 @@ public class CachedFeatureService implements FeatureService {
         cachedResponses.put(key, new CachedResponse(features, now));
         features.completeAsync(() -> {
             try {
-                return vicareService.getFeatures(s.installationId, s.gatewaySerial, s.deviceId);
+                return vicareService.getFeatures(s.installationId(), s.gatewaySerial(), s.deviceId());
             } catch (AuthenticationException | IOException e) {
                 if ((e instanceof AuthenticationException) &&
                         (e.getCause() instanceof InvalidKeyException)) {

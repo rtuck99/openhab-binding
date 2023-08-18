@@ -8,12 +8,16 @@ import java.util.UUID;
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.PROPERTY_DEVICE_UNIQUE_ID;
 
 public class VicareUtil {
-    public static class IGD {
-        long installationId;
-
-        String gatewaySerial;
-        String deviceId;
+    public record IGD (
+        long installationId,
+        String gatewaySerial,
+        String deviceId
+    ){
+        public String getDeviceUniqueId() {
+            return VicareUtil.encodeThingUniqueId(installationId, gatewaySerial, deviceId);
+        }
     }
+
     public static String getDeviceUniqueId(Thing t) {
         // Hidden configuration option for testing purposes
         String deviceUniqueId = (String) t.getConfiguration().get("deviceUniqueId");
@@ -34,12 +38,8 @@ public class VicareUtil {
     }
 
     public static IGD decodeThingUniqueId(String uniqueId) {
-        IGD decoded = new IGD();
         String[] split = uniqueId.split("/");
-        decoded.installationId = Long.valueOf(split[0]);
-        decoded.gatewaySerial = split[1];
-        decoded.deviceId = split[2];
-        return decoded;
+        return new IGD(Long.valueOf(split[0]), split[1], split[2]);
     }
 
     public static String escapeUIDSegment(String s) {

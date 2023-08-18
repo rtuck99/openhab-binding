@@ -1,5 +1,6 @@
-package com.qubular.openhab.binding.vicare.internal;
+package com.qubular.openhab.binding.vicare.internal.channeltype;
 
+import com.qubular.openhab.binding.vicare.internal.channeltype.FeatureUtil;
 import com.qubular.vicare.model.Feature;
 import com.qubular.vicare.model.features.StatusSensorFeature;
 import com.qubular.vicare.model.features.TextFeature;

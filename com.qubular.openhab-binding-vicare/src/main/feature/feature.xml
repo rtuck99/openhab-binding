@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <features name="com.qubular.openhab-binding-vicare-${project.version}" xmlns="http://karaf.apache.org/xmlns/features/v1.4.0">
-  <feature name="openhab-binding-vicare" description="Viessmann Vicare Binding" version="${project.version}">
+  <feature name="com.qubular.openhab-binding-vicare" description="Viessmann Vicare Binding" version="${project.version}">
     <bundle start-level="80">mvn:com.qubular/com.qubular.openhab-binding-vicare-bundle/${project.version}</bundle>
     <bundle start-level="80">mvn:com.qubular/com.qubular.vicare-osgi/${project.version}</bundle>
   </feature>

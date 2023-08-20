@@ -107,6 +107,10 @@ and they will appear in your Inbox.
 Changelog
 ---------
 
+### 4.0.2
+
+* Fixed #55 Karaf refreshes binding on restart and unloads it
+
 ### 4.0.1
 
 * Fixed #48 Slow startup of Viessmann binding under 4.0.0

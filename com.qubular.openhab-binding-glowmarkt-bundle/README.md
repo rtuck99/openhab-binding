@@ -110,6 +110,10 @@ Click Add Aggregate series to add an aggregate series
 Changelog
 ---------
 
+### 4.0.2
+
+* Fixed #55 Karaf refreshes binding on restart and unloads it.
+
 ### 4.0.1
 
 * Add official support for OpenHAB 4.0

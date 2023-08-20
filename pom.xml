@@ -411,10 +411,10 @@
   </build>
   <modules>
     <module>com.qubular.openhab-binding-vicare-bundle</module>
-    <module>openhab-binding-vicare</module>
+    <module>com.qubular.openhab-binding-vicare</module>
     <module>com.qubular.vicare-osgi</module>
     <module>com.qubular.openhab-binding-glowmarkt-bundle</module>
-    <module>openhab-binding-glowmarkt</module>
+    <module>com.qubular.openhab-binding-glowmarkt</module>
     <module>com.qubular.glowmarkt-osgi</module>
     <module>com.qubular.vicare.tester</module>
   </modules>

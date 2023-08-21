@@ -1997,6 +1997,26 @@ public class VicareBindingTest {
         verify(vicareService, timeout(1000)).sendCommand(URI.create("https://api.viessmann.com/iot/v1/equipment/installations/1234567/gateways/0123456789101112/devices/0/features/heating.dhw.temperature.temp2/commands/setTargetTemperature"), Map.of("temperature", 48.0));
     }
 
+    @Test
+    public void bridgeAndDeviceHandleFeatureTimeout() throws AuthenticationException, IOException {
+        HeatingThing heatingThing = initialiseHeatingThing();
+
+
+        Channel valueChannel = findChannelNoVerify(heatingThing.thingCaptor, "heating_dhw_temperature_temp2");
+        when(vicareService.getFeatures(anyLong(), anyString(), anyString())).thenThrow(new IOException("Timed out"));
+
+        heatingThing.handler.handleCommand(valueChannel.getUID(), RefreshType.REFRESH);
+
+        var thingStatusInfoCaptor = ArgumentCaptor.forClass(ThingStatusInfo.class);
+        InOrder inOrder = inOrder(heatingThing.bridgeCallback, heatingThing.callback);
+        inOrder.verify(heatingThing.bridgeCallback, timeout(3000)).statusUpdated(eq(heatingThing.bridge), thingStatusInfoCaptor.capture());
+        assertEquals(ThingStatus.OFFLINE, thingStatusInfoCaptor.getValue().getStatus());
+        assertEquals(ThingStatusDetail.COMMUNICATION_ERROR, thingStatusInfoCaptor.getValue().getStatusDetail());
+        inOrder.verify(heatingThing.callback, timeout(3000)).statusUpdated(eq(heatingThing.handler.getThing()), thingStatusInfoCaptor.capture());
+        assertEquals(ThingStatus.OFFLINE, thingStatusInfoCaptor.getValue().getStatus());
+        assertEquals(ThingStatusDetail.BRIDGE_OFFLINE, thingStatusInfoCaptor.getValue().getStatusDetail());
+    }
+
     public static Stream<Arguments> source_ventilationOperatingModes() {
         return Stream.of(
                 Arguments.of("ventilation_operating_modes_standby_active", "Standby Ventilation Mode Active", "Shows whether the Standby operating mode is active.", OnOffType.OFF),

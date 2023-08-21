@@ -110,6 +110,7 @@ Changelog
 ### 4.0.2
 
 * Fixed #55 Karaf refreshes binding on restart and unloads it
+* Fix for #57 Threading issues and log spam after HTTP connection EOF
 
 ### 4.0.1
 

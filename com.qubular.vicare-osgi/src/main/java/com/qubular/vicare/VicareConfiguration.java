@@ -42,4 +42,6 @@ public interface VicareConfiguration {
     default String getDebugInjectedGatewaySerial() {
         return null;
     }
+
+    default int getRequestTimeoutSecs() { return 60; }
 }

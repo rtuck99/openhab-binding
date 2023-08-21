@@ -64,6 +64,7 @@ public class VicareServiceTest {
     private final List<String> servlets = new CopyOnWriteArrayList<>();
 
     private SimpleTokenStore tokenStore;
+    private SimpleConfiguration configuration;
 
     private <T> T getService(Class<T> clazz) {
         return bundleContext.getService(bundleContext.getServiceReference(clazz));
@@ -75,7 +76,7 @@ public class VicareServiceTest {
         httpClient = new HttpClient();
         httpClient.start();
         httpService = getService(HttpService.class);
-        SimpleConfiguration configuration = (SimpleConfiguration) getService(VicareConfiguration.class);
+        configuration = (SimpleConfiguration) getService(VicareConfiguration.class);
         String clientId = ofNullable(System.getProperty("com.qubular.vicare.tester.clientId")).orElse("myClientId");
         String accessServerUri = ofNullable(System.getProperty("com.qubular.vicare.tester.accessServerUri")).orElse("http://localhost:9000/grantAccess");
         configuration.setClientId(clientId);
@@ -239,6 +240,42 @@ public class VicareServiceTest {
         String redirectUri = reflectorResponse.getHeaders().get("Location");
 
         assertEquals("http://localhost:9000/authorize", redirectUri.substring(0, redirectUri.indexOf('?')));
+    }
+
+    @Test
+    @DisabledIf("realConnection")
+    public void getFeaturesHonoursTimeoutSetting() throws ServletException, NamespaceException, AuthenticationException, IOException {
+        configuration.setRequestTimeoutSecs(2);
+        CompletableFuture<Void> servletTestResult = new CompletableFuture<>();
+        tokenStore.storeAccessToken("mytoken", Instant.now().plus(1, ChronoUnit.DAYS));
+        Servlet iotServlet = new HttpServlet() {
+            @Override
+            protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+                try {
+                    assertEquals("/iot/v2/features/installations/2012616/gateways/7633107093013212/devices/0/features", URI.create(req.getRequestURI()).getPath());
+                    assertEquals("Bearer mytoken", req.getHeader("Authorization"));
+                    try {
+                        Thread.sleep(5000);
+                    } catch (InterruptedException e) {
+                        fail("GET request was interrupted.");
+                    }
+                    String jsonResponse = new String(getClass().getResourceAsStream("deviceFeaturesResponse.json").readAllBytes(), StandardCharsets.UTF_8);
+                    resp.setContentType("application/json");
+                    resp.setStatus(200);
+                    try (ServletOutputStream outputStream = resp.getOutputStream()) {
+                        outputStream.print(jsonResponse);
+                    }
+                    servletTestResult.complete(null);
+                } catch (AssertionFailedError e) {
+                    logger.warn("getFeatures() FAILED: {}", e.getMessage());
+                    servletTestResult.completeExceptionally(e);
+                    resp.setStatus(400);
+                }
+            }
+        };
+        registerServlet("/iot", iotServlet);
+        assertThrows(IOException.class, () -> vicareService.getFeatures(2012616, "7633107093013212", "0"));
     }
 
     @Test

@@ -41,6 +41,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -206,6 +207,7 @@ public class VicareServiceImpl implements VicareService {
             if (responseContent == null) {
                 ContentResponse contentResponse = httpClientProvider.getHttpClient()
                         .newRequest(endpoint)
+                        .timeout(config.getRequestTimeoutSecs(), TimeUnit.SECONDS)
                         .header(HttpHeader.AUTHORIZATION, "Bearer " + accessToken.token)
                         .method(HttpMethod.GET)
                         .send();

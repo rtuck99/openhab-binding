@@ -107,6 +107,10 @@ and they will appear in your Inbox.
 Changelog
 ---------
 
+### 4.0.3
+
+* Fix for #57 Rework prefetching
+
 ### 4.0.2
 
 * Fixed #55 Karaf refreshes binding on restart and unloads it

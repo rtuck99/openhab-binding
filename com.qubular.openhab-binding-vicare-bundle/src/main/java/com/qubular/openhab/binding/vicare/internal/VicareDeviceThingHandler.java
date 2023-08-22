@@ -156,7 +156,12 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
                     }
                 })
                 .exceptionally(t -> {
-                    logger.warn(format("Unexpected exception handling command %s for channel %s", command, channelUID), t);
+                    // reduce amount of log spam for failed REFRESH
+                    if (command != RefreshType.REFRESH) {
+                        logger.warn(format("Unexpected exception handling command %s for channel %s", command, channelUID), t);
+                    } else {
+                        logger.debug(format("Unexpected exception handling command %s for channel %s", command, channelUID), t);
+                    }
                     return null;
                 });
     }

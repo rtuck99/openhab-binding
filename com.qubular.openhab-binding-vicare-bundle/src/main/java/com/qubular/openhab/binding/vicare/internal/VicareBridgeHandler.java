@@ -31,6 +31,7 @@ import java.util.concurrent.*;
 import java.util.function.Supplier;
 
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
@@ -101,17 +102,24 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
         return () -> {
             record HandlerChannel(ThingHandler handler, Channel channel){}
 
-            getThing().getThings().parallelStream()
+            getThing().getThings().stream()
                     .map(Thing::getHandler)
                     .filter(Objects::nonNull)
                     .map(VicareDeviceThingHandler.class::cast)
-                    .flatMap(handler -> {
+                    .forEach(handler -> {
                         // prime the feature cache
-                        vicareServiceProvider.getFeatureService().getFeatures(handler.getThing(), getPollingInterval());
-                        return handler.getThing().getChannels().stream().map(c -> new HandlerChannel(handler, c));
-                    })
-                    .forEach(handlerChannel -> handlerChannel.handler.handleCommand(handlerChannel.channel.getUID(), RefreshType.REFRESH));
-
+                        logger.debug("Prefetching features for {}", handler.getThing());
+                        vicareServiceProvider.getFeatureService().getFeatures(handler.getThing(), getPollingInterval())
+                                .exceptionally(ex -> {
+                                    logger.warn("Unable to prefetch features", ex);
+                                    return emptyList();
+                                })
+                                .thenRun(() -> {
+                                    handler.getThing().getChannels().stream().map(c -> new HandlerChannel(handler, c))
+                                            .forEach(handlerChannel -> handler.handleCommand(handlerChannel.channel.getUID(), RefreshType.REFRESH));
+                                         }
+                                );
+                    });
         };
     }
 

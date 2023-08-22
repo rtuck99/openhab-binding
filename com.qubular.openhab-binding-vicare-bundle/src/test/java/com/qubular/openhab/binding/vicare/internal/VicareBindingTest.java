@@ -63,6 +63,7 @@ import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.*;
+import static org.openhab.core.library.unit.SIUnits.CELSIUS;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -351,7 +352,9 @@ public class VicareBindingTest {
                                                                                "hoursLoadClassThree", new DimensionalValue(Unit.HOUR, 1962),
                                                                                "hoursLoadClassFour", new DimensionalValue(Unit.HOUR, 257),
                                                                                "hoursLoadClassFive", new DimensionalValue(Unit.HOUR, 71)));
-        Feature heatingBufferTemperatureSensor = new StatusSensorFeature("heating.buffer.sensors.temperature.top", Map.of("status", new StatusValue("notConnected")));
+        Feature heatingBufferTemperatureSensorTop = new StatusSensorFeature("heating.buffer.sensors.temperature.top", Map.of("status", StatusValue.NOT_CONNECTED));
+        Feature heatingBufferTemperatureSensorMain = new StatusSensorFeature("heating.buffer.sensors.temperature.main", Map.of("status", StatusValue.CONNECTED,
+                                                                                                                               "value", new DimensionalValue(Unit.CELSIUS, 28.9)));
         Feature heatingDhwHotwaterStorageSensorTop = new NumericSensorFeature("heating.dhw.sensors.temperature.hotWaterStorage.top", Map.of("status", new StatusValue("connected"),
                 "value", new DimensionalValue(Unit.CELSIUS, 44.4)), emptyList(), "value");
         Feature heatingDhwHotwaterStorageSensorBottom = new StatusSensorFeature("heating.dhw.sensors.temperature.hotWaterStorage.bottom", Map.of("status", new StatusValue("notConnected")));
@@ -404,7 +407,8 @@ public class VicareBindingTest {
         features.addAll(ventilationOperatingPrograms);
         features.addAll(List.of(temperatureSensor, statisticsFeature, textFeature, statusFeature,
                                 consumptionFeature, burnerFeature, curveFeature, holidayFeature,
-                                heatingBufferTemperatureSensor,
+                                heatingBufferTemperatureSensorTop,
+                                heatingBufferTemperatureSensorMain,
                                 heatingDhw,
                                 heatingDhwCharging,
                                 heatingDhwHotwaterStorageSensorTop,
@@ -1859,19 +1863,40 @@ public class VicareBindingTest {
         assertEquals(StringType.valueOf("off"), stateCaptor.getValue());
     }
 
-    @Test
-    public void supportsHeatingBufferSensorsTemperature() throws AuthenticationException, IOException {
+    public static Stream<Arguments> source_heatingBufferSensorsTemperature() {
+        return Stream.of(
+                Arguments.of("heating_buffer_sensors_temperature_top_status", "Heating Buffer Top Temperature Sensor Status", "notConnected",
+                            null, null, null),
+                Arguments.of("heating_buffer_sensors_temperature_main_status", "Heating Buffer Main Temperature Sensor Status", "connected",
+                             "heating_buffer_sensors_temperature_main_value", "Heating Buffer Main Temperature Sensor Reading", new DecimalType("28.9"))
+        );
+    }
+    
+    @MethodSource("source_heatingBufferSensorsTemperature")
+    @ParameterizedTest
+    public void supportsHeatingBufferSensorsTemperature(String statusChannelId, String expectedStatusLabel, String expectedStatus, String temperatureChannelId, String expectedTemperatureLabel, State expectedTemperature) throws AuthenticationException, IOException {
         HeatingThing result = initialiseHeatingThing();
 
-        Channel channel = findChannelNoVerify(result.thingCaptor, "heating_buffer_sensors_temperature_top_status");
-        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
-        assertEquals("Heating Buffer Top Temperature Sensor Status", channelType.getLabel());
-        assertEquals("String", channelType.getItemType());
-        assertTrue(channelType.getState().isReadOnly());
+        Channel statusChannel = findChannelNoVerify(result.thingCaptor, statusChannelId);
+        ChannelType statusChannelType = channelTypeRegistry.getChannelType(statusChannel.getChannelTypeUID());
+        assertEquals(expectedStatusLabel, statusChannelType.getLabel());
+        assertEquals("String", statusChannelType.getItemType());
+        assertTrue(statusChannelType.getState().isReadOnly());
 
-        result.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        result.handler.handleCommand(statusChannel.getUID(), RefreshType.REFRESH);
         result.inOrder.verify(vicareService, timeout(1000)).getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID);
-        verify(result.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), eq(new StringType("notConnected")));
+        verify(result.callback, timeout(1000)).stateUpdated(eq(statusChannel.getUID()), eq(new StringType(expectedStatus)));
+
+        if (temperatureChannelId != null) {
+            Channel temperatureChannel = findChannelNoVerify(result.thingCaptor, temperatureChannelId);
+            ChannelType temperatureChannelType = channelTypeRegistry.getChannelType(temperatureChannel.getChannelTypeUID());
+            assertEquals(expectedTemperatureLabel, temperatureChannelType.getLabel());
+            assertTrue(temperatureChannelType.getState().isReadOnly());
+            assertEquals("Number:Temperature", temperatureChannelType.getItemType());
+
+            result.handler.handleCommand(temperatureChannel.getUID(), RefreshType.REFRESH);
+            verify(result.callback, timeout(1000)).stateUpdated(eq(temperatureChannel.getUID()), eq(expectedTemperature));
+        }
     }
 
     public static Stream<Arguments> source_dhwSensorsTemperatureHotWaterStorage() {

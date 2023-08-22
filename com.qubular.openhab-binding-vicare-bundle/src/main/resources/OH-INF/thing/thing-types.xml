@@ -61,6 +61,11 @@
     <label>Heating Buffer ${pretty:0} Temperature Sensor Status</label>
     <state readOnly="true"/>
   </channel-type>
+  <channel-type id="template_heating_buffer_sensors_temperature_-_value">
+    <item-type>Number:Temperature</item-type>
+    <label>Heating Buffer ${pretty:0} Temperature Sensor Reading</label>
+    <state readOnly="true" pattern="%.1f °C"/>
+  </channel-type>
   <channel-type id="heating_burners_active">
     <item-type>Switch</item-type>
     <label>Burner Status</label>

@@ -111,6 +111,7 @@ Changelog
 
 * Fixed #55 Karaf refreshes binding on restart and unloads it
 * Fix for #57 Threading issues and log spam after HTTP connection EOF
+* Fix for #56 support for heating.buffer.sensors.temperature.main temperature value
 
 ### 4.0.1
 

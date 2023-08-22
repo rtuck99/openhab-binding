@@ -8,6 +8,8 @@ public class StatusValue extends Value {
     public static final StatusValue NA = new StatusValue("N/A");
     public static final StatusValue ON = new StatusValue("on");
     public static final StatusValue OFF = new StatusValue("off");
+    public static final StatusValue NOT_CONNECTED = new StatusValue("notConnected");
+    public static final StatusValue CONNECTED = new StatusValue("connected");
 
     private final String name;
 

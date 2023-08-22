@@ -1488,19 +1488,25 @@ public class VicareServiceTest {
         );
     }
 
-    @Test
-    public void supports_heating_buffer_sensors_temperature() throws ServletException, AuthenticationException, NamespaceException, IOException {
-        List<Feature> features = getFeatures("deviceFeaturesResponse8.json");
-        Optional<Feature> topSensor = features.stream().filter(
-                        f -> f.getName().equals("heating.buffer.sensors.temperature.top"))
+    public static Stream<Arguments> source_heating_buffer_sensors_temperature() {
+        return Stream.of(
+                Arguments.of("deviceFeaturesResponse8.json", "heating.buffer.sensors.temperature.top", StatusValue.NOT_CONNECTED, null),
+                Arguments.of("deviceFeaturesResponse8.json", "heating.buffer.sensors.temperature.main", StatusValue.NOT_CONNECTED, null),
+                Arguments.of("deviceFeaturesResponse9.json", "heating.buffer.sensors.temperature.main", StatusValue.CONNECTED, new DimensionalValue(Unit.CELSIUS, 28.9)),
+                Arguments.of("deviceFeaturesResponse9.json", "heating.buffer.sensors.temperature.top", StatusValue.CONNECTED, new DimensionalValue(Unit.CELSIUS, 28.9))
+        );
+    }
+    
+    @MethodSource("source_heating_buffer_sensors_temperature")
+    @ParameterizedTest
+    public void supports_heating_buffer_sensors_temperature(String fileName, String featureName, StatusValue expectedStatus, DimensionalValue expectedTemperature) throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures(fileName);
+        Optional<Feature> sensor = features.stream().filter(
+                        f -> f.getName().equals(featureName))
                 .findFirst();
-        assertTrue(topSensor.isPresent());
-        assertEquals(new StatusValue("notConnected"), topSensor.get().getProperties().get("status"));
-        Optional<Feature> mainSensor = features.stream().filter(
-                        f -> f.getName().equals("heating.buffer.sensors.temperature.main"))
-                .findFirst();
-        assertTrue(mainSensor.isPresent());
-        assertEquals(new StatusValue("notConnected"), mainSensor.get().getProperties().get("status"));
+        assertTrue(sensor.isPresent());
+        assertEquals(expectedStatus, sensor.get().getProperties().get("status"));
+        assertEquals(expectedTemperature, sensor.get().getProperties().get("value"));
     }
 
     @Test
@@ -1510,7 +1516,7 @@ public class VicareServiceTest {
                         f -> f.getName().equals("heating.dhw.sensors.temperature.hotWaterStorage.bottom"))
                 .findFirst();
         assertTrue(bottomSensor.isPresent());
-        assertEquals(new StatusValue("notConnected"), bottomSensor.get().getProperties().get("status"));
+        assertEquals(StatusValue.NOT_CONNECTED, bottomSensor.get().getProperties().get("status"));
     }
 
     @Test

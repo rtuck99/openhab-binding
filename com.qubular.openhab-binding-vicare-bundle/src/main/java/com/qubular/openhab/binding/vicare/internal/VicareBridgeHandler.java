@@ -13,6 +13,7 @@ import org.openhab.core.library.types.QuantityType;
 import org.openhab.core.library.types.StringType;
 import org.openhab.core.thing.*;
 import org.openhab.core.thing.binding.BaseBridgeHandler;
+import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerService;
 import org.openhab.core.thing.type.AutoUpdatePolicy;
 import org.openhab.core.thing.type.ChannelType;
@@ -30,6 +31,7 @@ import java.util.concurrent.*;
 import java.util.function.Supplier;
 
 import static com.qubular.openhab.binding.vicare.internal.VicareConstants.*;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
@@ -47,7 +49,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
     private String bindingVersion;
     private final VicareServiceProvider vicareServiceProvider;
 
-    private static final int REQUEST_INTERVAL_SECS = 90;
+    public static final int DEFAULT_POLLING_INTERVAL = 90;
 
     private volatile ScheduledFuture<?> featurePollingJob;
 
@@ -83,7 +85,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
 
     private int getPollingInterval() {
         BigDecimal pollingInterval = (BigDecimal) getConfig().getProperties().get(CONFIG_POLLING_INTERVAL);
-        return pollingInterval == null ? REQUEST_INTERVAL_SECS : pollingInterval.intValue();
+        return pollingInterval == null ? DEFAULT_POLLING_INTERVAL : pollingInterval.intValue();
     }
 
     @Override
@@ -98,14 +100,26 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
 
     private Runnable featurePoller() {
         return () -> {
-            for (Thing thing : getThing().getThings()) {
-                VicareDeviceThingHandler handler = (VicareDeviceThingHandler) thing.getHandler();
-                if (handler != null) {
-                    for (Channel channel : thing.getChannels()) {
-                        handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
-                    }
-                }
-            }
+            record HandlerChannel(ThingHandler handler, Channel channel){}
+
+            getThing().getThings().stream()
+                    .map(Thing::getHandler)
+                    .filter(Objects::nonNull)
+                    .map(VicareDeviceThingHandler.class::cast)
+                    .forEach(handler -> {
+                        // prime the feature cache
+                        logger.debug("Prefetching features for {}", handler.getThing());
+                        vicareServiceProvider.getFeatureService().getFeatures(handler.getThing(), getPollingInterval())
+                                .exceptionally(ex -> {
+                                    logger.warn("Unable to prefetch features", ex);
+                                    return emptyList();
+                                })
+                                .thenRun(() -> {
+                                    handler.getThing().getChannels().stream().map(c -> new HandlerChannel(handler, c))
+                                            .forEach(handlerChannel -> handler.handleCommand(handlerChannel.channel.getUID(), RefreshType.REFRESH));
+                                         }
+                                );
+                    });
         };
     }
 
@@ -150,17 +164,19 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
                 .join();
         } catch (CompletionException e) {
             Throwable t = e.getCause();
-            if (t instanceof AuthenticationException) {
+            if (t instanceof AuthenticationException ae) {
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
                              "Unable to authenticate with Viessmann API: " + e.getMessage());
-                throw ((AuthenticationException) t);
-            } else if ((t instanceof IOException) && (t instanceof VicareServiceException)) {
-                // VicareServiceException handled by device
-                throw ((IOException) t);
+                throw ae;
+            } else if (!(t instanceof VicareServiceException)) {
+                    // VicareServiceException handled by device
+                    updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
+                                     "Unable to communicate with Viessmann API: " + e.getMessage());
+                        logger.debug("Unexpected exception refreshing", e);
             }
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
-                             "Unable to communicate with Viessmann API: " + e.getMessage());
-                logger.debug("Unexpected exception refreshing", e);
+            if (t instanceof IOException ioe) {
+                throw ioe;
+            }
             return empty();
         }
     }

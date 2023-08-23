@@ -143,167 +143,183 @@ public class VicareDeviceThingHandler extends BaseThingHandler {
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
-        CompletableFuture.runAsync(() -> syncHandleCommand(channelUID, command))
+        CompletableFuture.runAsync(() -> {
+                    try {
+                        syncHandleCommand(channelUID, command);
+                    } catch (AuthenticationException e) {
+                        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Unable to authenticate with Viessmann API: " + e.getMessage());
+                    } catch (VicareServiceException e) {
+                        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "Unable to communicate with device: " + e.getMessage());
+                    } catch (IOException e) {
+                        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Unable to communicate with Viessmann API: " + e.getMessage());
+                    } catch (CommandFailureException e) {
+                        logger.warn("Unable to perform command {} for channel {} {}: {}", command, channelUID, e.getReason(), e.getMessage());
+                    }
+                })
                 .exceptionally(t -> {
-                    logger.warn(format("Unexpected exception handling command %s for channel %s", command, channelUID), t);
+                    // reduce amount of log spam for failed REFRESH
+                    if (command != RefreshType.REFRESH) {
+                        logger.warn(format("Unexpected exception handling command %s for channel %s", command, channelUID), t);
+                    } else {
+                        logger.debug(format("Unexpected exception handling command %s for channel %s", command, channelUID), t);
+                    }
                     return null;
                 });
     }
 
-    public void syncHandleCommand(ChannelUID channelUID, Command command) {
-        try {
-            if (command == RefreshType.REFRESH) {
-                Optional<Feature> feature = ((VicareBridgeHandler) getBridge().getHandler()).handleBridgedRefreshCommand(channelUID);
-                feature.ifPresent(f -> {
-                    f.accept(new Feature.Visitor() {
-                        @Override
-                        public void visit(ConsumptionFeature f) {
-                            Channel channel = getThing().getChannel(channelUID);
-                            String statName = channel.getProperties().get(PROPERTY_PROP_NAME);
-                            Optional<DimensionalValue> stat = f.getConsumption(
-                                    CONSUMPTION_STATS_BY_CHANNEL_NAME.get(statName));
-                            updateConsumptionStat(stat.map(DimensionalValue::getValue).orElse(0.0),
-                                                  stat.map(DimensionalValue::getUnit).orElse(null));
-                        }
+    private void syncHandleCommand(ChannelUID channelUID, Command command) throws AuthenticationException, IOException, CommandFailureException {
+        if (command == RefreshType.REFRESH) {
+            syncHandleRefreshCommand(channelUID);
+        } else if (command instanceof State state){
+            syncHandleOtherCommand(channelUID, state);
+        }
+    }
 
-                        private void updateConsumptionStat(Double value, Unit unit) {
-                            updateState(channelUID, apiToOpenHab(unit, value));
-                        }
+    private void syncHandleOtherCommand(ChannelUID channelUID, State command) throws AuthenticationException, IOException, CommandFailureException {
+        Optional<State> newValue = getBridgeHandler().handleBridgedDeviceCommand(channelUID, command);
+        newValue.ifPresent(state -> updateState(channelUID, state));
+    }
 
-                        @Override
-                        public void visit(NumericSensorFeature f) {
-                            Channel channel = getThing().getChannel(channelUID);
-                            String propName = channel.getProperties().get(PROPERTY_PROP_NAME);
-                            if ("active".equals(propName)) {
-                                updateState(channelUID, f.isActive() ? OnOffType.ON : OnOffType.OFF);
-                            } else if ("status".equals(propName)) {
-                                updateState(channelUID, StringType.valueOf(f.getStatus() == null ? null : f.getStatus().getName()));
-                            } else {
-                                Value v = f.getProperties().get(propName);
-                                if (v instanceof DimensionalValue) {
-                                    double value = ((DimensionalValue) v).getValue();
-                                    updateState(channelUID, new DecimalType(value));
-                                }
-                            }
-                        }
-
-                        @Override
-                        public void visit(StatusSensorFeature f) {
-                            Channel channel = getThing().getChannel(channelUID);
-                            String propertyName = channel.getProperties().get(PROPERTY_PROP_NAME);
-                            State state;
-                            switch (propertyName) {
-                                case "status":
-                                    state = StringType.valueOf(f.getStatus() == null ? null : f.getStatus().getName());
-                                    break;
-                                default:
-                                    Value value = f.getProperties().get(propertyName);
-                                    var visitor = new Value.Visitor() {
-                                        State state = UnDefType.UNDEF;
-
-                                        @Override
-                                        public void visit(ArrayValue v) {
-                                            unsupportedValue(v);
-                                        }
-
-                                        @Override
-                                        public void visit(BooleanValue v) {
-                                            state = v.getValue() ? OnOffType.ON : OnOffType.OFF;
-                                        }
-
-                                        @Override
-                                        public void visit(DimensionalValue v) {
-                                            state = new DecimalType(v.getValue());
-                                        }
-
-                                        @Override
-                                        public void visit(LocalDateValue v) {
-                                            unsupportedValue(v);
-                                        }
-
-                                        @Override
-                                        public void visit(StatusValue v) {
-                                            unsupportedValue(v);
-                                        }
-
-                                        @Override
-                                        public void visit(StringValue v) {
-                                            state = new StringType(v.getValue());
-                                        }
-
-                                        private void unsupportedValue(Value v) {
-                                            logger.trace("Unable to update unsupported value {} for property {}.{}",
-                                                    v, f.getName(), propertyName);
-                                        }
-                                    };
-                                    value.accept(visitor);
-                                    state = visitor.state;
-                                    break;
-                            }
-                            updateState(channelUID, state);
-                        }
-
-                        @Override
-                        public void visit(TextFeature f) {
-                            logger.trace("Update {} with {}", channelUID, f.getValue());
-                            updateState(channelUID, new StringType(f.getValue()));
-                        }
-
-                        @Override
-                        public void visit(CurveFeature f) {
-                            Channel channel = getThing().getChannel(channelUID);
-                            switch (channel.getProperties().get(PROPERTY_PROP_NAME)) {
-                                case "slope":
-                                    State slopeState = new DecimalType(f.getSlope().getValue());
-                                    updateState(channelUID, slopeState);
-                                    break;
-                                case "shift":
-                                    State shiftState = new DecimalType(f.getShift().getValue());
-                                    updateState(channelUID, shiftState);
-                                    break;
-                            }
-                        }
-
-                        @Override
-                        public void visit(DatePeriodFeature datePeriodFeature) {
-                            Channel channel = getThing().getChannel(channelUID);
-                            State newState = UnDefType.UNDEF;
-                            switch (channel.getProperties().get(PROPERTY_PROP_NAME)) {
-                                case "active":
-                                    newState = StatusValue.ON.equals(datePeriodFeature.getActive()) ? OnOffType.ON : OnOffType.OFF;
-                                    break;
-                                case "start":
-                                    LocalDate startDate = datePeriodFeature.getStart();
-                                    if (startDate != null) {
-                                        newState = new DateTimeType(startDate.atStartOfDay(ZoneId.systemDefault()));
-                                    }
-                                    break;
-                                case "end":
-                                    LocalDate endDate = datePeriodFeature.getEnd();
-                                    if (endDate != null) {
-                                        newState = new DateTimeType(endDate.atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()));
-                                    }
-                                    break;
-                            }
-                            updateState(channelUID, newState);
-                        }
-                    });
-                });
-                if (thing.getStatus() != ThingStatus.ONLINE) {
-                    updateStatus(ThingStatus.ONLINE);
+    private void syncHandleRefreshCommand(ChannelUID channelUID) throws AuthenticationException, IOException {
+        Optional<Feature> feature = ((VicareBridgeHandler) getBridge().getHandler()).handleBridgedRefreshCommand(
+                channelUID);
+        feature.ifPresent(f -> {
+            f.accept(new Feature.Visitor() {
+                @Override
+                public void visit(ConsumptionFeature f) {
+                    Channel channel = getThing().getChannel(channelUID);
+                    String statName = channel.getProperties().get(PROPERTY_PROP_NAME);
+                    Optional<DimensionalValue> stat = f.getConsumption(
+                            CONSUMPTION_STATS_BY_CHANNEL_NAME.get(statName));
+                    updateConsumptionStat(stat.map(DimensionalValue::getValue).orElse(0.0),
+                                          stat.map(DimensionalValue::getUnit).orElse(null));
                 }
-            } else if (command instanceof State){
-                Optional<State> newValue = getBridgeHandler().handleBridgedDeviceCommand(channelUID, (State) command);
-                newValue.ifPresent(state -> updateState(channelUID, state));
-            }
-        } catch (AuthenticationException e) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Unable to authenticate with Viessmann API: " + e.getMessage());
-        } catch (VicareServiceException e) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "Unable to communicate with device: " + e.getMessage());
-        } catch (IOException e) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE, "Unable to communicate with Viessmann API: " + e.getMessage());
-        } catch (CommandFailureException e) {
-            logger.warn("Unable to perform command {} for channel {} {}: {}", command, channelUID, e.getReason(), e.getMessage());
+
+                private void updateConsumptionStat(Double value, Unit unit) {
+                    updateState(channelUID, apiToOpenHab(unit, value));
+                }
+
+                @Override
+                public void visit(NumericSensorFeature f) {
+                    Channel channel = getThing().getChannel(channelUID);
+                    String propName = channel.getProperties().get(PROPERTY_PROP_NAME);
+                    if ("active".equals(propName)) {
+                        updateState(channelUID, f.isActive() ? OnOffType.ON : OnOffType.OFF);
+                    } else if ("status".equals(propName)) {
+                        updateState(channelUID, StringType.valueOf(f.getStatus() == null ? null : f.getStatus().getName()));
+                    } else {
+                        Value v = f.getProperties().get(propName);
+                        if (v instanceof DimensionalValue) {
+                            double value = ((DimensionalValue) v).getValue();
+                            updateState(channelUID, new DecimalType(value));
+                        }
+                    }
+                }
+
+                @Override
+                public void visit(StatusSensorFeature f) {
+                    Channel channel = getThing().getChannel(channelUID);
+                    String propertyName = channel.getProperties().get(PROPERTY_PROP_NAME);
+                    State state;
+                    switch (propertyName) {
+                        case "status":
+                            state = StringType.valueOf(f.getStatus() == null ? null : f.getStatus().getName());
+                            break;
+                        default:
+                            Value value = f.getProperties().get(propertyName);
+                            var visitor = new Value.Visitor() {
+                                State state = UnDefType.UNDEF;
+
+                                @Override
+                                public void visit(ArrayValue v) {
+                                    unsupportedValue(v);
+                                }
+
+                                @Override
+                                public void visit(BooleanValue v) {
+                                    state = v.getValue() ? OnOffType.ON : OnOffType.OFF;
+                                }
+
+                                @Override
+                                public void visit(DimensionalValue v) {
+                                    state = new DecimalType(v.getValue());
+                                }
+
+                                @Override
+                                public void visit(LocalDateValue v) {
+                                    unsupportedValue(v);
+                                }
+
+                                @Override
+                                public void visit(StatusValue v) {
+                                    unsupportedValue(v);
+                                }
+
+                                @Override
+                                public void visit(StringValue v) {
+                                    state = new StringType(v.getValue());
+                                }
+
+                                private void unsupportedValue(Value v) {
+                                    logger.trace("Unable to update unsupported value {} for property {}.{}",
+                                            v, f.getName(), propertyName);
+                                }
+                            };
+                            value.accept(visitor);
+                            state = visitor.state;
+                            break;
+                    }
+                    updateState(channelUID, state);
+                }
+
+                @Override
+                public void visit(TextFeature f) {
+                    logger.trace("Update {} with {}", channelUID, f.getValue());
+                    updateState(channelUID, new StringType(f.getValue()));
+                }
+
+                @Override
+                public void visit(CurveFeature f) {
+                    Channel channel = getThing().getChannel(channelUID);
+                    switch (channel.getProperties().get(PROPERTY_PROP_NAME)) {
+                        case "slope":
+                            State slopeState = new DecimalType(f.getSlope().getValue());
+                            updateState(channelUID, slopeState);
+                            break;
+                        case "shift":
+                            State shiftState = new DecimalType(f.getShift().getValue());
+                            updateState(channelUID, shiftState);
+                            break;
+                    }
+                }
+
+                @Override
+                public void visit(DatePeriodFeature datePeriodFeature) {
+                    Channel channel = getThing().getChannel(channelUID);
+                    State newState = UnDefType.UNDEF;
+                    switch (channel.getProperties().get(PROPERTY_PROP_NAME)) {
+                        case "active":
+                            newState = StatusValue.ON.equals(datePeriodFeature.getActive()) ? OnOffType.ON : OnOffType.OFF;
+                            break;
+                        case "start":
+                            LocalDate startDate = datePeriodFeature.getStart();
+                            if (startDate != null) {
+                                newState = new DateTimeType(startDate.atStartOfDay(ZoneId.systemDefault()));
+                            }
+                            break;
+                        case "end":
+                            LocalDate endDate = datePeriodFeature.getEnd();
+                            if (endDate != null) {
+                                newState = new DateTimeType(endDate.atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()));
+                            }
+                            break;
+                    }
+                    updateState(channelUID, newState);
+                }
+            });
+        });
+        if (thing.getStatus() != ThingStatus.ONLINE) {
+            updateStatus(ThingStatus.ONLINE);
         }
     }
 

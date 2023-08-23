@@ -4,7 +4,7 @@
 
   <groupId>com.qubular</groupId>
   <artifactId>com.qubular.openhab-binding</artifactId>
-  <version>4.0.2-SNAPSHOT</version>
+  <version>4.0.3-SNAPSHOT</version>
   <licenses>
     <license>
       <name>Eclipse Public License 2.0</name>
@@ -411,10 +411,10 @@
   </build>
   <modules>
     <module>com.qubular.openhab-binding-vicare-bundle</module>
-    <module>openhab-binding-vicare</module>
+    <module>com.qubular.openhab-binding-vicare</module>
     <module>com.qubular.vicare-osgi</module>
     <module>com.qubular.openhab-binding-glowmarkt-bundle</module>
-    <module>openhab-binding-glowmarkt</module>
+    <module>com.qubular.openhab-binding-glowmarkt</module>
     <module>com.qubular.glowmarkt-osgi</module>
     <module>com.qubular.vicare.tester</module>
   </modules>

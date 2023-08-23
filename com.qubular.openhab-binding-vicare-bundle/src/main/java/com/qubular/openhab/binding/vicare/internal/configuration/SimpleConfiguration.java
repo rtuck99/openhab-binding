@@ -1,5 +1,6 @@
 package com.qubular.openhab.binding.vicare.internal.configuration;
 
+import com.qubular.openhab.binding.vicare.internal.VicareBridgeHandler;
 import com.qubular.vicare.VicareConfiguration;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
@@ -11,6 +12,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.qubular.openhab.binding.vicare.internal.VicareBridgeHandler.CONFIG_POLLING_INTERVAL;
+import static com.qubular.openhab.binding.vicare.internal.VicareBridgeHandler.DEFAULT_POLLING_INTERVAL;
 import static java.util.Optional.ofNullable;
 
 @Component(service = VicareConfiguration.class)
@@ -82,7 +85,12 @@ public class SimpleConfiguration implements VicareConfiguration {
     public String getDebugInjectedGatewaySerial() {
         return (String) configurationParameters.get("injectedGatewaySerial");
     }
-    
+
+    @Override
+    public int getRequestTimeoutSecs() {
+        return Math.max(((BigDecimal)configurationParameters.getOrDefault(CONFIG_POLLING_INTERVAL, BigDecimal.valueOf(DEFAULT_POLLING_INTERVAL))).intValue() - 5, 1);
+    }
+
     public static Map<String, Object> upgradeConfiguration(Map<String, Object> oldConfig) {
         Map<String, Object> newConfig = new HashMap<>(oldConfig);
         String currentIOTServerURI = getIOTServerURI(oldConfig);

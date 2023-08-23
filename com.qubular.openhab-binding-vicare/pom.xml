@@ -3,17 +3,12 @@
   <parent>
     <artifactId>com.qubular.openhab-binding</artifactId>
     <groupId>com.qubular</groupId>
-    <version>4.0.2-SNAPSHOT</version>
+    <version>4.0.3-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>openhab-binding-glowmarkt</artifactId>
+  <artifactId>com.qubular.openhab-binding-vicare</artifactId>
   <packaging>kar</packaging>
-  <properties>
-    <maven.compiler.source>17</maven.compiler.source>
-    <maven.compiler.target>17</maven.compiler.target>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
   <build>
     <plugins>
       <plugin>
@@ -40,7 +35,7 @@
             <phase>install</phase>
             <configuration>
               <target>
-                <move file="target/${project.artifactId}-${project.version}.kar" tofile="target/com.qubular.openhab.binding.glowmarkt-${project.version}.kar" />
+                <move file="target/${project.artifactId}-${project.version}.kar" tofile="target/com.qubular.openhab.binding.vicare-${project.version}.kar" />
               </target>
             </configuration>
             <goals>
@@ -54,7 +49,8 @@
   <dependencies>
     <dependency>
       <groupId>com.qubular</groupId>
-      <artifactId>com.qubular.openhab-binding-glowmarkt-bundle</artifactId>
+      <artifactId>com.qubular.openhab-binding-vicare-bundle</artifactId>
     </dependency>
   </dependencies>
+
 </project>

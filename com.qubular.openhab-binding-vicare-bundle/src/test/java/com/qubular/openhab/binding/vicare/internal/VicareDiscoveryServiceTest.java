@@ -40,7 +40,7 @@ public class VicareDiscoveryServiceTest {
     public static final long INSTALLATION_ID = 123456L;
     public static final String GATEWAY_SERIAL = "1234567";
     public static final String DEVICE_ID = "001";
-    private BridgeHandler bridgeHandler;
+    private VicareBridgeHandler bridgeHandler;
     @Mock
     private BundleContext bundleContext;
     @Mock
@@ -66,6 +66,7 @@ public class VicareDiscoveryServiceTest {
         doReturn(bridgeId).when(bridge).getUID();
         doReturn(thingTypeRegistry).when(vicareServiceProvider).getThingTypeRegistry();
         doReturn(vicareThingTypeProvider).when(vicareServiceProvider).getVicareThingTypeProvider();
+        doReturn(vicareServiceProvider).when(bridgeHandler).getVicareServiceProvider();
     }
 
     @AfterEach
@@ -95,7 +96,7 @@ public class VicareDiscoveryServiceTest {
                                                                     null));
         doReturn(installations).when(vicareService).getInstallations();
 
-        VicareDiscoveryService discoveryService = new VicareDiscoveryService(vicareServiceProvider);
+        VicareDiscoveryService discoveryService = new VicareDiscoveryService();
         discoveryService.setThingHandler(bridgeHandler);
         DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
         discoveryService.addDiscoveryListener(discoveryListener);
@@ -110,7 +111,7 @@ public class VicareDiscoveryServiceTest {
         doReturn(vicareService).when((VicareThingHandler)bridgeHandler).getVicareService();
         List<Installation> installations = gatewayWithUnknownAttachedDevice();
 
-        VicareDiscoveryService discoveryService = new VicareDiscoveryService(vicareServiceProvider);
+        VicareDiscoveryService discoveryService = new VicareDiscoveryService();
         discoveryService.setThingHandler(bridgeHandler);
         DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
         discoveryService.addDiscoveryListener(discoveryListener);

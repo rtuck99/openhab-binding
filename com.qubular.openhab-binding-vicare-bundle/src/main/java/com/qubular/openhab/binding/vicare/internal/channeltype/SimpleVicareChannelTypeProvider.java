@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Component(service = {ChannelTypeProvider.class, VicareChannelTypeProvider.class})
 public class SimpleVicareChannelTypeProvider implements VicareChannelTypeProvider {
-    private static final Map<ChannelTypeUID, ChannelType> channelTypes = new ConcurrentHashMap<>();
+    private final Map<ChannelTypeUID, ChannelType> channelTypes = new ConcurrentHashMap<>();
 
     @Override
     public Collection<ChannelType> getChannelTypes(@Nullable Locale locale) {

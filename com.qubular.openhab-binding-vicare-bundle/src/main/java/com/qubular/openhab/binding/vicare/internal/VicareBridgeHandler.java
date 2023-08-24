@@ -46,7 +46,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
     private final VicareConfiguration config;
 
     private final VicareService vicareService;
-    private String bindingVersion;
+    private final String bindingVersion;
     private final VicareServiceProvider vicareServiceProvider;
 
     public static final int DEFAULT_POLLING_INTERVAL = 90;
@@ -68,7 +68,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
     public void initialize() {
         upgradeConfiguration();
         updateProperty(VicareConstants.PROPERTY_BINDING_VERSION, bindingVersion);
-        updateProperty(PROPERTY_RESPONSE_CAPTURE_FOLDER, config.getResponseCaptureFolder() != null ? config.getResponseCaptureFolder().getAbsolutePath().toString() : "");
+        updateProperty(PROPERTY_RESPONSE_CAPTURE_FOLDER, config.getResponseCaptureFolder() != null ? config.getResponseCaptureFolder().getAbsolutePath() : "");
         updateStatus(ThingStatus.UNKNOWN);
         featurePollingJob = scheduler.scheduleAtFixedRate(featurePoller(), POLLING_STARTUP_DELAY_SECS, getPollingInterval(), TimeUnit.SECONDS);
         logger.debug("VicareBridgeHandler initialised");
@@ -108,17 +108,18 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
                     .map(VicareDeviceThingHandler.class::cast)
                     .forEach(handler -> {
                         // prime the feature cache
-                        logger.debug("Prefetching features for {}", handler.getThing());
-                        vicareServiceProvider.getFeatureService().getFeatures(handler.getThing(), getPollingInterval())
-                                .exceptionally(ex -> {
-                                    logger.warn("Unable to prefetch features", ex);
-                                    return emptyList();
-                                })
-                                .thenRun(() -> {
-                                    handler.getThing().getChannels().stream().map(c -> new HandlerChannel(handler, c))
-                                            .forEach(handlerChannel -> handler.handleCommand(handlerChannel.channel.getUID(), RefreshType.REFRESH));
-                                         }
-                                );
+                        if (!handler.getThing().getChannels().isEmpty()) {
+                            // don't poll devices with no channels, in case people include TCU which has none
+                            logger.debug("Prefetching features for {}", handler.getThing());
+                            vicareServiceProvider.getFeatureService().getFeatures(handler.getThing(), getPollingInterval())
+                                    .exceptionally(ex -> {
+                                        logger.warn("Unable to prefetch features", ex);
+                                        return emptyList();
+                                    })
+                                    .thenRun(() -> handler.getThing().getChannels().stream().map(c -> new HandlerChannel(handler, c))
+                                            .forEach(handlerChannel -> handler.handleCommand(handlerChannel.channel.getUID(), RefreshType.REFRESH))
+                                    );
+                        }
                     });
         };
     }
@@ -184,6 +185,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
     public Optional<State> handleBridgedDeviceCommand(ChannelUID channelUID, State command) throws AuthenticationException, IOException, CommandFailureException {
         logger.trace("Handling command {} for channel {} from thing {}", command, channelUID, channelUID.getThingUID());
         Thing targetThing = thingRegistry.get(channelUID.getThingUID());
+        assert targetThing != null;
         Channel channel = targetThing.getChannel(channelUID);
         if (command instanceof StringType) {
             sendCommand(channelUID, targetThing, channel, () -> ((StringType) command).toString());
@@ -197,6 +199,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
             logger.trace("Ignored unsupported command type {}", command);
             return empty();
         }
+        assert channel != null;
         ChannelType channelType = vicareServiceProvider.getChannelTypeRegistry().getChannelType(channel.getChannelTypeUID());
         if (channelType.getAutoUpdatePolicy() == AutoUpdatePolicy.VETO) {
             return Optional.of(command);
@@ -228,6 +231,10 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
     @Override
     public VicareService getVicareService() {
         return vicareService;
+    }
+
+    public VicareServiceProvider getVicareServiceProvider() {
+        return vicareServiceProvider;
     }
 
     Optional<CommandDescriptor> getCommandDescriptor(Channel channel, @Nullable Object value) {

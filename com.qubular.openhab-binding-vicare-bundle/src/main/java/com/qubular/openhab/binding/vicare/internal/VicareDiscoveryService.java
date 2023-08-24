@@ -19,7 +19,6 @@ import org.openhab.core.thing.type.ThingType;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceRegistration;
-import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 import org.osgi.service.event.EventHandler;
@@ -41,19 +40,15 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
     implements ThingHandlerService {
     private static final Set<ThingTypeUID> SUPPORTED_THING_TYPES = emptySet();
     private static final int DISCOVERY_TIMEOUT_SECS = 10;
-
     private static final Logger logger = LoggerFactory.getLogger(VicareDiscoveryService.class);
-    private final VicareServiceProvider vicareServiceProvider;
 
-    private CompletableFuture<BridgeHandler> bridgeHandler = new CompletableFuture<>();
+    private CompletableFuture<VicareBridgeHandler> bridgeHandler = new CompletableFuture<>();
     private ScheduledFuture<?> backgroundJob;
     private ServiceRegistration<EventHandler> eventHandlerRegistration;
     private EventAdmin eventAdmin;
 
-    /** Invoked by the bridge handler factory */
-    public VicareDiscoveryService(@Reference VicareServiceProvider vicareServiceProvider) {
+    public VicareDiscoveryService() {
         super(SUPPORTED_THING_TYPES, DISCOVERY_TIMEOUT_SECS, true);
-        this.vicareServiceProvider = vicareServiceProvider;
         logger.info("Created Vicare Discovery Service");
         // activate manually 'cos not part of OSGI services
         // Potential race condition here because this invokes discovery before our caller
@@ -138,7 +133,7 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
         logger.info("Discovered unknown device type " + device.getDeviceType());
         ThingTypeUID thingTypeUID = new ThingTypeUID(BINDING_ID, VicareUtil.escapeUIDSegment(device.getDeviceType()));
         // prime the thingType registry
-        ThingType thingType = vicareServiceProvider.getVicareThingTypeProvider().fetchOrCreateThingType(vicareServiceProvider.getThingTypeRegistry(), thingTypeUID);
+        ThingType thingType = getVicareServiceProvider().getVicareThingTypeProvider().fetchOrCreateThingType(getVicareServiceProvider().getThingTypeRegistry(), thingTypeUID);
 
         discoverDevice(new HashMap<>(), installation, gateway, device, bridgeId, String.format("Unrecognised %s device", device.getDeviceType()),
                        thingTypeUID);
@@ -188,12 +183,16 @@ public class VicareDiscoveryService extends AbstractDiscoveryService
 
     @Override
     public void setThingHandler(ThingHandler handler) {
-        this.bridgeHandler.complete((BridgeHandler) handler);
+        this.bridgeHandler.complete((VicareBridgeHandler) handler);
     }
 
     @Override
-    public @Nullable ThingHandler getThingHandler() {
+    public @Nullable VicareBridgeHandler getThingHandler() {
         return bridgeHandler.join();
+    }
+
+    private VicareServiceProvider getVicareServiceProvider() {
+        return getThingHandler().getVicareServiceProvider();
     }
 
     @Override

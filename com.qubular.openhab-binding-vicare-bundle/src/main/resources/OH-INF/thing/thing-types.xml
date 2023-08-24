@@ -1010,4 +1010,21 @@
     <item-type>DateTime</item-type>
     <label>Ventilation Holiday Operating Program End</label>
   </channel-type>
+
+  <!-- default templates for fallback -->
+  <channel-type id="template_status_value">
+    <item-type>String</item-type>
+    <label>${featureName} ${pretty:propertyName}</label>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="template_boolean_value">
+    <item-type>Boolean</item-type>
+    <label>${featureName} ${pretty:propertyName}</label>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="template_string_value">
+    <item-type>String</item-type>
+    <label>${featureName} ${pretty:propertyName}</label>
+    <state readOnly="true"/>
+  </channel-type>
 </thing:thing-descriptions>

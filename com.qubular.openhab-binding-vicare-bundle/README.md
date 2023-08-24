@@ -89,6 +89,12 @@ configuration some or all of these may or may not be present:
 * Ventilation holiday program (read-only)
 * Heating buffer temperature sensors
 
+Generic Device Support
+----------------------
+
+The has generic read-only support for unrecognised devices which will report read-only 
+values for boolean, string and numeric properties.  
+
 Configuring
 -----------
 
@@ -104,12 +110,18 @@ authorise the Viessmann binding by clicking on the Authorise button on the setup
 After authorising the binding, then it should automatically discover any heating devices you have
 and they will appear in your Inbox.
 
+Note that the API is rate-limited to 1450 requests per day, or approximately once every 60 seconds;
+exceeding the threshold incurs a lockout for the rest of the day.
+The default polling interval is configured to 90 seconds to leave some headroom for additional requests.
+If you have multiple heating devices configured then you may need to increase the polling interval.
+
 Changelog
 ---------
 
 ### 4.0.3
 
 * Fix for #57 Rework prefetching
+* Add generic read-only support for unrecognised devices and boolean, string and numeric properties 
 
 ### 4.0.2
 

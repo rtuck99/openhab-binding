@@ -65,7 +65,6 @@ import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.*;
-import static org.openhab.core.library.unit.SIUnits.CELSIUS;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -398,11 +397,6 @@ public class VicareBindingTest {
         );
         Feature ventilationOperatingProgramsActive = new TextFeature("ventilation.operating.programs.active", "value", "levelThree");
         Feature ventilationOperatingProgramsHoliday = new DatePeriodFeature("ventilation.operating.programs.holiday", false, LocalDate.parse("2023-05-23"), LocalDate.parse("2023-05-30"));
-        Feature unknownTemperatureSensor = new NumericSensorFeature("unknown.sensors.temperature", Map.of(
-                "unit", new StringValue("celsius"),
-                "value", new DimensionalValue(Unit.CELSIUS, 27.3),
-                "status", new StatusValue("connected")
-        ), emptyList(), "value");
 
         List<Feature> features = new ArrayList<>();
         features.addAll(programFeatures);
@@ -447,9 +441,42 @@ public class VicareBindingTest {
                                 heatingCompressors0Statistics,
                                 ventilationOperatingModesActive,
                                 ventilationOperatingProgramsActive,
-                                ventilationOperatingProgramsHoliday,
-                                unknownTemperatureSensor));
+                                ventilationOperatingProgramsHoliday));
         return when(vicareService.getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID))
+                .thenReturn(features);
+    }
+
+    private void unknownDeviceInstallation() throws AuthenticationException, IOException {
+        Installation installation = mock(Installation.class);
+        Gateway gateway = mock(Gateway.class);
+        doReturn(GATEWAY_SERIAL).when(gateway).getSerial();
+        Device device = mock(Device.class);
+        doReturn(DEVICE_1_ID).when(device).getId();
+        doReturn("unknown").when(device).getDeviceType();
+        doReturn(GATEWAY_SERIAL).when(device).getGatewaySerial();
+        doReturn(List.of(device)).when(gateway).getDevices();
+        doReturn(List.of(gateway)).when(installation).getGateways();
+        doReturn(INSTALLATION_ID).when(installation).getId();
+        List<Installation> installations = List.of(installation);
+        doReturn(installations).when(vicareService).getInstallations();
+
+        List<Feature> features = new ArrayList<>();
+
+        Feature unknownTemperatureSensor = new NumericSensorFeature("unknown.sensors.temperature", Map.of(
+                "unit", new StringValue("celsius"),
+                "value", new DimensionalValue(Unit.CELSIUS, 27.3),
+                "status", new StatusValue("connected")
+        ), emptyList(), "value");
+        Feature unknownStatusFeature = new StatusSensorFeature("unknown.status",
+                                                               StatusValue.ON, true);
+        Feature unknownTextFeature = new TextFeature("unknown.text", "value", "some text");
+
+        features.addAll(List.of(
+            unknownTemperatureSensor,
+            unknownStatusFeature,
+            unknownTextFeature
+        ));
+        when(vicareService.getFeatures(INSTALLATION_ID, GATEWAY_SERIAL, DEVICE_1_ID))
                 .thenReturn(features);
     }
 
@@ -562,7 +589,7 @@ public class VicareBindingTest {
 
         DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
         InOrder inOrder1 = inOrder(vicareService, discoveryListener);
-        VicareDiscoveryService discoveryService = VicareDiscoveryService.class.getConstructor().newInstance();
+        VicareDiscoveryService discoveryService = new VicareDiscoveryService();
         discoveryService.setThingHandler(bridgeHandler);
         discoveryService.addDiscoveryListener(discoveryListener);
 
@@ -601,7 +628,7 @@ public class VicareBindingTest {
 
         DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
         InOrder inOrder1 = inOrder(vicareService, discoveryListener);
-        VicareDiscoveryService discoveryService = VicareDiscoveryService.class.getConstructor().newInstance();
+        VicareDiscoveryService discoveryService = new VicareDiscoveryService();
         discoveryService.setThingHandler(bridgeHandler);
         discoveryService.addDiscoveryListener(discoveryListener);
 
@@ -622,7 +649,7 @@ public class VicareBindingTest {
                                                                              vicareServiceProvider);
         bridgeHandler = vicareHandlerFactory.createHandler(bridge);
         bridgeHandler.setCallback(thingHandlerCallback);
-        VicareDiscoveryService discoveryService = VicareDiscoveryService.class.getConstructor().newInstance();
+        VicareDiscoveryService discoveryService = new VicareDiscoveryService();
         discoveryService.setThingHandler(bridgeHandler);
         DiscoveryListener discoveryListener = mock(DiscoveryListener.class);
         discoveryService.addDiscoveryListener(discoveryListener);
@@ -1771,10 +1798,10 @@ public class VicareBindingTest {
 
     public static Stream<Arguments> source_heatingGasConsumptionDhw() {
         return Stream.of(
-                Arguments.of("heating_gas_consumption_dhw_currentDay", "%.1f %unit%", new QuantityType(0.7, Units.KILOWATT_HOUR), "Number:Energy"),
-                Arguments.of("heating_gas_consumption_dhw_previousDay", "%.1f %unit%", new QuantityType(1.3, Units.KILOWATT_HOUR), "Number:Energy"),
-                Arguments.of("heating_gas_consumption_dhw_currentWeek", "%.1f %unit%", new QuantityType(0.7, tech.units.indriya.unit.Units.CUBIC_METRE), "Number:Volume"),
-                Arguments.of("heating_gas_consumption_dhw_previousWeek", "%.1f %unit%", new QuantityType(7.6, tech.units.indriya.unit.Units.CUBIC_METRE), "Number:Volume")
+                Arguments.of("heating_gas_consumption_dhw_currentDay", "%.1f %unit%", new QuantityType<>(0.7, Units.KILOWATT_HOUR), "Number:Energy"),
+                Arguments.of("heating_gas_consumption_dhw_previousDay", "%.1f %unit%", new QuantityType<>(1.3, Units.KILOWATT_HOUR), "Number:Energy"),
+                Arguments.of("heating_gas_consumption_dhw_currentWeek", "%.1f %unit%", new QuantityType<>(0.7, tech.units.indriya.unit.Units.CUBIC_METRE), "Number:Volume"),
+                Arguments.of("heating_gas_consumption_dhw_previousWeek", "%.1f %unit%", new QuantityType<>(7.6, tech.units.indriya.unit.Units.CUBIC_METRE), "Number:Volume")
          );
     }
 
@@ -1803,49 +1830,49 @@ public class VicareBindingTest {
         assertEquals("heating_solar_power_production_currentDay", channel.getChannelTypeUID().getId());
         heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new QuantityType(0, Units.KILOWATT_HOUR), stateCaptor.getValue());
+        assertEquals(new QuantityType<>(0, Units.KILOWATT_HOUR), stateCaptor.getValue());
 
         channel = findChannel(heatingThing.thingCaptor, "heating_solar_power_production_previousDay");
         assertEquals("heating_solar_power_production_previousDay", channel.getChannelTypeUID().getId());
         heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new QuantityType(11.4, Units.KILOWATT_HOUR), stateCaptor.getValue());
+        assertEquals(new QuantityType<>(11.4, Units.KILOWATT_HOUR), stateCaptor.getValue());
 
         channel = findChannel(heatingThing.thingCaptor, "heating_solar_power_production_currentWeek");
         assertEquals("heating_solar_power_production_currentWeek", channel.getChannelTypeUID().getId());
         heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new QuantityType(31, Units.KILOWATT_HOUR), stateCaptor.getValue());
+        assertEquals(new QuantityType<>(31, Units.KILOWATT_HOUR), stateCaptor.getValue());
 
         channel = findChannel(heatingThing.thingCaptor, "heating_solar_power_production_previousWeek");
         assertEquals("heating_solar_power_production_previousWeek", channel.getChannelTypeUID().getId());
         heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new QuantityType(58.3, Units.KILOWATT_HOUR), stateCaptor.getValue());
+        assertEquals(new QuantityType<>(58.3, Units.KILOWATT_HOUR), stateCaptor.getValue());
 
         channel = findChannel(heatingThing.thingCaptor, "heating_solar_power_production_currentMonth");
         assertEquals("heating_solar_power_production_currentMonth", channel.getChannelTypeUID().getId());
         heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new QuantityType(247.8, Units.KILOWATT_HOUR), stateCaptor.getValue());
+        assertEquals(new QuantityType<>(247.8, Units.KILOWATT_HOUR), stateCaptor.getValue());
 
         channel = findChannel(heatingThing.thingCaptor, "heating_solar_power_production_previousMonth");
         assertEquals("heating_solar_power_production_previousMonth", channel.getChannelTypeUID().getId());
         heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new QuantityType(355.5, Units.KILOWATT_HOUR), stateCaptor.getValue());
+        assertEquals(new QuantityType<>(355.5, Units.KILOWATT_HOUR), stateCaptor.getValue());
 
         channel = findChannel(heatingThing.thingCaptor, "heating_solar_power_production_currentYear");
         assertEquals("heating_solar_power_production_currentYear", channel.getChannelTypeUID().getId());
         heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new QuantityType(4250.6, Units.KILOWATT_HOUR), stateCaptor.getValue());
+        assertEquals(new QuantityType<>(4250.6, Units.KILOWATT_HOUR), stateCaptor.getValue());
 
         channel = findChannel(heatingThing.thingCaptor, "heating_solar_power_production_previousYear");
         assertEquals("heating_solar_power_production_previousYear", channel.getChannelTypeUID().getId());
         heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
-        assertEquals(new QuantityType(0, Units.KILOWATT_HOUR), stateCaptor.getValue());
+        assertEquals(new QuantityType<>(0, Units.KILOWATT_HOUR), stateCaptor.getValue());
     }
 
     @Test
@@ -2050,6 +2077,60 @@ public class VicareBindingTest {
         assertEquals(ThingStatusDetail.BRIDGE_OFFLINE, thingStatusInfoCaptor.getValue().getStatusDetail());
     }
 
+    @Test
+    public void supportsUnknownSensor() throws AuthenticationException, IOException {
+        HeatingThing heatingThing = initialiseUnknownThing();
+
+        Channel valueChannel = findChannelNoVerify(heatingThing.thingCaptor, "unknown_sensors_temperature");
+        ChannelType valueChannelType = channelTypeRegistry.getChannelType(valueChannel.getChannelTypeUID());
+        assertEquals("unknown.sensors.temperature Value", valueChannelType.getLabel());
+        assertEquals("Number:Temperature", valueChannelType.getItemType());
+
+        Channel statusChannel = findChannelNoVerify(heatingThing.thingCaptor, "unknown_sensors_temperature_status");
+        ChannelType statusChannelType = channelTypeRegistry.getChannelType(statusChannel.getChannelTypeUID());
+        assertEquals("unknown.sensors.temperature Status", statusChannelType.getLabel());
+        assertEquals("String", statusChannelType.getItemType());
+
+        heatingThing.handler.handleCommand(valueChannel.getUID(), RefreshType.REFRESH);
+        verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(valueChannel.getUID()), eq(new DecimalType("27.3")));
+
+        heatingThing.handler.handleCommand(statusChannel.getUID(), RefreshType.REFRESH);
+        verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(statusChannel.getUID()), eq(new StringType("connected")));
+    }
+    @Test
+    public void supportsUnknownStatus() throws AuthenticationException, IOException {
+        HeatingThing heatingThing = initialiseUnknownThing();
+
+        Channel valueChannel = findChannelNoVerify(heatingThing.thingCaptor, "unknown_status_active");
+        ChannelType valueChannelType = channelTypeRegistry.getChannelType(valueChannel.getChannelTypeUID());
+        assertEquals("unknown.status Active", valueChannelType.getLabel());
+        assertEquals("Boolean", valueChannelType.getItemType());
+
+        heatingThing.handler.handleCommand(valueChannel.getUID(), RefreshType.REFRESH);
+        verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(valueChannel.getUID()), eq(OnOffType.ON));
+
+        Channel statusChannel = findChannelNoVerify(heatingThing.thingCaptor, "unknown_status_status");
+        ChannelType statusChannelType = channelTypeRegistry.getChannelType(statusChannel.getChannelTypeUID());
+        assertEquals("unknown.status Status", statusChannelType.getLabel());
+        assertEquals("String", statusChannelType.getItemType());
+
+        heatingThing.handler.handleCommand(statusChannel.getUID(), RefreshType.REFRESH);
+        verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(statusChannel.getUID()), eq(new StringType("on")));
+    }
+
+    @Test
+    public void supportsUnknownString() throws AuthenticationException, IOException {
+        HeatingThing heatingThing = initialiseUnknownThing();
+
+        Channel valueChannel = findChannelNoVerify(heatingThing.thingCaptor, "unknown_text_value");
+        ChannelType valueChannelType = channelTypeRegistry.getChannelType(valueChannel.getChannelTypeUID());
+        assertEquals("unknown.text Value", valueChannelType.getLabel());
+        assertEquals("String", valueChannelType.getItemType());
+
+        heatingThing.handler.handleCommand(valueChannel.getUID(), RefreshType.REFRESH);
+        verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(valueChannel.getUID()), eq(new StringType("some text")));
+    }
+
     public static Stream<Arguments> source_ventilationOperatingModes() {
         return Stream.of(
                 Arguments.of("ventilation_operating_modes_standby_active", "Standby Ventilation Mode Active", "Shows whether the Standby operating mode is active.", OnOffType.OFF),
@@ -2180,6 +2261,11 @@ public class VicareBindingTest {
 
     private HeatingThing initialiseHeatingThing() throws AuthenticationException, IOException {
         simpleHeatingInstallation();
+        return postInitialiseHeatingThing();
+    }
+
+    private HeatingThing initialiseUnknownThing() throws AuthenticationException, IOException {
+        unknownDeviceInstallation();
         return postInitialiseHeatingThing();
     }
 

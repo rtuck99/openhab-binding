@@ -6,6 +6,7 @@ import com.qubular.openhab.binding.vicare.internal.VicareUtil;
 import com.qubular.vicare.AuthenticationException;
 import com.qubular.vicare.model.CommandDescriptor;
 import com.qubular.vicare.model.Feature;
+import com.qubular.vicare.model.Unit;
 import com.qubular.vicare.model.Value;
 import com.qubular.vicare.model.features.*;
 import com.qubular.vicare.model.values.*;
@@ -15,6 +16,7 @@ import org.openhab.core.thing.type.ChannelType;
 import org.openhab.core.thing.type.ChannelTypeBuilder;
 import org.openhab.core.thing.type.ChannelTypeUID;
 import org.openhab.core.thing.type.StateChannelTypeBuilder;
+import org.openhab.core.types.StateDescriptionFragmentBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,6 +113,61 @@ public class VicareChannelBuilder implements Supplier<VicareChannelBuilder.Memo>
                 }
             }
         } while (truncation++ < 1);
+
+        // try to find a default fallback template
+        Value value = f.getProperties().get(propertyNameSuffix);
+        if (value != null) {
+            var visitor = new Value.Visitor() {
+                ChannelType template = null;
+
+                @Override
+                public void visit(ArrayValue arrayValue) {
+                }
+
+                @Override
+                public void visit(BooleanValue booleanValue) {
+                    template = vicareServiceProvider.getChannelTypeRegistry().getChannelType(new ChannelTypeUID(BINDING_ID, "template_boolean_value"));
+                }
+
+                @Override
+                public void visit(DimensionalValue dimensionalValue) {
+                    Unit unit = dimensionalValue.getUnit();
+                    String templateId = VicareUtil.escapeUIDSegment(
+                            "template_dimensional_value_" + (unit != null ? unit.getName() : "unitless"));
+                    ChannelTypeUID templateUID = new ChannelTypeUID(BINDING_ID, templateId);
+                    template = vicareServiceProvider.getChannelTypeRegistry().getChannelType(templateUID);
+                    if (template == null) {
+                        String itemType = "Number";
+                        if (unit != null) {
+                            itemType = UnitMapping.apiToItemType(unit);
+                        }
+                        template = ChannelTypeBuilder.state(templateUID, "${featureName} ${pretty:propertyName}",
+                                                            itemType)
+                                .withStateDescriptionFragment(StateDescriptionFragmentBuilder.create()
+                                                                      .withReadOnly(true)
+                                                                      .build())
+                                .build();
+                        vicareServiceProvider.getChannelTypeProvider().addChannelType(template);
+                    }
+                }
+
+                @Override
+                public void visit(LocalDateValue localDateValue) {
+                }
+
+                @Override
+                public void visit(StatusValue statusValue) {
+                    template = vicareServiceProvider.getChannelTypeRegistry().getChannelType(new ChannelTypeUID(BINDING_ID, "template_status_value"));
+                }
+
+                @Override
+                public void visit(StringValue stringValue) {
+                    template = vicareServiceProvider.getChannelTypeRegistry().getChannelType(new ChannelTypeUID(BINDING_ID, "template_string_value"));
+                }
+            };
+            value.accept(visitor);
+            return visitor.template;
+        }
         return null;
     }
 
@@ -184,46 +241,6 @@ public class VicareChannelBuilder implements Supplier<VicareChannelBuilder.Memo>
         if (channelType != null) {
             logger.debug("Found channel type {} for channelId {}", channelTypeUID, channelId);
         } else {
-            // exact ChannelType match not found, create from a template
-            if (template == null) {
-                // No named template found, use a generic fallback template
-                var visitor = new Feature.Visitor() {
-                    String templateId;
-
-                    @Override
-                    public void visit(ConsumptionFeature f) {
-                        templateId = ConsumptionFeature.class.getSimpleName();
-                    }
-
-                    @Override
-                    public void visit(NumericSensorFeature f) {
-                        templateId = NumericSensorFeature.class.getSimpleName();
-                    }
-
-                    @Override
-                    public void visit(StatusSensorFeature f) {
-                        templateId = StatusSensorFeature.class.getSimpleName();
-                    }
-
-                    @Override
-                    public void visit(TextFeature f) {
-                        templateId = TextFeature.class.getSimpleName();
-                    }
-
-                    @Override
-                    public void visit(CurveFeature f) {
-                        templateId = CurveFeature.class.getSimpleName();
-                    }
-
-                    @Override
-                    public void visit(DatePeriodFeature datePeriodFeature) {
-                        templateId = DatePeriodFeature.class.getSimpleName();
-                    }
-                };
-                feature.accept(visitor);
-                template = vicareServiceProvider.getChannelTypeRegistry().getChannelType(
-                        new ChannelTypeUID(BINDING_ID, "default_template" + visitor.templateId));
-            }
             if (template == null) {
                 logger.debug("No fallback template for feature {}, channelId {}", feature.getName(), channelId);
                 return Optional.empty();
@@ -306,25 +323,30 @@ public class VicareChannelBuilder implements Supplier<VicareChannelBuilder.Memo>
                     .map(ChannelBuilder::build)
                     .ifPresent(result.channels::add);
             if (f.getStatus() != null && !StatusValue.NA.equals(f.getStatus())) {
+                Map<String, String> statusProps = new HashMap<>();
+                statusProps.put(PROPERTY_FEATURE_NAME, feature.getName());
+                statusProps.put(PROPERTY_PROP_NAME, "status");
+                FeatureUtil.extractTemplatePropertiesFromFeature(f, statusProps);
                 String statusId = id + "_status";
                 ChannelType statusTemplate = findTemplate(f, "status");
-                channelBuilder(new ChannelUID(thing.getUID(), statusId), f, statusId, statusTemplate, props)
-                        .map(c -> c.withProperties(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
-                                                          PROPERTY_PROP_NAME, "status")))
+                channelBuilder(new ChannelUID(thing.getUID(), statusId), f, statusId, statusTemplate, statusProps)
+                        .map(c -> c.withProperties(statusProps))
                         .map(ChannelBuilder::build)
                         .ifPresent(result.channels::add);
             } else if (f.isActive() != null) {
+                Map<String, String> activeProps = new HashMap<>();
                 String activeId = id + "_active";
+                activeProps.put(PROPERTY_FEATURE_NAME, feature.getName());
+                activeProps.put(PROPERTY_PROP_NAME, "active");
+                FeatureUtil.extractTemplatePropertiesFromFeature(f, activeProps);
                 ChannelType activeTemplate = findTemplate(f, "active");
-                Map<String, String> propMap = new HashMap<>(Map.of(PROPERTY_FEATURE_NAME, feature.getName(),
-                                                                   PROPERTY_PROP_NAME, "active"));
 
                 List<CommandDescriptor> commandDescriptors = FeatureUtil.activateCommands(f);
                 commandDescriptors.forEach(
-                        c -> propMap.put(COMMAND_NAMES_TO_PROPS.get(c.getName()), c.getName()));
-                channelBuilder(new ChannelUID(thing.getUID(), activeId), f, activeId, activeTemplate, props,
+                        c -> activeProps.put(COMMAND_NAMES_TO_PROPS.get(c.getName()), c.getName()));
+                channelBuilder(new ChannelUID(thing.getUID(), activeId), f, activeId, activeTemplate, activeProps,
                                commandDescriptors)
-                        .map(c -> c.withProperties(propMap))
+                        .map(c -> c.withProperties(activeProps))
                         .map(ChannelBuilder::build)
                         .ifPresent(result.channels::add);
             }
@@ -366,11 +388,13 @@ public class VicareChannelBuilder implements Supplier<VicareChannelBuilder.Memo>
             switch (propName) {
                 case "status":
                     String statusId = escapeUIDSegment(f.getName() + "_status");
+                    HashMap<String, String> props = new HashMap<>();
+                    props.put(PROPERTY_FEATURE_NAME, f.getName());
+                    props.put(PROPERTY_PROP_NAME, "status");
                     channelBuilder(new ChannelUID(thing.getUID(), statusId), f, statusId,
                                    findTemplate(f, "status"),
-                                   FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()))
-                            .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
-                                                                PROPERTY_PROP_NAME, "status")).build())
+                                   FeatureUtil.extractTemplatePropertiesFromFeature(f, props))
+                            .map(cb -> cb.withProperties(props).build())
                             .ifPresent(result.channels::add);
                     break;
                 case "active":
@@ -381,7 +405,7 @@ public class VicareChannelBuilder implements Supplier<VicareChannelBuilder.Memo>
                     commandDescriptors.forEach(
                             c -> propMap.put(COMMAND_NAMES_TO_PROPS.get(c.getName()), c.getName()));
                     channelBuilder(new ChannelUID(thing.getUID(), id), f, id, findTemplate(f, propName),
-                                   FeatureUtil.extractTemplatePropertiesFromFeature(f, new HashMap<>()),
+                                   FeatureUtil.extractTemplatePropertiesFromFeature(f, propMap),
                                    commandDescriptors)
                             .map(cb -> cb.withProperties(propMap).build())
                             .ifPresent(result.channels::add);
@@ -396,13 +420,14 @@ public class VicareChannelBuilder implements Supplier<VicareChannelBuilder.Memo>
                         @Override
                         public void visit(BooleanValue v) {
                             String id = escapeUIDSegment(f.getName() + "_" + propName);
+                            HashMap<String, String> props = new HashMap<>();
+                            props.put(PROPERTY_FEATURE_NAME, f.getName());
+                            props.put(PROPERTY_PROP_NAME, propName);
+                            FeatureUtil.extractTemplatePropertiesFromFeature(f, props);
                             channelBuilder(new ChannelUID(thing.getUID(), id), f, id,
                                            findTemplate(f, propName),
-                                           FeatureUtil.extractTemplatePropertiesFromFeature(f,
-                                                                                            new HashMap<>()))
-                                    .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
-                                                                        PROPERTY_PROP_NAME,
-                                                                        propName)).build())
+                                           props)
+                                    .map(cb -> cb.withProperties(props).build())
                                     .ifPresent(result.channels::add);
                         }
 
@@ -411,12 +436,13 @@ public class VicareChannelBuilder implements Supplier<VicareChannelBuilder.Memo>
                             Map<String, String> props = new HashMap<>();
                             props.put(PROPERTY_FEATURE_NAME, feature.getName());
                             props.put(PROPERTY_PROP_NAME, propName);
+                            FeatureUtil.extractTemplatePropertiesFromFeature(f, props);
                             Optional<CommandDescriptor> commandDescriptor = maybeAddPropertiesForSetter(
                                     f, propName, props);
                             String id = escapeUIDSegment(f.getName() + "_" + propName);
                             channelBuilder(new ChannelUID(thing.getUID(), id), f, id,
                                            findTemplate(f, propName),
-                                           FeatureUtil.extractTemplatePropertiesFromFeature(f, props),
+                                           props,
                                            commandDescriptor.orElse(null))
                                     .map(cb -> cb.withProperties(props).build())
                                     .ifPresent(result.channels::add);
@@ -435,13 +461,15 @@ public class VicareChannelBuilder implements Supplier<VicareChannelBuilder.Memo>
                         @Override
                         public void visit(StringValue v) {
                             String id = escapeUIDSegment(f.getName() + "_" + propName);
+                            HashMap<String, String> props = new HashMap<>();
+                            props.put(PROPERTY_FEATURE_NAME, f.getName());
+                            props.put(PROPERTY_PROP_NAME, propName);
+                            FeatureUtil.extractTemplatePropertiesFromFeature(f, props);
+
                             channelBuilder(new ChannelUID(thing.getUID(), id), f, id,
                                            findTemplate(f, propName),
-                                           FeatureUtil.extractTemplatePropertiesFromFeature(f,
-                                                                                            new HashMap<>()))
-                                    .map(cb -> cb.withProperties(Map.of(PROPERTY_FEATURE_NAME, f.getName(),
-                                                                        PROPERTY_PROP_NAME,
-                                                                        propName)).build())
+                                           props)
+                                    .map(cb -> cb.withProperties(props).build())
                                     .ifPresent(result.channels::add);
                         }
 

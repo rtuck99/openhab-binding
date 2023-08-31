@@ -110,7 +110,7 @@ public class VicareBridgeHandler extends BaseBridgeHandler implements VicareThin
                         // prime the feature cache
                         if (!handler.getThing().getChannels().isEmpty()) {
                             // don't poll devices with no channels, in case people include TCU which has none
-                            logger.debug("Prefetching features for {}", handler.getThing());
+                            logger.debug("Prefetching features for {}", handler.getThing().getUID());
                             vicareServiceProvider.getFeatureService().getFeatures(handler.getThing(), getPollingInterval())
                                     .exceptionally(ex -> {
                                         logger.warn("Unable to prefetch features", ex);

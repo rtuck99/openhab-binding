@@ -225,7 +225,7 @@ public class VicareServiceImpl implements VicareService {
                                                 errorResponse.getMessage(),
                                                 errorResponse.getErrorType());
                             if (contentResponse.getStatus() == RATE_LIMIT_EXCEEDED && errorResponse.getExtendedPayload() != null) {
-                                logger.warn("Rate limit expires at %s", Instant.ofEpochMilli(errorResponse.getExtendedPayload().getLimitReset()));
+                                logger.warn("Rate limit expires at {}", Instant.ofEpochMilli(errorResponse.getExtendedPayload().getLimitReset()));
                             }
                             logger.warn(msg);
                             throw new VicareServiceException(errorResponse);

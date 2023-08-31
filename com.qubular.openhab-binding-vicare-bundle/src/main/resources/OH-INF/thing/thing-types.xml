@@ -23,9 +23,15 @@
   <channel-type id="heating_boiler_sensors_temperature_commonSupply">
     <item-type>Number:Temperature</item-type>
     <label>Common Supply Temperature</label>
-    <description>Shows the status and the value of the temperature sensor located on the exit of the boiler</description>
+    <description>Shows the value of the temperature sensor located on the exit of the boiler</description>
     <category>Temperature</category>
     <state pattern="%.1f °C" readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_boiler_sensors_temperature_commonSupply_status">
+    <item-type>String</item-type>
+    <label>Common Supply Temperature Sensor Status</label>
+    <description>Shows the status of the temperature sensor located on the exit of the boiler</description>
+    <state readOnly="true"/>
   </channel-type>
 
   <channel-type id="heating_boiler_serial_value">
@@ -88,6 +94,16 @@
     <description>Shows whether frost protection of the installation is turned on for the device on Heating Circuit ${heatingCircuit}</description>
     <state readOnly="true"/>
   </channel-type>
+  <channel-type id="template_heating_circuits_active">
+    <item-type>Switch</item-type>
+    <label>Heating Circuit ${heatingCircuit} Active</label>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="template_heating_circuits_type">
+    <item-type>String</item-type>
+    <label>Heating Circuit ${heatingCircuit} Type</label>
+    <state readOnly="true"/>
+  </channel-type>
   <channel-type id="template_heating_circuits_name">
     <item-type>String</item-type>
     <label>Heating Circuit ${heatingCircuit} Name</label>
@@ -100,6 +116,11 @@
     <label>Heating Circuit ${heatingCircuit} Name</label>
     <description>Shows the name given for Heating Circuit ${heatingCircuit}</description>
     <category>Text</category>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="template_heating_circuits_heating_schedule_active">
+    <item-type>Switch</item-type>
+    <label>Heating Circuit ${heatingCircuit} Heating Schedule Active</label>
     <state readOnly="true"/>
   </channel-type>
   <channel-type id="template_heating_circuits_sensors_temperature_supply_value">
@@ -160,6 +181,12 @@
     <item-type>Switch</item-type>
     <label>DHW Charging Active</label>
     <description>Shows whether the hot water charging for the DHW storage is currently active.</description>
+    <state readOnly="true"/>
+  </channel-type>
+  <channel-type id="heating_dhw_comfort_active">
+    <item-type>Switch</item-type>
+    <label>Heating DHW Comfort Active</label>
+    <description>Shows if comfort mode for the DHW heat-exchanger is active.</description>
     <state readOnly="true"/>
   </channel-type>
   <channel-type id="heating_dhw_hygiene_enabled">
@@ -1018,7 +1045,7 @@
     <state readOnly="true"/>
   </channel-type>
   <channel-type id="template_boolean_value">
-    <item-type>Boolean</item-type>
+    <item-type>Switch</item-type>
     <label>${featureName} ${pretty:propertyName}</label>
     <state readOnly="true"/>
   </channel-type>

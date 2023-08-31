@@ -190,6 +190,7 @@ public class VicareBindingTest {
                                                                                 new DimensionalValue(new Unit("celsius"), 54.3), new StatusValue("connected"), null
         );
         Feature heatingDhwCharging = new StatusSensorFeature("heating.dhw.charging", StatusValue.NA, false);
+        Feature heatingDhwComfort = new StatusSensorFeature("heating.dhw.comfort", null, false);
         Feature operatingModesActive = new TextFeature("heating.circuits.0.operating.modes.active",
                                                        "value",
                                                        "dhw",
@@ -243,12 +244,16 @@ public class VicareBindingTest {
         Feature heatingSolar = new StatusSensorFeature("heating.solar",
                                                         StatusValue.NA,
                                                         true);
-        Feature heatingCircuit = new TextFeature("heating.circuits.0",
-                                                     "name",
-                                                     "circuitName", emptyList());
+        Feature heatingCircuit = new StatusSensorFeature("heating.circuits.0",
+                                                     Map.of("name", new StringValue("circuitName"),
+                                                            "type", new StringValue("heatingCircuit"),
+                                                            "active", BooleanValue.TRUE));
         Feature heatingCircuitName = new TextFeature("heating.circuits.0.name",
                                                      "name",
                                                      "circuitNameName", emptyList());
+        Feature heatingCircuitHeatingSchedule = new StatusSensorFeature("heating.circuits.0.heating.schedule",
+                                                                        null,
+                                                                        true);
         Feature operatingModesDHW = new StatusSensorFeature("heating.circuits.1.operating.modes.dhw",
                                                             StatusValue.NA,
                                                             false);
@@ -340,7 +345,8 @@ public class VicareBindingTest {
         List<Feature> heatingSensors = List.of(
                 new NumericSensorFeature("heating.sensors.temperature.outside", "value", new DimensionalValue(Unit.CELSIUS, 15.8), new StatusValue("connected"), null),
                 new NumericSensorFeature("heating.sensors.temperature.return", "value", new DimensionalValue(Unit.CELSIUS, 34.1), new StatusValue("connected"), null),
-                new NumericSensorFeature("heating.sensors.volumetricFlow.allengra", "value", new DimensionalValue(Unit.CELSIUS, 274), new StatusValue("connected"), null)
+                new NumericSensorFeature("heating.sensors.volumetricFlow.allengra", "value", new DimensionalValue(Unit.LITRE, 274), new StatusValue("connected"), null),
+                new NumericSensorFeature("heating.boiler.sensors.temperature.commonSupply", "value", new DimensionalValue(Unit.CELSIUS, 34.4), StatusValue.CONNECTED, null)
         );
         Feature heatingCompressors0 = new StatusSensorFeature("heating.compressors.0",
                                                              Map.of("phase", new StringValue("ready"),
@@ -412,6 +418,7 @@ public class VicareBindingTest {
                                 heatingBufferTemperatureSensorMain,
                                 heatingDhw,
                                 heatingDhwCharging,
+                                heatingDhwComfort,
                                 heatingDhwHotwaterStorageSensorTop,
                                 heatingDhwHotwaterStorageSensorBottom,
                                 heatingDhwTemperatureHysteresis,
@@ -428,6 +435,7 @@ public class VicareBindingTest {
                                 heatingSolar,
                                 heatingCircuit,
                                 heatingCircuitName,
+                                heatingCircuitHeatingSchedule,
                                 operatingModesDHW,
                                 operatingModesDHWAndHeating,
                                 operatingModesHeating,
@@ -1085,6 +1093,37 @@ public class VicareBindingTest {
         ArgumentCaptor<State> stateCaptor = forClass(State.class);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
         assertEquals(StringType.valueOf("circuitName"), stateCaptor.getValue());
+
+        Channel activeChannel = findChannelNoVerify(heatingThing.thingCaptor, "heating_circuits_0_active");
+        ChannelType activeChannelType = channelTypeRegistry.getChannelType(activeChannel.getChannelTypeUID());
+        assertEquals("Heating Circuit 0 Active", activeChannelType.getLabel());
+
+        heatingThing.handler.handleCommand(activeChannel.getUID(), RefreshType.REFRESH);
+        verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(activeChannel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.ON, stateCaptor.getValue());
+
+        Channel typeChannel = findChannelNoVerify(heatingThing.thingCaptor, "heating_circuits_0_type");
+        ChannelType typeChannelType = channelTypeRegistry.getChannelType(typeChannel.getChannelTypeUID());
+        assertEquals("Heating Circuit 0 Type", typeChannelType.getLabel());
+
+        heatingThing.handler.handleCommand(typeChannel.getUID(), RefreshType.REFRESH);
+        verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(typeChannel.getUID()), stateCaptor.capture());
+        assertEquals(new StringType("heatingCircuit"), stateCaptor.getValue());
+    }
+
+    @Test
+    public void supportsHeatingCircuitHeatingScheduleActive() throws AuthenticationException, IOException {
+        HeatingThing heatingThing = initialiseHeatingThing();
+
+        Channel channel = findChannelNoVerify(heatingThing.thingCaptor, "heating_circuits_0_heating_schedule_active");
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals("Heating Circuit 0 Heating Schedule Active", channelType.getLabel());
+        assertEquals("Switch", channelType.getItemType());
+
+        heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.ON, stateCaptor.getValue());
     }
 
     @Test
@@ -1437,6 +1476,21 @@ public class VicareBindingTest {
     }
 
     @Test
+    public void supportsHeatingDhwComfort() throws AuthenticationException, IOException {
+        HeatingThing heatingThing = initialiseHeatingThing();
+
+        Channel channel = findChannelNoVerify(heatingThing.thingCaptor, "heating_dhw_comfort_active");
+        ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+        assertEquals("Heating DHW Comfort Active", channelType.getLabel());
+        assertEquals("Switch", channelType.getItemType());
+
+        ArgumentCaptor<State> stateCaptor = forClass(State.class);
+        heatingThing.handler.handleCommand(channel.getUID(), RefreshType.REFRESH);
+        verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(channel.getUID()), stateCaptor.capture());
+        assertEquals(OnOffType.OFF, stateCaptor.getValue());
+    }
+
+    @Test
     public void supportsHeatingDhwHygiene() throws AuthenticationException, IOException, CommandFailureException {
         HeatingThing heatingThing = initialiseHeatingThing();
 
@@ -1673,7 +1727,8 @@ public class VicareBindingTest {
     public static Stream<Arguments> source_heatingSensorsTemperature() {
         return Stream.of(
                 Arguments.of("heating_sensors_temperature_outside", "Outside Temperature", "Shows the temperature value of the outside temperature sensor", 15.8, "Outside Temperature Sensor Status", "Shows the status of the outside temperature sensor", "connected"),
-                Arguments.of("heating_sensors_temperature_return", "Heating Return Temperature", "Shows the flow return temperature, i.e. water temperature on return to the boiler from the heating installation.", 34.1, "Heating Return Temperature Sensor Status", "Shows the flow return temperature sensor status", "connected")
+                Arguments.of("heating_sensors_temperature_return", "Heating Return Temperature", "Shows the flow return temperature, i.e. water temperature on return to the boiler from the heating installation.", 34.1, "Heating Return Temperature Sensor Status", "Shows the flow return temperature sensor status", "connected"),
+                Arguments.of("heating_boiler_sensors_temperature_commonSupply", "Common Supply Temperature", "Shows the value of the temperature sensor located on the exit of the boiler", 34.4, "Common Supply Temperature Sensor Status", "Shows the status of the temperature sensor located on the exit of the boiler", "connected")
         );
     }
 
@@ -2104,7 +2159,7 @@ public class VicareBindingTest {
         Channel valueChannel = findChannelNoVerify(heatingThing.thingCaptor, "unknown_status_active");
         ChannelType valueChannelType = channelTypeRegistry.getChannelType(valueChannel.getChannelTypeUID());
         assertEquals("unknown.status Active", valueChannelType.getLabel());
-        assertEquals("Boolean", valueChannelType.getItemType());
+        assertEquals("Switch", valueChannelType.getItemType());
 
         heatingThing.handler.handleCommand(valueChannel.getUID(), RefreshType.REFRESH);
         verify(heatingThing.callback, timeout(1000)).stateUpdated(eq(valueChannel.getUID()), eq(OnOffType.ON));

@@ -436,7 +436,7 @@
       },
       "commands": {
         "setTemperature": {
-          "uri": "https://api.viessmann.com/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.operating.programs.manual/commands/setTemperature",
+          "uri": "http://localhost:9000/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.operating.programs.manual/commands/setTemperature",
           "name": "setTemperature",
           "isExecutable": true,
           "params": {

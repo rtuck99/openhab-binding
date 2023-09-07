@@ -830,39 +830,42 @@ public class VicareServiceTest {
 
     static Stream<Arguments> source_heating_circuits_operating_programs() {
         return Stream.of(
-                Arguments.of("deviceFeaturesResponse.json", "normal", false, 20, "celsius", 3, 37, 1, 23.0,
+                Arguments.of("deviceFeaturesResponse.json", "normal", false, 20, Unit.CELSIUS, 3, 37, 1, 23.0,
                              "/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.normal/commands/setTemperature"),
-                Arguments.of("deviceFeaturesResponse.json", "reduced", false, 12, "celsius", 3, 37, 1, 23.0,
+                Arguments.of("deviceFeaturesResponse.json", "reduced", false, 12, Unit.CELSIUS, 3, 37, 1, 23.0,
                              "/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.reduced/commands/setTemperature"),
-                Arguments.of("deviceFeaturesResponse.json", "comfort", false, 22, "celsius", 3, 37, 1, 23.0,
+                Arguments.of("deviceFeaturesResponse.json", "comfort", false, 22, Unit.CELSIUS, 3, 37, 1, 23.0,
                              "/iot/v1/equipment/installations/2012616/gateways/7633107093013212/devices/0/features/heating.circuits.0.operating.programs.comfort/commands/setTemperature"),
-                Arguments.of("deviceFeaturesResponse5.json", "reducedHeating", false, 18, "celsius", 3, 37, 1, 23.0,
+                Arguments.of("deviceFeaturesResponse5.json", "reducedHeating", false, 18, Unit.CELSIUS, 3, 37, 1, 23.0,
                              "/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.operating.programs.reducedHeating/commands/setTemperature"),
-                Arguments.of("deviceFeaturesResponse5.json", "normalHeating", true, 21, "celsius", 3, 37, 1, 23.0,
+                Arguments.of("deviceFeaturesResponse5.json", "normalHeating", true, 21, Unit.CELSIUS, 3, 37, 1, 23.0,
                              "/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.operating.programs.normalHeating/commands/setTemperature"),
-                Arguments.of("deviceFeaturesResponse5.json", "comfortHeating", false, 22, "celsius", 3, 37, 1, 23.0,
+                Arguments.of("deviceFeaturesResponse5.json", "comfortHeating", false, 22, Unit.CELSIUS, 3, 37, 1, 23.0,
                              "/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.operating.programs.comfortHeating/commands/setTemperature"),
-                Arguments.of("deviceFeaturesResponse2.json", "eco", false, 21, "", 0, 0, 1, 23.0,
+                Arguments.of("deviceFeaturesResponse2.json", "eco", false, 21, Unit.EMPTY, 0, 0, 1, 23.0,
                              null),
-                Arguments.of("deviceFeaturesResponse2.json", "external", false, 0, "", 0, 0, 1, 23.0,
-                             null)
+                Arguments.of("deviceFeaturesResponse2.json", "external", false, 0, Unit.EMPTY, 0, 0, 1, 23.0,
+                             null),
+                Arguments.of("deviceFeaturesResponse3.json", "manual", false, null, null, 8, 30, 0.5, 29, "/iot/v1/equipment/installations/1234567/gateways/1234567890123456/devices/0/features/heating.circuits.0.operating.programs.manual/commands/setTemperature")
         );
     }
 
     @ParameterizedTest
     @MethodSource("source_heating_circuits_operating_programs")
     @DisabledIf("realConnection")
-    public void supports_heating_circuits_N_operating_programs(String fileName, String programName, boolean expectedActive, int expectedTemp, String expectedUnit, int expectedMin, int expectedMax, int expectedStep, double setValue, String uriPath) throws ServletException, NamespaceException, CommandFailureException, AuthenticationException, IOException, ExecutionException, InterruptedException, TimeoutException {
+    public void supports_heating_circuits_N_operating_programs(String fileName, String programName, boolean expectedActive, Integer expectedTemp, Unit expectedUnit, int expectedMin, int expectedMax, double expectedStep, double setValue, String uriPath) throws ServletException, NamespaceException, CommandFailureException, AuthenticationException, IOException, ExecutionException, InterruptedException, TimeoutException {
         List<Feature> features = getFeatures(fileName);
 
-        Optional<NumericSensorFeature> programMode = features.stream()
+        Optional<Feature> programMode = features.stream()
                 .filter(f -> f.getName().equals("heating.circuits.0.operating.programs." + programName))
-                .map(NumericSensorFeature.class::cast)
+                .map(Feature.class::cast)
                 .findFirst();
         assertTrue(programMode.isPresent());
-        assertEquals(expectedActive, programMode.get().isActive());
-        assertEquals(expectedTemp, programMode.get().getValue().getValue(), 0.001);
-        assertEquals(expectedUnit, programMode.get().getValue().getUnit().getName());
+        Map<String, ? extends Value> props = programMode.get().getProperties();
+        assertEquals(BooleanValue.valueOf(expectedActive), props.get("active"));
+        if (expectedTemp != null) {
+            assertEquals(new DimensionalValue(expectedUnit, expectedTemp), props.get("temperature"));
+        }
         if (uriPath != null) {
             CommandDescriptor commandDescriptor = programMode.get().getCommands().stream().filter(c -> c.getName().equals("setTemperature")).findFirst().get();
             assertEquals(URI.create("http://localhost:9000" + uriPath), commandDescriptor.getUri());

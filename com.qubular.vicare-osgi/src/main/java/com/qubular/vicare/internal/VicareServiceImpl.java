@@ -424,7 +424,7 @@ public class VicareServiceImpl implements VicareService {
                     JsonObject startObject = properties.getAsJsonObject("start");
                     JsonObject endObject = properties.getAsJsonObject("end");
                     if (temperature != null) {
-                        boolean activeStatus = activeObject.get("value").getAsBoolean();
+                        Boolean activeStatus = ofNullable(activeObject).map(jo -> jo.get("value")).map(JsonElement::getAsBoolean).orElse(null);
                         DimensionalValue temperatureValue = dimensionalValueFromUnitValue(temperature);
                         List<CommandDescriptor> commandDescriptors = generateCommands(commands);
                         return new NumericSensorFeature(featureName, "temperature", commandDescriptors, temperatureValue, NA, activeStatus
@@ -445,6 +445,9 @@ public class VicareServiceImpl implements VicareService {
                     }
                 } else if (featureName.endsWith(".production") ||
                 featureName.contains(".consumption.")) {
+                    Optional<String> defaultUnit = Optional.ofNullable(properties.getAsJsonObject("unit"))
+                            .map(jo -> jo.get("value"))
+                            .map(JsonElement::getAsString);
                     Map<String, Value> arrayProperties = properties.entrySet().stream()
                             .filter(e -> TYPE_ARRAY.equals(e.getValue().getAsJsonObject().get("type").getAsString()))
                             .collect(toMap(Map.Entry::getKey, e -> {
@@ -454,7 +457,10 @@ public class VicareServiceImpl implements VicareService {
                                 for (int i = 0; i < jsonArray.size(); ++i) {
                                     values[i] = jsonArray.get(i).getAsDouble();
                                 }
-                                Unit unit = new Unit(property.get("unit").getAsString());
+                                Unit unit = Optional.ofNullable(property.get("unit")).map(JsonElement::getAsString)
+                                        .or(() -> defaultUnit)
+                                        .map(Unit::new)
+                                        .orElse(Unit.EMPTY);
                                 return new ArrayValue(unit, values);
                             }));
 
@@ -485,7 +491,7 @@ public class VicareServiceImpl implements VicareService {
                                                           return BooleanValue.valueOf(
                                                                   propObject.get("value").getAsBoolean());
                                                       case TYPE_NUMBER:
-                                                          return new DimensionalValue(new Unit(propObject.get("unit").getAsString()), propObject.get("value").getAsDouble());
+                                                          return dimensionalValueFromUnitValue(propObject);
                                                       default:
                                                           throw new IllegalStateException(
                                                                   "Unsupported property type " + propObject.get(
@@ -551,8 +557,11 @@ public class VicareServiceImpl implements VicareService {
     }
 
     private static DimensionalValue dimensionalValueFromUnitValue(JsonObject prop) {
-        String unit = prop.get("unit").getAsString();
+        Unit unit = Optional.ofNullable(prop.get("unit"))
+                .map(JsonElement::getAsString)
+                .map(Unit::new)
+                .orElse(Unit.EMPTY);
         double numberValue = prop.get("value").getAsDouble();
-        return new DimensionalValue(new Unit(unit), numberValue);
+        return new DimensionalValue(unit, numberValue);
     }
 }

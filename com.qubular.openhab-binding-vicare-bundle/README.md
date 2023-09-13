@@ -118,6 +118,10 @@ If you have multiple heating devices configured then you may need to increase th
 Changelog
 ---------
 
+### 4.0.4
+
+* Fixed #58 Fix parsing in cases where units are omitted.
+
 ### 4.0.3
 
 * Fix for #57 Rework prefetching

@@ -16,7 +16,9 @@ import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.opentest4j.AssertionFailedError;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
@@ -1436,6 +1438,26 @@ public class VicareServiceTest {
     }
 
     @Test
+    public void supports_heating_solar_power_production_withSeparateUnit() throws ServletException, AuthenticationException, NamespaceException, IOException {
+        List<Feature> features = getFeatures("response/Solar.json");
+
+        Optional<ConsumptionFeature> solarPower = features.stream()
+                .filter(f -> f.getName().equals("heating.solar.power.production"))
+                .map(ConsumptionFeature.class::cast)
+                .findFirst();
+
+        assertEquals(19.773, solarPower.get().getConsumption(ConsumptionFeature.Stat.CURRENT_DAY).get().getValue(), 0.001);
+        assertEquals(Unit.KILOWATT_HOUR, solarPower.get().getConsumption(ConsumptionFeature.Stat.CURRENT_DAY).get().getUnit());
+        assertEquals(20.642, solarPower.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_DAY).get().getValue(), 0.001);
+        assertEquals(19.773, solarPower.get().getConsumption(ConsumptionFeature.Stat.CURRENT_WEEK).get().getValue(), 0.001);
+        assertEquals(20.642, solarPower.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_WEEK).get().getValue(), 0.001);
+        assertEquals(19.773, solarPower.get().getConsumption(ConsumptionFeature.Stat.CURRENT_MONTH).get().getValue(), 0.001);
+        assertEquals(20.642, solarPower.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_MONTH).get().getValue(), 0.001);
+        assertEquals(19.773, solarPower.get().getConsumption(ConsumptionFeature.Stat.CURRENT_YEAR).get().getValue(), 0.001);
+        assertEquals(20.642, solarPower.get().getConsumption(ConsumptionFeature.Stat.PREVIOUS_YEAR).get().getValue(), 0.001);
+    }
+
+    @Test
     @DisabledIf("realConnection")
     public void supports_heating_solar_sensors_temperature_collector() throws ServletException, AuthenticationException, NamespaceException, IOException {
         List<Feature> features = getFeatures("deviceFeaturesResponse4.json");
@@ -1688,5 +1710,31 @@ public class VicareServiceTest {
         assertEquals(BooleanValue.FALSE, holiday.get().getProperties().get("active"));
         assertEquals(LocalDateValue.EMPTY, holiday.get().getProperties().get("start"));
         assertEquals(LocalDateValue.EMPTY, holiday.get().getProperties().get("end"));
+    }
+
+    @ValueSource(strings = {"response/Solar.json",
+            "response/Vitocal200.json",
+            "response/Vitocal200S.json",
+            "response/Vitocal200S_E8NEV.json",
+            "response/Vitocal222S.json",
+            "response/Vitocal250A.json",
+            "response/Vitocal300G.json",
+            "response/Vitocaldens222F.json",
+            "response/VitochargeVX3.json",
+            "response/Vitodens100W.json",
+            "response/Vitodens111W.json",
+            "response/Vitodens200W.json",
+            "response/Vitodens200W_2.json",
+            "response/Vitodens222W.json",
+            "response/Vitodens300W.json",
+            "response/Vitodens333F.json",
+            "response/VitolaUniferral.json",
+            "response/VitovalorPT2.json",
+            "response/zigbee_zk03839.json",
+            "response/zigbee_zk03840.json"})
+    @ParameterizedTest
+    public void canParseAllJsonResponses(String filename) throws ServletException, AuthenticationException, NamespaceException, IOException {
+        logger.info("canParseAllJsonResponses({})", filename);
+        getFeatures(filename);
     }
 }

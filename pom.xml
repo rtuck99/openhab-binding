@@ -15,7 +15,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <org.osgi.service.http.port>9000</org.osgi.service.http.port>
-    <openhab.version>4.0.0</openhab.version>
+    <openhab.version>4.1.0.M1</openhab.version>
     <oh.java.version>17</oh.java.version>
     <maven.compiler.source>${oh.java.version}</maven.compiler.source>
     <maven.compiler.target>${oh.java.version}</maven.compiler.target>
@@ -326,7 +326,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-dependency-plugin</artifactId>
-          <version>3.1.2</version>
+          <version>3.6.0</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -400,7 +400,15 @@
               </goals>
               <configuration>
                 <rules>
-                  <dependencyConvergence />
+                  <dependencyConvergence>
+                    <excludes>
+                      <!--
+                           org.osgi:org.osgi.util.promise:jar:1.2.0 and org.osgi:org.osgi.service.component:jar:1.5.0 include
+                           different versions of this
+                       -->
+                      <exclude>org.osgi:org.osgi.util.function:jar</exclude>
+                    </excludes>
+                  </dependencyConvergence>
                 </rules>
               </configuration>
             </execution>
